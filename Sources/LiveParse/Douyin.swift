@@ -211,7 +211,7 @@ var headers = HTTPHeaders.init([
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
 ])
 
-public class Douyin: LiveParse {
+public struct Douyin: LiveParse {
 
     static func getCategoryList() async throws -> [LiveMainListModel] {
         let dataReq = try await AF.request("https://live.douyin.com", method: .get, headers: headers).serializingString().value
@@ -462,7 +462,7 @@ public class Douyin: LiveParse {
         throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
     }
     
-    class func randomHexString(length: Int) -> String {
+    static func randomHexString(length: Int) -> String {
         let allowedChars = "0123456789ABCDEF"
         let allowedCharsCount = UInt32(allowedChars.count)
         var randomString = ""
@@ -481,7 +481,7 @@ public class Douyin: LiveParse {
         headers.add(HTTPHeader(name: "cookie", value: (dataReq.response?.allHeaderFields["Set-Cookie"] ?? "") as! String))
     }
     
-    class func getUserUniqueId(roomId: String) async throws -> String {
+    static func getUserUniqueId(roomId: String) async throws -> String {
         var httpHeaders = headers
         httpHeaders.add(name: "Cookie", value: "__ac_nonce=\(Douyin.randomHexString(length: 21))")
         let dataReq = try await AF.request("https://live.douyin.com/\(roomId)", method: .get, headers: httpHeaders).serializingString().value
@@ -506,14 +506,14 @@ public class Douyin: LiveParse {
         return ""
     }
     
-    class func getCookie(roomId: String) async throws -> String {
+    static func getCookie(roomId: String) async throws -> String {
         var httpHeaders = headers
         httpHeaders.add(name: "Cookie", value: "__ac_nonce=\(Douyin.randomHexString(length: 21))")
         let dataReq = await AF.request("https://live.douyin.com/\(roomId)", method: .get, headers: httpHeaders).serializingString().response.response?.allHeaderFields
         return dataReq?["Set-Cookie"] as? String ?? ""
     }
     
-    class func signURL(_ url: String) async throws -> DouyinTKData {
+    static func signURL(_ url: String) async throws -> DouyinTKData {
         
         var request = URLRequest(url: URL(string: "https://tk.nsapps.cn/")!)
         request.httpMethod = "post"

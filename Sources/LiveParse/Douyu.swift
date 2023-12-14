@@ -132,7 +132,7 @@ struct DouyuSearchRelateShow: Codable {
     let avatar: String
 }
 
-class Douyu: LiveParse {
+public struct Douyu: LiveParse {
     
     static func getCategoryList() async throws -> [LiveMainListModel] {
         return [
@@ -269,7 +269,7 @@ class Douyu: LiveParse {
         return try await Douyu.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
-    class func getCategoryList(id: String) async throws -> Array<LiveCategoryModel> {
+    static func getCategoryList(id: String) async throws -> Array<LiveCategoryModel> {
         let dataReq = try await AF.request(
             "https://www.douyu.com/japi/weblist/api/getC2List",
             method: .get,
@@ -286,7 +286,7 @@ class Douyu: LiveParse {
         return tempArray
     }
     
-    class func getRealPlayArgs(roomId: String, rate: Int = 0, cdn: String?) async throws -> [LiveQualityModel] {
+    static func getRealPlayArgs(roomId: String, rate: Int = 0, cdn: String?) async throws -> [LiveQualityModel] {
         let jsEncReq = try await AF.request(
             "https://www.douyu.com/swf_api/homeH5Enc?rids=\(roomId)",
             method: .get,

@@ -152,7 +152,7 @@ struct HuyaSearchDocs: Codable {
     let game_screenshot: String
 }
 
-public class Huya: LiveParse {
+public struct Huya: LiveParse {
     
     static func getCategoryList() async throws -> [LiveMainListModel] {
         return [

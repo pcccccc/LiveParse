@@ -258,7 +258,7 @@ struct BilibiliRoomAnchorBaseInfo: Codable {
     let face: String
 }
 
-public class Bilibili: LiveParse {
+public struct Bilibili: LiveParse {
     
     static func getCategoryList() async throws -> [LiveMainListModel] {
         let dataReq = try await AF.request("https://api.live.bilibili.com/room/v1/Area/getList", method: .get).serializingDecodable(BilibiliMainData<[BilibiliMainListModel]>.self).value
