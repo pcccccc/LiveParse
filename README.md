@@ -9,11 +9,11 @@
 获取直播分类、对应分类主播列表、主播信息、直播源地址、模糊搜索、通过分享链接识别主播信息。
 
 ## Swift Package Manager：
-
+```swift
 dependencies: [
     .package(url: "https://github.com/pcccccc/LiveParse.git", .upToNextMajor(from:"1.0.0"))
 ]
-
+```
 ## 使用：
 
 获取Bilibili所有分类列表：
