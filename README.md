@@ -2,7 +2,7 @@
 
 ## 介绍： 
 
-解析 Bilibili/Douyin/Huya/Douyin 直播相关内容的Siwft版本。
+解析 Bilibili/Douyin/Huya/Douyin 直播相关内容的Swift版本。
 
 ## 功能：
 
