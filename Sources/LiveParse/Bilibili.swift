@@ -8,8 +8,12 @@
 import Foundation
 import Alamofire
 
-struct BiliBiliCookie {
-    static let cookie = UserDefaults.standard.value(forKey: "BilibiliCookie") as? String ?? ""
+public struct BiliBiliCookie {
+    public static var cookie = UserDefaults.standard.value(forKey: "LiveParse.Bilibili.Cookie") as? String ?? "" {
+        didSet {
+            UserDefaults.standard.setValue(cookie, forKey: "LiveParse.Bilibili.Cookie")
+        }
+    }
 }
 
 struct BilibiliMainData<T: Codable>: Codable {

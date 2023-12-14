@@ -10,16 +10,16 @@ import Alamofire
 import CloudKit
 
 public struct LiveModel: Codable {
-    let userName: String
-    let roomTitle: String
-    let roomCover: String
-    let userHeadImg: String
-    let liveType: LiveType
-    var liveState: String?
-    let userId: String //B站 userId 抖音id_str
-    let roomId: String //B站 roomId 抖音web_rid
+    public let userName: String
+    public let roomTitle: String
+    public let roomCover: String
+    public let userHeadImg: String
+    public let liveType: LiveType
+    public var liveState: String?
+    public let userId: String //B站 userId 抖音id_str
+    public let roomId: String //B站 roomId 抖音web_rid
     
-    init(userName: String, roomTitle: String, roomCover: String, userHeadImg: String, liveType: LiveType, liveState: String?, userId: String, roomId: String) {
+    public init(userName: String, roomTitle: String, roomCover: String, userHeadImg: String, liveType: LiveType, liveState: String?, userId: String, roomId: String) {
         self.userName = userName
         self.roomTitle = roomTitle
         self.roomCover = roomCover
@@ -30,39 +30,39 @@ public struct LiveModel: Codable {
         self.roomId = roomId
     }
     
-    var description: String {
+    public var description: String {
         return "\(userName)-\(roomTitle)-\(roomCover)-\(userHeadImg)-\(liveType)-\(liveState ?? "")-\(userId)-\(roomId)"
     }
     
 }
 
 public struct LiveQualityModel: Codable {
-    var cdn: String
-    var douyuCdnName: String? = ""
-    var qualitys: [LiveQualityDetail]
+    public var cdn: String
+    public var douyuCdnName: String? = ""
+    public var qualitys: [LiveQualityDetail]
 }
 
 public struct LiveQualityDetail: Codable {
-    var roomId: String
-    var title: String
-    var qn: Int //bilibili用qn请求地址
-    var url: String
-    var liveCodeType: LiveCodeType
-    var liveType: LiveType
+    public var roomId: String
+    public var title: String
+    public var qn: Int //bilibili用qn请求地址
+    public var url: String
+    public var liveCodeType: LiveCodeType
+    public var liveType: LiveType
 }
 
 public struct LiveCategoryModel {
-    let id: String //B站: id; Douyu:cid2; Huya: gid; Douyin: partitionId
-    let parentId: String //B站: parent_id; Douyu: 不需要; Huya: 不需要; Douyin: partitionType
-    let title: String
-    let icon: String
+    public let id: String //B站: id; Douyu:cid2; Huya: gid; Douyin: partitionId
+    public let parentId: String //B站: parent_id; Douyu: 不需要; Huya: 不需要; Douyin: partitionType
+    public let title: String
+    public let icon: String
 }
 
 public struct LiveMainListModel {
-    let id: String
-    let title: String
-    let icon: String
-    var subList: [LiveCategoryModel]
+    public let id: String
+    public let title: String
+    public let icon: String
+    public var subList: [LiveCategoryModel]
 }
 
 public enum LiveType: String, Codable {
