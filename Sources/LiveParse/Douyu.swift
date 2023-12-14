@@ -134,7 +134,7 @@ struct DouyuSearchRelateShow: Codable {
 
 public struct Douyu: LiveParse {
     
-    static func getCategoryList() async throws -> [LiveMainListModel] {
+    public static func getCategoryList() async throws -> [LiveMainListModel] {
         return [
             LiveMainListModel(id: "PCgame", title: "网游竞技", icon: "", subList: try await getCategoryList(id: "PCgame")),
             LiveMainListModel(id: "djry", title: "单机热游", icon: "", subList: try await getCategoryList(id: "djry")),
@@ -146,7 +146,7 @@ public struct Douyu: LiveParse {
         ]
     }
     
-    static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
+    public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         let dataReq = try await AF.request(
             "https://www.douyu.com/gapi/rkc/directory/mixList/2_\(id)/\(page)",
             method: .get
@@ -160,11 +160,11 @@ public struct Douyu: LiveParse {
         return tempArray
     }
     
-    static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+    public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
         return try await getRealPlayArgs(roomId: roomId, rate: 0, cdn: nil)
     }
     
-    static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
+    public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         let dataReq = try await AF.request(
             "https://www.douyu.com/betard/\(roomId)",
             method: .get,
@@ -189,12 +189,12 @@ public struct Douyu: LiveParse {
         return LiveModel(userName: roomDict["nickname"] as? String ?? "", roomTitle: roomDict["room_name"] as? String ?? "", roomCover: roomDict["room_pic"] as? String ?? "", userHeadImg: roomDict["owner_avatar"] as? String ?? "", liveType: .douyu, liveState: liveState, userId: "\(roomDict["owner_id"] as? Int ?? 0)", roomId: roomId)
     }
     
-    static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+    public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
         let dataReq = try await Douyu.getLiveLastestInfo(roomId: roomId, userId: userId)
         return LiveState(rawValue: dataReq.liveState ?? "unknow") ?? .unknow
     }
     
-    static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+    public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
         let did = String.generateRandomString(length: 32)
         let dataReq =  try await AF.request(
             "https://www.douyu.com/japi/search/api/searchShow",
@@ -217,7 +217,7 @@ public struct Douyu: LiveParse {
         return tempArray
     }
     
-    static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+    public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
         var roomId = ""
         var realUrl = ""
         if shareCode.contains("douyu.com") { //长链接
@@ -269,7 +269,7 @@ public struct Douyu: LiveParse {
         return try await Douyu.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
-    static func getCategoryList(id: String) async throws -> Array<LiveCategoryModel> {
+    public static func getCategoryList(id: String) async throws -> Array<LiveCategoryModel> {
         let dataReq = try await AF.request(
             "https://www.douyu.com/japi/weblist/api/getC2List",
             method: .get,
@@ -286,7 +286,7 @@ public struct Douyu: LiveParse {
         return tempArray
     }
     
-    static func getRealPlayArgs(roomId: String, rate: Int = 0, cdn: String?) async throws -> [LiveQualityModel] {
+    public static func getRealPlayArgs(roomId: String, rate: Int = 0, cdn: String?) async throws -> [LiveQualityModel] {
         let jsEncReq = try await AF.request(
             "https://www.douyu.com/swf_api/homeH5Enc?rids=\(roomId)",
             method: .get,

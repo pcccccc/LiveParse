@@ -154,7 +154,7 @@ struct HuyaSearchDocs: Codable {
 
 public struct Huya: LiveParse {
     
-    static func getCategoryList() async throws -> [LiveMainListModel] {
+    public static func getCategoryList() async throws -> [LiveMainListModel] {
         return [
             LiveMainListModel(id: "1", title: "网游", icon: "", subList: try await getCategorySubList(id: "1")),
             LiveMainListModel(id: "2", title: "单机", icon: "", subList: try await getCategorySubList(id: "2")),
@@ -163,7 +163,7 @@ public struct Huya: LiveParse {
         ]
     }
     
-    static func getCategorySubList(id: String) async throws -> [LiveCategoryModel] {
+    public static func getCategorySubList(id: String) async throws -> [LiveCategoryModel] {
         let dataReq = try await AF.request("https://live.cdn.huya.com/liveconfig/game/bussLive", method: .get, parameters: ["bussType": id]).serializingDecodable(HuyaMainData<[HuyaSubListModel]>.self).value
         var tempArray: [LiveCategoryModel] = []
         for item in dataReq.data {
@@ -172,7 +172,7 @@ public struct Huya: LiveParse {
         return tempArray
     }
     
-    static func getRoomList(id: String, parentId: String?, page: Int = 1) async throws -> [LiveModel] {
+    public static func getRoomList(id: String, parentId: String?, page: Int = 1) async throws -> [LiveModel] {
         let dataReq = try await AF.request(
             "https://www.huya.com/cache.php",
             method: .get,
@@ -191,7 +191,7 @@ public struct Huya: LiveParse {
         return tempArray
     }
     
-    static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+    public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
         let dataReq = try await AF.request(
             "https://m.huya.com/\(roomId)",
             method: .get,
@@ -269,7 +269,7 @@ public struct Huya: LiveParse {
         return []
     }
     
-    static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
+    public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         let dataReq = try await AF.request(
             "https://m.huya.com/\(roomId)",
             method: .get,
@@ -297,12 +297,12 @@ public struct Huya: LiveParse {
         throw NSError(domain: "获取房间信息失败", code: -9999, userInfo: ["desc": "获取房间信息失败"])
     }
     
-    static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+    public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
         guard let liveStatus = try await Huya.getLiveLastestInfo(roomId: roomId, userId: userId).liveState else { return .unknow }
         return LiveState(rawValue: liveStatus)!
     }
     
-    static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+    public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
         let dataReq = try await AF.request(
             "https://search.cdn.huya.com/",
             parameters: [
@@ -324,7 +324,7 @@ public struct Huya: LiveParse {
         return tempArray
     }
     
-    static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+    public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
         var roomId = ""
         var realUrl = ""
         if shareCode.contains("huya.com") { //长链接
@@ -376,14 +376,14 @@ public struct Huya: LiveParse {
         return try await Huya.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
-    static func getUUID() -> String {
+    public static func getUUID() -> String {
         let now = Date().timeIntervalSince1970 * 1000
         let rand = Int(arc4random() % 1000 | 0)
         let uuid = (Int(now) % 10000000000 * 1000 + rand) % 4294967295
         return "\(uuid)"
     }
     
-    static func getAnonymousUid() async throws -> String {
+    public static func getAnonymousUid() async throws -> String {
         var request = URLRequest(url: URL(string: "https://udblgn.huya.com/web/anonymousLogin")!)
         request.httpMethod = "post"
         request.setValue("application/json", forHTTPHeaderField: "Accept")

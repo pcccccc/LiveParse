@@ -213,7 +213,7 @@ var headers = HTTPHeaders.init([
 
 public struct Douyin: LiveParse {
 
-    static func getCategoryList() async throws -> [LiveMainListModel] {
+    public static func getCategoryList() async throws -> [LiveMainListModel] {
         let dataReq = try await AF.request("https://live.douyin.com", method: .get, headers: headers).serializingString().value
         let regex = try NSRegularExpression(pattern: "\\{\\\\\"pathname\\\\\":\\\\\"/\\\\\",\\\\\"categoryData.*?\\]\\)", options: [])
         let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
@@ -235,7 +235,7 @@ public struct Douyin: LiveParse {
         return []
     }
     
-    static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
+    public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         let parameter: Dictionary<String, Any> = [
             "aid": 6383,
             "app_name": "douyin_web",
@@ -256,7 +256,7 @@ public struct Douyin: LiveParse {
         return tempArray
     }
     
-    static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+    public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
         let liveData = try await Douyin.getDouyinRoomDetail(roomId: roomId, userId: userId ?? "")
         if liveData.data?.data?.count ?? 0 > 0 {
             let FULL_HD1 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.FULL_HD1 ?? ""
@@ -281,7 +281,7 @@ public struct Douyin: LiveParse {
         return []
     }
     
-    static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+    public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
         let serverUrl = "https://www.douyin.com/aweme/v1/web/live/search/"
         var components = URLComponents(string: serverUrl)!
         components.scheme = "https"
@@ -343,7 +343,7 @@ public struct Douyin: LiveParse {
         return tempArray
     }
     
-    static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
+    public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         let dataReq = try await getDouyinRoomDetail(roomId: roomId, userId: userId ?? "")
         var liveState = ""
         switch dataReq.data?.data?.first?.status {
@@ -357,7 +357,7 @@ public struct Douyin: LiveParse {
         return LiveModel(userName: dataReq.data?.user.nickname ?? "", roomTitle: dataReq.data?.data?.first?.title ?? "", roomCover: dataReq.data?.data?.first?.cover?.url_list.first ?? "", userHeadImg: dataReq.data?.user.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveState, userId: userId ?? "", roomId: roomId)
     }
     
-    static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+    public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
         let dataReq = try await Douyin.getDouyinRoomDetail(roomId: roomId, userId: userId ?? "")
         switch dataReq.data?.data?.first?.status {
         case 4:
@@ -395,7 +395,7 @@ public struct Douyin: LiveParse {
         return res
     }
     
-    static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+    public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
         if shareCode.contains("v.douyin.com") { //短链接 or 分享码
             let url = shareCode.getUrlStringWithShareCode()
             let dataReq = await AF.request(url).serializingData().response
@@ -462,7 +462,7 @@ public struct Douyin: LiveParse {
         throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
     }
     
-    static func randomHexString(length: Int) -> String {
+    public static func randomHexString(length: Int) -> String {
         let allowedChars = "0123456789ABCDEF"
         let allowedCharsCount = UInt32(allowedChars.count)
         var randomString = ""
@@ -476,12 +476,12 @@ public struct Douyin: LiveParse {
         return randomString
     }
     
-    static func getRequestHeaders() async throws {
+    public static func getRequestHeaders() async throws {
         let dataReq = await AF.request("https://live.douyin.com", headers: headers).serializingData().response
         headers.add(HTTPHeader(name: "cookie", value: (dataReq.response?.allHeaderFields["Set-Cookie"] ?? "") as! String))
     }
     
-    static func getUserUniqueId(roomId: String) async throws -> String {
+    public static func getUserUniqueId(roomId: String) async throws -> String {
         var httpHeaders = headers
         httpHeaders.add(name: "Cookie", value: "__ac_nonce=\(Douyin.randomHexString(length: 21))")
         let dataReq = try await AF.request("https://live.douyin.com/\(roomId)", method: .get, headers: httpHeaders).serializingString().value
@@ -506,7 +506,7 @@ public struct Douyin: LiveParse {
         return ""
     }
     
-    static func getCookie(roomId: String) async throws -> String {
+    public static func getCookie(roomId: String) async throws -> String {
         var httpHeaders = headers
         httpHeaders.add(name: "Cookie", value: "__ac_nonce=\(Douyin.randomHexString(length: 21))")
         let dataReq = await AF.request("https://live.douyin.com/\(roomId)", method: .get, headers: httpHeaders).serializingString().response.response?.allHeaderFields

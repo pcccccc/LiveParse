@@ -260,7 +260,7 @@ struct BilibiliRoomAnchorBaseInfo: Codable {
 
 public struct Bilibili: LiveParse {
     
-    static func getCategoryList() async throws -> [LiveMainListModel] {
+    public static func getCategoryList() async throws -> [LiveMainListModel] {
         let dataReq = try await AF.request("https://api.live.bilibili.com/room/v1/Area/getList", method: .get).serializingDecodable(BilibiliMainData<[BilibiliMainListModel]>.self).value
         var tempArray: [LiveMainListModel] = []
         for item in dataReq.data {
@@ -276,7 +276,7 @@ public struct Bilibili: LiveParse {
         return tempArray
     }
     
-    static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
+    public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         let dataReq = try await AF.request(
             "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList",
             method: .get,
@@ -301,7 +301,7 @@ public struct Bilibili: LiveParse {
         }
     }
     
-    static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+    public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
         let dataReq = try await AF.request(
             "https://api.live.bilibili.com/room/v1/Room/playUrl",
             method: .get,
@@ -360,7 +360,7 @@ public struct Bilibili: LiveParse {
         return []
     }
     
-    static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
+    public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         let dataReq = try await AF.request(
             "https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom",
             parameters: [
@@ -388,7 +388,7 @@ public struct Bilibili: LiveParse {
         return LiveModel(userName: dataReq.data.anchor_info.base_info.uname, roomTitle: dataReq.data.room_info.title, roomCover: dataReq.data.room_info.cover, userHeadImg: dataReq.data.anchor_info.base_info.face, liveType: .bilibili, liveState: liveStatus, userId: "\(dataReq.data.room_info.uid)", roomId: realRoomId)
     }
     
-    static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+    public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
         let dataReq = try await AF.request(
             "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live&cover_type=user_cover",
             method: .get,
@@ -424,7 +424,7 @@ public struct Bilibili: LiveParse {
         return tempArray
     }
     
-    static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+    public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
         let dataReq = try await AF.request(
             "https://api.live.bilibili.com/room/v1/Room/get_info",
             method: .get,
@@ -451,7 +451,7 @@ public struct Bilibili: LiveParse {
         }
     }
     
-    static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+    public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
         
         var roomId = ""
         var realUrl = ""
@@ -517,7 +517,7 @@ public struct Bilibili: LiveParse {
         return dataReq
     }
     
-    static func getBuvid() async throws -> String {
+    public static func getBuvid() async throws -> String {
         do {
             let cookie = BiliBiliCookie.cookie
             if NSString(string: cookie).contains("buvid3") {
@@ -558,7 +558,7 @@ public struct Bilibili: LiveParse {
         return dataReq.data
     }
     
-    static func getBilibiliLiveStateString(liveState: Int) -> LiveState {
+    public static func getBilibiliLiveStateString(liveState: Int) -> LiveState {
         switch liveState {
         case 0:
             return .close
