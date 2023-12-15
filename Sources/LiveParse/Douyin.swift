@@ -230,7 +230,7 @@ public struct Douyin: LiveParse {
                 }
                 tempArray.append(.init(id: item.partition.id_str, title: item.partition.title, icon: "", subList: subList))
             }
-            
+            return tempArray
         }
         return []
     }
