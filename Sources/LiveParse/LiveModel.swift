@@ -18,8 +18,9 @@ public struct LiveModel: Codable {
     public var liveState: String?
     public let userId: String //B站 userId 抖音id_str
     public let roomId: String //B站 roomId 抖音web_rid
+    public let liveWatchedCount: String?
     
-    public init(userName: String, roomTitle: String, roomCover: String, userHeadImg: String, liveType: LiveType, liveState: String?, userId: String, roomId: String) {
+    public init(userName: String, roomTitle: String, roomCover: String, userHeadImg: String, liveType: LiveType, liveState: String?, userId: String, roomId: String, liveWatchedCount: String?) {
         self.userName = userName
         self.roomTitle = roomTitle
         self.roomCover = roomCover
@@ -28,6 +29,7 @@ public struct LiveModel: Codable {
         self.liveState = liveState
         self.userId = userId
         self.roomId = roomId
+        self.liveWatchedCount = liveWatchedCount
     }
     
     public var description: String {

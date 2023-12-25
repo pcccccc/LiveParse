@@ -101,7 +101,7 @@ struct BiliBiliCategoryListModel: Codable {
     let attentions: Int?
     let cate_name: String?
     //    let verify: BiliBiliVerifyModel?
-    //    let watched_show: BiliBiliWatchedShowModel?
+    let watched_show: BiliBiliWatchedShowModel?
 }
 
 struct BiliBiliVerifyModel: Codable {
@@ -128,6 +128,25 @@ struct BiliBiliWatchedShowModel: Codable {
         case icon
         case icon_location
         case icon_web
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.the_switch = try container.decodeIfPresent(Bool.self, forKey: .the_switch)
+        self.num = try container.decodeIfPresent(Int.self, forKey: .num)
+        self.text_small = try container.decodeIfPresent(String.self, forKey: .text_small)
+        self.text_large = try container.decodeIfPresent(String.self, forKey: .text_large)
+        self.icon = try container.decodeIfPresent(String.self, forKey: .icon)
+        // icon_location首先尝试解码 Int
+        if let intValue = try? container.decodeIfPresent(Int.self, forKey: .icon_location) {
+            icon_location = intValue
+        // 如果 Int 解码失败，则尝试解码 String，然后将其转换为 Int
+        } else if let stringValue = try? container.decodeIfPresent(String.self, forKey: .icon_location), let intValue = Int(stringValue) {
+            icon_location = intValue
+        } else {
+            icon_location = nil
+        }
+        self.icon_web = try container.decodeIfPresent(String.self, forKey: .icon_web)
     }
 }
 
@@ -243,6 +262,7 @@ struct BilibiliSearchResultMain: Codable {
 struct BilibiliRoomInfoData: Codable {
     let room_info: BilibiliRoomInfoModel
     let anchor_info: BilibiliRoomAnchorInfo
+    let watched_show: BiliBiliWatchedShowModel?
 }
 
 struct BilibiliRoomInfoModel: Codable {
@@ -297,7 +317,7 @@ public struct Bilibili: LiveParse {
         if let listModelArray = dataReq.data.list {
             var tempArray: Array<LiveModel> = []
             for item in listModelArray {
-                tempArray.append(LiveModel(userName: item.uname, roomTitle: item.title ?? "", roomCover: item.cover ?? "", userHeadImg: item.face ?? "", liveType: .bilibili, liveState: "", userId: "\(item.uid)", roomId: "\(item.roomid)"))
+                tempArray.append(LiveModel(userName: item.uname, roomTitle: item.title ?? "", roomCover: item.cover ?? "", userHeadImg: item.face ?? "", liveType: .bilibili, liveState: "", userId: "\(item.uid)", roomId: "\(item.roomid)", liveWatchedCount: item.watched_show?.text_small ?? ""))
             }
             return tempArray
         }else {
@@ -389,10 +409,13 @@ public struct Bilibili: LiveParse {
         if roomId != "\(dataReq.data.room_info.room_id)" { //如果两个RoomId不想等，用服务器返回的真实ID
             realRoomId = "\(dataReq.data.room_info.room_id)"
         }
-        return LiveModel(userName: dataReq.data.anchor_info.base_info.uname, roomTitle: dataReq.data.room_info.title, roomCover: dataReq.data.room_info.cover, userHeadImg: dataReq.data.anchor_info.base_info.face, liveType: .bilibili, liveState: liveStatus, userId: "\(dataReq.data.room_info.uid)", roomId: realRoomId)
+        return LiveModel(userName: dataReq.data.anchor_info.base_info.uname, roomTitle: dataReq.data.room_info.title, roomCover: dataReq.data.room_info.cover, userHeadImg: dataReq.data.anchor_info.base_info.face, liveType: .bilibili, liveState: liveStatus, userId: "\(dataReq.data.room_info.uid)", roomId: realRoomId, liveWatchedCount: dataReq.data.watched_show?.text_small ?? "")
+        
+        //WARNING: 11
     }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+
         let dataReq = try await AF.request(
             "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live&cover_type=user_cover",
             method: .get,
@@ -410,9 +433,10 @@ public struct Bilibili: LiveParse {
             ["cookie": "buvid3=infoc"] :
                 ["cookie": BiliBiliCookie.cookie]
         ).serializingDecodable(BilibiliSearchMainData.self).value
+        
         var tempArray: Array<LiveModel> = []
         for item in dataReq.data?.result?.live_room ?? [] {
-            tempArray.append(LiveModel(userName: item.uname, roomTitle: item.title ?? "", roomCover: "https:\(item.cover ?? "")", userHeadImg: "https:\(item.uface ?? "")", liveType: .bilibili, liveState: Bilibili.getBilibiliLiveStateString(liveState: item.live_status ?? 0).rawValue, userId: "\(item.uid)", roomId: "\(item.roomid)"))
+            tempArray.append(LiveModel(userName: item.uname, roomTitle: item.title ?? "", roomCover: "https:\(item.cover ?? "")", userHeadImg: "https:\(item.uface ?? "")", liveType: .bilibili, liveState: Bilibili.getBilibiliLiveStateString(liveState: item.live_status ?? 0).rawValue, userId: "\(item.uid)", roomId: "\(item.roomid)", liveWatchedCount: item.watched_show?.text_small ?? ""))
         }
         for item in dataReq.data?.result?.live_user ?? [] {
             let flowCount = item.attentions ?? 0
@@ -423,7 +447,7 @@ public struct Bilibili: LiveParse {
                 flowFormatString = "\(flowCount) 人关注直播间"
             }
             let userName = String.stripHTML(from: item.uname)
-            tempArray.append(LiveModel(userName: userName, roomTitle: item.title ?? "\(item.cate_name ?? "无分区") · \(flowFormatString)", roomCover: "https:\(item.uface ?? "")", userHeadImg: "https:\(item.uface ?? "")", liveType: .bilibili, liveState: Bilibili.getBilibiliLiveStateString(liveState: item.live_status ?? 0).rawValue, userId: "\(item.uid)", roomId: "\(item.roomid)"))
+            tempArray.append(LiveModel(userName: userName, roomTitle: item.title ?? "\(item.cate_name ?? "无分区") · \(flowFormatString)", roomCover: "https:\(item.uface ?? "")", userHeadImg: "https:\(item.uface ?? "")", liveType: .bilibili, liveState: Bilibili.getBilibiliLiveStateString(liveState: item.live_status ?? 0).rawValue, userId: "\(item.uid)", roomId: "\(item.roomid)", liveWatchedCount: flowFormatString))
         }
         return tempArray
     }

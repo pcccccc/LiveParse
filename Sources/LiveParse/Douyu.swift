@@ -130,6 +130,7 @@ struct DouyuSearchRelateShow: Codable {
     let roomType: Int
     let nickName: String
     let avatar: String
+    let hot: String
 }
 
 public struct Douyu: LiveParse {
@@ -154,7 +155,7 @@ public struct Douyu: LiveParse {
         var tempArray: Array<LiveModel> = []
         for item in dataReq.data.rl {
             if item.type == 1 {
-                tempArray.append(LiveModel(userName: item.nn!, roomTitle: item.rn!, roomCover: item.rs16_avif!, userHeadImg: item.av!, liveType: .douyu, liveState: "", userId: "\(item.uid!)", roomId: "\(item.rid!)"))
+                tempArray.append(LiveModel(userName: item.nn!, roomTitle: item.rn!, roomCover: item.rs16_avif!, userHeadImg: item.av!, liveType: .douyu, liveState: "", userId: "\(item.uid!)", roomId: "\(item.rid!)", liveWatchedCount: "\(item.ol ?? 0)"))
             }
         }
         return tempArray
@@ -186,7 +187,8 @@ public struct Douyu: LiveParse {
         }else {
             liveState = LiveState.close.rawValue
         }
-        return LiveModel(userName: roomDict["nickname"] as? String ?? "", roomTitle: roomDict["room_name"] as? String ?? "", roomCover: roomDict["room_pic"] as? String ?? "", userHeadImg: roomDict["owner_avatar"] as? String ?? "", liveType: .douyu, liveState: liveState, userId: "\(roomDict["owner_id"] as? Int ?? 0)", roomId: roomId)
+        let roomBizAll = roomDict["room_biz_all"] as? Dictionary<String, Any>
+        return LiveModel(userName: roomDict["nickname"] as? String ?? "", roomTitle: roomDict["room_name"] as? String ?? "", roomCover: roomDict["room_pic"] as? String ?? "", userHeadImg: roomDict["owner_avatar"] as? String ?? "", liveType: .douyu, liveState: liveState, userId: "\(roomDict["owner_id"] as? Int ?? 0)", roomId: roomId, liveWatchedCount: "\(roomBizAll?["hot"] as? String ?? "")")
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
@@ -212,7 +214,7 @@ public struct Douyu: LiveParse {
         ).serializingDecodable(DouyuSearchResult.self).value
         var tempArray: Array<LiveModel> = []
         for item in dataReq.data.relateShow {
-            tempArray.append(LiveModel(userName: item.nickName, roomTitle: item.roomName, roomCover: item.roomSrc, userHeadImg: item.avatar, liveType: .douyu, liveState: item.roomType == 0 ? "正在直播" :"已下播", userId: "\(item.rid)", roomId: "\(item.rid)"))
+            tempArray.append(LiveModel(userName: item.nickName, roomTitle: item.roomName, roomCover: item.roomSrc, userHeadImg: item.avatar, liveType: .douyu, liveState: item.roomType == 0 ? "正在直播" :"已下播", userId: "\(item.rid)", roomId: "\(item.rid)", liveWatchedCount: item.hot))
         }
         return tempArray
     }

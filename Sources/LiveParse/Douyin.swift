@@ -151,6 +151,7 @@ struct DouyinPlayQualitiesInfo: Codable {
     let stream_url: DouyinPlayQualities?
     let id_str: String
     let title: String
+    let user_count_str: String
     let cover: DouyinLiveUserAvatarInfo?
 }
 
@@ -247,11 +248,12 @@ public struct Douyin: LiveParse {
             "partition_type": parentId ?? "",
             "req_from": 2
         ]
+        
         let dataReq = try await AF.request("https://live.douyin.com/webcast/web/partition/detail/room/", method: .get, parameters: parameter, headers: headers).serializingDecodable(DouyinRoomMainResponse.self).value
         let listModelArray = dataReq.data.data
         var tempArray: Array<LiveModel> = []
         for item in listModelArray {
-            tempArray.append(LiveModel(userName: item.room.owner.nickname, roomTitle: item.room.title, roomCover: item.room.cover.url_list.first ?? "", userHeadImg: item.room.owner.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: "", userId: item.room.id_str, roomId: item.web_rid ?? ""))
+            tempArray.append(LiveModel(userName: item.room.owner.nickname, roomTitle: item.room.title, roomCover: item.room.cover.url_list.first ?? "", userHeadImg: item.room.owner.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: "", userId: item.room.id_str, roomId: item.web_rid ?? "", liveWatchedCount: item.room.user_count_str ?? ""))
         }
         return tempArray
     }
@@ -338,7 +340,7 @@ public struct Douyin: LiveParse {
         var tempArray: Array<LiveModel> = []
         for item in dataReq.data {
             let dict = try JSON(data: item.lives.rawdata.data(using: .utf8) ?? Data())
-            tempArray.append(LiveModel(userName: dict["owner"]["nickname"].stringValue, roomTitle: dict["title"].stringValue, roomCover: dict["cover"]["url_list"][0].stringValue, userHeadImg: dict["owner"]["avatar_thumb"]["url_list"][0].stringValue, liveType: .douyin, liveState: "", userId: dict["id_str"].stringValue, roomId: dict["owner"]["web_rid"].stringValue))
+            tempArray.append(LiveModel(userName: dict["owner"]["nickname"].stringValue, roomTitle: dict["title"].stringValue, roomCover: dict["cover"]["url_list"][0].stringValue, userHeadImg: dict["owner"]["avatar_thumb"]["url_list"][0].stringValue, liveType: .douyin, liveState: "", userId: dict["id_str"].stringValue, roomId: dict["owner"]["web_rid"].stringValue, liveWatchedCount: dict["user_count"].stringValue))
         }
         return tempArray
     }
@@ -354,7 +356,7 @@ public struct Douyin: LiveParse {
         default:
             liveState = LiveState.unknow.rawValue
         }
-        return LiveModel(userName: dataReq.data?.user.nickname ?? "", roomTitle: dataReq.data?.data?.first?.title ?? "", roomCover: dataReq.data?.data?.first?.cover?.url_list.first ?? "", userHeadImg: dataReq.data?.user.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveState, userId: userId ?? "", roomId: roomId)
+        return LiveModel(userName: dataReq.data?.user.nickname ?? "", roomTitle: dataReq.data?.data?.first?.title ?? "", roomCover: dataReq.data?.data?.first?.cover?.url_list.first ?? "", userHeadImg: dataReq.data?.user.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveState, userId: userId ?? "", roomId: roomId, liveWatchedCount: dataReq.data?.data?.first?.user_count_str ?? "")
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
@@ -391,7 +393,6 @@ public struct Douyin: LiveParse {
         ]
         
         let res = try await AF.request("https://live.douyin.com/webcast/room/web/enter/", method: .get, parameters: parameter, headers: headers).serializingDecodable(DouyinRoomPlayInfoMainData.self).value
-        
         return res
     }
     
@@ -431,7 +432,7 @@ public struct Douyin: LiveParse {
                         default:
                             liveStatus = LiveState.unknow.rawValue
                         }
-                        return LiveModel(userName: res.data.room.owner.nickname, roomTitle: res.data.room.title, roomCover: res.data.room.cover.url_list.first ?? "", userHeadImg: res.data.room.owner.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveStatus, userId: res.data.room.owner.id_str, roomId: res.data.room.owner.web_rid ?? "")
+                        return LiveModel(userName: res.data.room.owner.nickname, roomTitle: res.data.room.title, roomCover: res.data.room.cover.url_list.first ?? "", userHeadImg: res.data.room.owner.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveStatus, userId: res.data.room.owner.id_str, roomId: res.data.room.owner.web_rid ?? "", liveWatchedCount: res.data.room.user_count_str ?? "")
                     } else {
                         throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
                     }

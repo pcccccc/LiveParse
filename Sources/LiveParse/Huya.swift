@@ -67,6 +67,7 @@ struct HuyaRoomModel: Codable {
     let avatar180: String
     let uid: String
     let profileRoom: String
+    let totalCount: String
 }
 
 
@@ -87,6 +88,7 @@ struct HuyaRoomTLiveInfo: Codable {
     let sAvatar180: String
     let sIntroduction: String
     let sScreenshot: String
+    let lTotalCount: Int
 }
 
 struct HuyaRoomTLiveStreamInfo: Codable {
@@ -150,6 +152,7 @@ struct HuyaSearchDocs: Codable {
     let game_introduction: String
     let game_imgUrl: String
     let game_screenshot: String
+    let game_total_count: Int
 }
 
 public struct Huya: LiveParse {
@@ -186,7 +189,7 @@ public struct Huya: LiveParse {
         ).serializingDecodable(HuyaRoomMainData.self).value
         var tempArray: Array<LiveModel> = []
         for item in dataReq.data.datas {
-            tempArray.append(LiveModel(userName: item.nick, roomTitle: item.introduction, roomCover: item.screenshot, userHeadImg: item.avatar180, liveType: .huya, liveState: "", userId: item.uid, roomId: item.profileRoom))
+            tempArray.append(LiveModel(userName: item.nick, roomTitle: item.introduction, roomCover: item.screenshot, userHeadImg: item.avatar180, liveType: .huya, liveState: "", userId: item.uid, roomId: item.profileRoom, liveWatchedCount: item.totalCount))
         }
         return tempArray
     }
@@ -292,7 +295,7 @@ public struct Huya: LiveParse {
             default:
                 liveStatus = LiveState.close.rawValue
             }
-            return LiveModel(userName: data.roomInfo.tLiveInfo.sNick, roomTitle: data.roomInfo.tLiveInfo.sIntroduction, roomCover: data.roomInfo.tLiveInfo.sScreenshot, userHeadImg: data.roomInfo.tLiveInfo.sAvatar180, liveType: .huya, liveState: liveStatus, userId: "\(data.roomInfo.tLiveInfo.lYyid)", roomId: roomId)
+            return LiveModel(userName: data.roomInfo.tLiveInfo.sNick, roomTitle: data.roomInfo.tLiveInfo.sIntroduction, roomCover: data.roomInfo.tLiveInfo.sScreenshot, userHeadImg: data.roomInfo.tLiveInfo.sAvatar180, liveType: .huya, liveState: liveStatus, userId: "\(data.roomInfo.tLiveInfo.lYyid)", roomId: roomId, liveWatchedCount: "\(data.roomInfo.tLiveInfo.lTotalCount)")
         }
         throw NSError(domain: "获取房间信息失败", code: -9999, userInfo: ["desc": "获取房间信息失败"])
     }
@@ -319,7 +322,7 @@ public struct Huya: LiveParse {
         ).serializingDecodable(HuyaSearchResult.self).value
         var tempArray: Array<LiveModel> = []
         for item in dataReq.response.three.docs {
-            tempArray.append(LiveModel(userName: item.game_nick, roomTitle: item.game_introduction, roomCover: item.game_screenshot, userHeadImg: item.game_imgUrl, liveType: .huya, liveState: "正在直播", userId: "\(item.uid)", roomId: "\(item.room_id)"))
+            tempArray.append(LiveModel(userName: item.game_nick, roomTitle: item.game_introduction, roomCover: item.game_screenshot, userHeadImg: item.game_imgUrl, liveType: .huya, liveState: "正在直播", userId: "\(item.uid)", roomId: "\(item.room_id)", liveWatchedCount: "\(item.game_total_count)"))
         }
         return tempArray
     }
