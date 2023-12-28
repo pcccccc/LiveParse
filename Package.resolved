@@ -10,6 +10,42 @@
       }
     },
     {
+      "identity" : "bitbytedata",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tsolomko/BitByteData",
+      "state" : {
+        "revision" : "36df26fe4586b4f23d76cfd8b47076998343a2b2",
+        "version" : "2.0.3"
+      }
+    },
+    {
+      "identity" : "starscream",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/daltoniam/Starscream",
+      "state" : {
+        "revision" : "ac6c0fc9da221873e01bd1a0d4818498a71eef33",
+        "version" : "4.0.6"
+      }
+    },
+    {
+      "identity" : "swcompression",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tsolomko/SWCompression",
+      "state" : {
+        "revision" : "cd39ca0a3b269173bab06f68b182b72fa690765c",
+        "version" : "4.8.5"
+      }
+    },
+    {
+      "identity" : "swift-protobuf",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-protobuf.git",
+      "state" : {
+        "revision" : "65e8f29b2d63c4e38e736b25c27b83e012159be8",
+        "version" : "1.25.2"
+      }
+    },
+    {
       "identity" : "swiftyjson",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/SwiftyJSON/SwiftyJSON",

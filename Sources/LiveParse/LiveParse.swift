@@ -105,4 +105,22 @@ protocol LiveParse {
      - Throws: 如果无法完成请求或解析数据，将抛出错误。
      */
     static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel
+    
+    /**
+     获取对应平台主播弹幕链接重要参数。
+     
+     - Parameters:
+     - roomId: 对应平台主播房间号（并不一定url中出现的房间号， 抖音对应原始字段为webrid）。
+     - userId: 对应平台用户id（抖音对应原始字段为room_id_str）。
+     
+     - Returns: 对应平台主播连接WebSocket重要参数, B站 虎牙 斗鱼链接WebSocket后第一次验证身份时需要，抖音则为url params和header (元组)
+     
+         B站：0: roomId(ws参数名:roomid) & token(ws参数名:key) & buvid; 1: nil
+         Douyu: 0: roomid; 1: nil
+         Huya: 0: lYyid & lChannelId & lSubChannelId; 1: nil
+         Douyin: 0: URL Params; 1: Cookie: ttwid, ac_nonce
+     
+     - Throws: 如果无法完成请求或解析数据，将抛出错误。
+     */
+    static func getDanmukuArgs(roomId: String) async throws -> ([String: String], [String: String]?)
 }

@@ -221,7 +221,7 @@ struct BilibiliBuvidModel: Codable {
     let b_4: String
 }
 
-struct BilibiliDanmuModel: Codable {
+public struct BilibiliDanmuModel: Codable {
     let group: String
     let business_id: Int
     let refresh_row_factor: Double
@@ -283,7 +283,7 @@ struct BilibiliRoomAnchorBaseInfo: Codable {
 }
 
 public struct Bilibili: LiveParse {
-    
+
     public static func getCategoryList() async throws -> [LiveMainListModel] {
         let dataReq = try await AF.request("https://api.live.bilibili.com/room/v1/Area/getList", method: .get).serializingDecodable(BilibiliMainData<[BilibiliMainListModel]>.self).value
         var tempArray: [LiveMainListModel] = []
@@ -543,6 +543,12 @@ public struct Bilibili: LiveParse {
             UserDefaults.standard.setValue(resp.response?.headers["Set-Cookie"] ?? "", forKey: "BilibiliCookie")
         }
         return dataReq
+    }
+    
+    public static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
+        let buvid = try await getBuvid()
+        let resp = try await getRoomDanmuDetail(roomId: roomId)
+        return (["roomId": roomId, "buvid": buvid,"token": resp.token], nil)
     }
     
     public static func getBuvid() async throws -> String {

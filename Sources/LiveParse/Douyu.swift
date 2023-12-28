@@ -271,6 +271,10 @@ public struct Douyu: LiveParse {
         return try await Douyu.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
+    public static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
+        (["roomId": roomId], nil)
+    }
+    
     public static func getCategoryList(id: String) async throws -> Array<LiveCategoryModel> {
         let dataReq = try await AF.request(
             "https://www.douyu.com/japi/weblist/api/getC2List",

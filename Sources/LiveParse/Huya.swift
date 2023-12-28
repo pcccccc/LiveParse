@@ -156,7 +156,7 @@ struct HuyaSearchDocs: Codable {
 }
 
 public struct Huya: LiveParse {
-    
+
     public static func getCategoryList() async throws -> [LiveMainListModel] {
         return [
             LiveMainListModel(id: "1", title: "网游", icon: "", subList: try await getCategorySubList(id: "1")),
@@ -254,7 +254,7 @@ public struct Huya: LiveParse {
                         var url = ""
                         let bitRateInfo = bitRateInfoArray[index]
                         if streamInfo.iMobilePriorityRate > 15 { //15帧以下，KSPlayer可能会产生抽动问题。如果使用IINA则可以正常播放
-                            if bitRateInfo.iBitRate > 0 {
+                            if bitRateInfo.iBitRate > 0 && bitRateInfo.sDisplayName.contains("HDR") == false { //如果HDR视频包含ratio参数会直接报错
                                 url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&ratio=\(bitRateInfo.iBitRate)"
                             }else {
                                 url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)"
@@ -377,6 +377,34 @@ public struct Huya: LiveParse {
             throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
         }
         return try await Huya.getLiveLastestInfo(roomId: roomId, userId: nil)
+    }
+    
+    public static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
+        let dataReq = try await AF.request(
+            "https://m.huya.com/\(roomId)",
+            method: .get,
+            headers: [
+                HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
+            ]
+        ).serializingString().value
+        let regex = try NSRegularExpression(pattern: "window\\.HNF_GLOBAL_INIT.=.\\{(.*?)\\}.</script>", options: [])
+        let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
+        for match in matchs {
+            let matchRange = Range(match.range, in: dataReq)!
+            let matchedSubstring = dataReq[matchRange]
+            var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
+            nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
+            let liveData = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
+            return (
+                [
+                    "lYyid": "\(liveData.roomInfo.tLiveInfo.lYyid )",
+                    "lChannelId": "\(liveData.roomInfo.tLiveInfo.tLiveStreamInfo.vStreamInfo.value.first?.lChannelId ?? 0)",
+                    "lSubChannelId": "\(liveData.roomInfo.tLiveInfo.tLiveStreamInfo.vStreamInfo.value.first?.lSubChannelId ?? 0)"
+                ],
+                nil
+            )
+        }
+        return ([:], nil)
     }
     
     public static func getUUID() -> String {

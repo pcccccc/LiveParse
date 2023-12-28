@@ -3,10 +3,11 @@ import XCTest
 
 final class LiveParseTests: XCTestCase {
     func testExample() throws {
-        // XCTest Documentation
-        // https://developer.apple.com/documentation/xctest
-
-        // Defining Test Cases and Test Methods
-        // https://developer.apple.com/documentation/xctest/defining_test_cases_and_test_methods
+        //bilibili
+        Task {
+            let categoryList = try await Bilibili.getCategoryList()
+            let roomList = try await Bilibili.getRoomList(id: categoryList.first?.subList.first?.id ?? "", parentId: categoryList.first?.id, page: 1)
+            _ = try await Bilibili.getLiveLastestInfo(roomId: roomList.first?.roomId ?? "", userId: nil)
+        }
     }
 }
