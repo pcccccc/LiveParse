@@ -1,4 +1,4 @@
-# LiveParse ![GitHub release](https://img.shields.io/badge/release-v1.0.0-blue.svg)
+# LiveParse ![GitHub release](https://img.shields.io/badge/release-v1.0.3-blue.svg)
 
 ## 介绍： 
 
@@ -39,10 +39,47 @@ do {
 }
 ```
 
+通过抖音分享码获取弹幕信息：
+
+```swift
+class ViewModel: ObservableObject {
+    
+    var socketConnection: WebSocketConnection?
+    
+    func getDanmuInfo() {
+        Task {
+
+            let room = try await Douyin.getRoomInfoFromShareCode(shareCode: "2- #在抖音，记录美好生活#【中标标院】正在直播，来和我一起支持Ta吧。复制下方链接，打开【抖音】，直接观看直播！ https://v.douyin.com/i8gXjg1D/ 4@0.com 08/22")
+            print(try await Douyin.getPlayArgs(roomId: room.roomId, userId: room.userId))
+            let danmuArgs = try await Douyin.getDanmukuArgs(roomId: room.roomId)
+            socketConnection = WebSocketConnection(parameters: danmuArgs.0, headers: danmuArgs.1, liveType: room.liveType)
+            socketConnection!.delegate = self
+            socketConnection!.connect()
+//            //断开
+//            socketConnection!.disconnect()
+        }
+    }
+}
+
+extension ViewModel: WebSocketConnectionDelegate {
+    func webSocketDidConnect() {//连接成功
+        
+    }
+
+    func webSocketDidDisconnect(error: Error?) {//连接失败
+        
+    }
+    /// 接收到消息后的回调(String)
+    func webSocketDidReceiveMessage(text: String, color: UInt32) {
+        print("弹幕：==>\(text)" )
+    }
+}
+```
+
 ## TODO：
 
 - [x] 增加对应平台观看人数（人气）。
-- [ ] 弹幕监控。
+- [x] 弹幕监控。
 
 
 ## 参考及引用：

@@ -48,7 +48,7 @@ struct DouyinStreamerData: Codable {
     let title_type: Int?
     let cover_type: Int?
     let room: DouyinRoomData
-    let owner: DouyinRoomOwnerData
+    let owner: DouyinRoomOwnerData?
 }
 
 struct DouyinRoomData: Codable {
@@ -358,7 +358,7 @@ public struct Douyin: LiveParse {
         default:
             liveState = LiveState.unknow.rawValue
         }
-        return LiveModel(userName: dataReq.data?.user.nickname ?? "", roomTitle: dataReq.data?.data?.first?.title ?? "", roomCover: dataReq.data?.data?.first?.cover?.url_list.first ?? "", userHeadImg: dataReq.data?.user.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveState, userId: userId ?? "", roomId: roomId, liveWatchedCount: dataReq.data?.data?.first?.user_count_str ?? "")
+        return LiveModel(userName: dataReq.data?.user.nickname ?? "", roomTitle: dataReq.data?.data?.first?.title ?? "", roomCover: dataReq.data?.data?.first?.cover?.url_list.first ?? "", userHeadImg: dataReq.data?.user.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveState, userId: userId ?? (dataReq.data?.data?.first?.id_str ?? ""), roomId: roomId, liveWatchedCount: dataReq.data?.data?.first?.user_count_str ?? "")
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
@@ -435,7 +435,7 @@ public struct Douyin: LiveParse {
                         default:
                             liveStatus = LiveState.unknow.rawValue
                         }
-                        return LiveModel(userName: res.data.room.owner.nickname, roomTitle: res.data.room.title, roomCover: res.data.room.cover.url_list.first ?? "", userHeadImg: res.data.room.owner.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveStatus, userId: res.data.room.owner.id_str, roomId: res.data.room.owner.web_rid ?? "", liveWatchedCount: res.data.room.user_count_str ?? "")
+                        return LiveModel(userName: res.data.room.owner.nickname, roomTitle: res.data.room.title, roomCover: res.data.room.cover.url_list.first ?? "", userHeadImg: res.data.room.owner.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveStatus, userId: res.data.room.id_str, roomId: res.data.room.owner.web_rid ?? "", liveWatchedCount: res.data.room.user_count_str ?? "")
                     } else {
                         throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
                     }

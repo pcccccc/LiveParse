@@ -44,11 +44,12 @@ public class DouyinSocketDataParser: WebSocketDataParser {
             if payloadPackage.needAck {
                 douyinSendAck(logID, payloadPackage.internalExt, connection)
             }
+            
             for msg in payloadPackage.messagesList {
                 if msg.method == "WebcastChatMessage" {
                     dyUnPackWebcastChatMessage(msg.payload, connection)
                 }else if msg.method == "WebcastRoomUserSeqMessage" {//暂时不知道干嘛用的
-//                    dyUnPackWebcastRoomUserSeqMessage(msg.payload)
+                    dyUnPackWebcastRoomUserSeqMessage(msg.payload)
                 }
             }
         }catch {
@@ -73,6 +74,15 @@ public class DouyinSocketDataParser: WebSocketDataParser {
         do {
             let chatMessage = try Douyin_ChatMessage(serializedData: payload)
             connection.delegate?.webSocketDidReceiveMessage(text: chatMessage.content, color: 0xFFFFFF)
+        }catch {
+            
+        }
+    }
+    
+    private func dyUnPackWebcastRoomUserSeqMessage(_ payload: Data) {
+        do {
+            let roomUserSeqMessage = try Douyin_RoomUserSeqMessage(serializedData: payload)
+            
         }catch {
             
         }
