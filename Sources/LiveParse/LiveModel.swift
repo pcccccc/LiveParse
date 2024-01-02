@@ -9,7 +9,7 @@ import Foundation
 import Alamofire
 import CloudKit
 
-public struct LiveModel: Codable {
+public struct LiveModel: Codable, Equatable {
     public let userName: String
     public let roomTitle: String
     public let roomCover: String
@@ -34,6 +34,10 @@ public struct LiveModel: Codable {
     
     public var description: String {
         return "\(userName)-\(roomTitle)-\(roomCover)-\(userHeadImg)-\(liveType)-\(liveState ?? "")-\(userId)-\(roomId)"
+    }
+    
+    public static func ==(lhs: LiveModel, rhs: LiveModel) -> Bool {
+        return lhs.roomId == rhs.roomId
     }
     
     public func liveStateFormat() -> String {
