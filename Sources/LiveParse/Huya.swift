@@ -79,11 +79,13 @@ struct HuyaRoomInfoMainModel: Codable {
 struct HuyaRoomInfoModel: Codable {
     let eLiveStatus: Int
     let tLiveInfo: HuyaRoomTLiveInfo
+    let tRecentLive: HuyaRoomTLiveInfo
+    let tReplayInfo: HuyaRoomTLiveInfo
 }
 
 struct HuyaRoomTLiveInfo: Codable {
     let lYyid: Int
-    let tLiveStreamInfo: HuyaRoomTLiveStreamInfo
+    let tLiveStreamInfo: HuyaRoomTLiveStreamInfo?
     let sNick: String
     let sAvatar180: String
     let sIntroduction: String
@@ -210,7 +212,7 @@ public struct Huya: LiveParse {
             var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
             nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
             let liveData = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
-            let streamInfo = liveData.roomInfo.tLiveInfo.tLiveStreamInfo.vStreamInfo.value.first
+            let streamInfo = liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value.first
             var playQualitiesInfo: Dictionary<String, String> = [:]
             if let urlComponent = URLComponents(string: "?\(streamInfo?.sFlvAntiCode ?? "")") {
                 if let queryItems = urlComponent.queryItems {
@@ -247,8 +249,8 @@ public struct Huya: LiveParse {
                 let result = urlComps.url!
                 let res = result.absoluteString as NSString
                 var tempArray: [LiveQualityModel] = []
-                for streamInfo in liveData.roomInfo.tLiveInfo.tLiveStreamInfo.vStreamInfo.value {
-                    let bitRateInfoArray  = liveData.roomInfo.tLiveInfo.tLiveStreamInfo.vBitRateInfo.value
+                for streamInfo in liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value {
+                    let bitRateInfoArray  = liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vBitRateInfo.value
                     var liveQualtys: [LiveQualityDetail] = []
                     for index in 0 ..< bitRateInfoArray.count {
                         var url = ""
@@ -287,15 +289,26 @@ public struct Huya: LiveParse {
             let matchedSubstring = dataReq[matchRange]
             var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
             nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
-            let data = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
-            var liveStatus = ""
-            switch data.roomInfo.eLiveStatus {
-            case 2:
-                liveStatus = LiveState.live.rawValue
-            default:
-                liveStatus = LiveState.close.rawValue
+            do {
+                let data = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
+                var liveStatus = ""
+                var liveInfo = data.roomInfo.tLiveInfo
+                switch data.roomInfo.eLiveStatus {
+                    case 2:
+                        liveStatus = LiveState.live.rawValue
+                        liveInfo = data.roomInfo.tLiveInfo
+                    case 3:
+                        liveStatus = LiveState.video.rawValue
+                        liveInfo = data.roomInfo.tReplayInfo
+                default:
+                    liveStatus = LiveState.close.rawValue
+                        liveInfo = data.roomInfo.tRecentLive
+                }
+                return LiveModel(userName: liveInfo.sNick, roomTitle: liveInfo.sIntroduction, roomCover: liveInfo.sScreenshot, userHeadImg: liveInfo.sAvatar180, liveType: .huya, liveState: liveStatus, userId: "\(liveInfo.lYyid)", roomId: roomId, liveWatchedCount: "\(liveInfo.lTotalCount)")
+            }catch {
+                print(error)
+                throw NSError(domain: "获取房间信息失败", code: -9999, userInfo: ["desc": "获取房间信息失败"])
             }
-            return LiveModel(userName: data.roomInfo.tLiveInfo.sNick, roomTitle: data.roomInfo.tLiveInfo.sIntroduction, roomCover: data.roomInfo.tLiveInfo.sScreenshot, userHeadImg: data.roomInfo.tLiveInfo.sAvatar180, liveType: .huya, liveState: liveStatus, userId: "\(data.roomInfo.tLiveInfo.lYyid)", roomId: roomId, liveWatchedCount: "\(data.roomInfo.tLiveInfo.lTotalCount)")
         }
         throw NSError(domain: "获取房间信息失败", code: -9999, userInfo: ["desc": "获取房间信息失败"])
     }
@@ -398,8 +411,8 @@ public struct Huya: LiveParse {
             return (
                 [
                     "lYyid": "\(liveData.roomInfo.tLiveInfo.lYyid )",
-                    "lChannelId": "\(liveData.roomInfo.tLiveInfo.tLiveStreamInfo.vStreamInfo.value.first?.lChannelId ?? 0)",
-                    "lSubChannelId": "\(liveData.roomInfo.tLiveInfo.tLiveStreamInfo.vStreamInfo.value.first?.lSubChannelId ?? 0)"
+                    "lChannelId": "\(liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value.first?.lChannelId ?? 0)",
+                    "lSubChannelId": "\(liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value.first?.lSubChannelId ?? 0)"
                 ],
                 nil
             )

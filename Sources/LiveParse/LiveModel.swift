@@ -36,6 +36,20 @@ public struct LiveModel: Codable {
         return "\(userName)-\(roomTitle)-\(roomCover)-\(userHeadImg)-\(liveType)-\(liveState ?? "")-\(userId)-\(roomId)"
     }
     
+    public func liveStateFormat() -> String {
+        switch LiveState(rawValue: liveState ?? "0") {
+            case .close:
+                return "已下播"
+            case .live:
+                return "正在直播"
+            case .video:
+                return "回放/轮播"
+            case .unknow:
+                return "未知状态"
+            case .none:
+                return "未知状态"
+        }
+    }
 }
 
 public struct LiveQualityModel: Codable {
@@ -80,6 +94,7 @@ public enum LiveState: String, Codable {
          live = "1", //直播中
          video = "2", //录播、轮播
          unknow = "3" //未知
+    
 }
 
 public enum LiveCodeType: String, Codable {
