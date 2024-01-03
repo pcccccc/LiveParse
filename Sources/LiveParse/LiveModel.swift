@@ -71,14 +71,14 @@ public struct LiveQualityDetail: Codable {
     public var liveType: LiveType
 }
 
-public struct LiveCategoryModel {
+public struct LiveCategoryModel: Codable {
     public let id: String //B站: id; Douyu:cid2; Huya: gid; Douyin: partitionId
     public let parentId: String //B站: parent_id; Douyu: 不需要; Huya: 不需要; Douyin: partitionType
     public let title: String
     public let icon: String
 }
 
-public struct LiveMainListModel {
+public struct LiveMainListModel: Codable {
     public let id: String
     public let title: String
     public let icon: String
