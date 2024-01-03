@@ -1,4 +1,4 @@
-# LiveParse ![GitHub release](https://img.shields.io/badge/release-v1.0.4-blue.svg)
+# LiveParse ![GitHub release](https://img.shields.io/badge/release-v1.0.6-blue.svg)
 
 ## 介绍： 
 

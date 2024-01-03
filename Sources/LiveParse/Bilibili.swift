@@ -207,7 +207,7 @@ public struct BilibiliQRMainModel: Codable {
     let data: BilibiliQRMainData
 }
 
-struct BilibiliQRMainData: Codable {
+public struct BilibiliQRMainData: Codable {
     let url: String?
     let qrcode_key: String?
     let refresh_token: String?
