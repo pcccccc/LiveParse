@@ -200,7 +200,7 @@ struct BilibiliPlayInfoModel: Codable {
     let extra: String
 }
 
-struct BilibiliQRMainModel: Codable {
+public struct BilibiliQRMainModel: Codable {
     let code: Int
     let message: String
     let ttl: Int
@@ -521,7 +521,7 @@ public struct Bilibili: LiveParse {
         return try await Bilibili.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
-    static func getQRCodeUrl() async throws -> BilibiliQRMainModel {
+    public static func getQRCodeUrl() async throws -> BilibiliQRMainModel {
         let dataReq = try await AF.request(
             "https://passport.bilibili.com/x/passport-login/web/qrcode/generate",
             method: .get
@@ -529,7 +529,7 @@ public struct Bilibili: LiveParse {
         return dataReq
     }
     
-    static func getQRCodeState(qrcode_key: String) async throws -> BilibiliQRMainModel {
+    public static func getQRCodeState(qrcode_key: String) async throws -> BilibiliQRMainModel {
         let resp = AF.request(
             "https://passport.bilibili.com/x/passport-login/web/qrcode/poll",
             method: .get,
