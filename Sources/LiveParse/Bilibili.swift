@@ -201,19 +201,19 @@ struct BilibiliPlayInfoModel: Codable {
 }
 
 public struct BilibiliQRMainModel: Codable {
-    let code: Int
-    let message: String
-    let ttl: Int
-    let data: BilibiliQRMainData
+    public let code: Int
+    public let message: String
+    public let ttl: Int
+    public let data: BilibiliQRMainData
 }
 
 public struct BilibiliQRMainData: Codable {
-    let url: String?
-    let qrcode_key: String?
-    let refresh_token: String?
-    let timestamp: Int?
-    let code: Int?
-    let message: String?
+    public let url: String?
+    public let qrcode_key: String?
+    public let refresh_token: String?
+    public let timestamp: Int?
+    public let code: Int?
+    public let message: String?
 }
 
 struct BilibiliBuvidModel: Codable {
