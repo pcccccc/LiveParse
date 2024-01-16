@@ -540,6 +540,7 @@ public struct Bilibili: LiveParse {
         
         let dataReq = try await resp.serializingDecodable(BilibiliQRMainModel.self).value
         if dataReq.data.code == 0 {
+            BiliBiliCookie.cookie = resp.response?.headers["Set-Cookie"] ?? ""
             return (dataReq, resp.response?.headers["Set-Cookie"] ?? "")
         }
         return (dataReq, "")
