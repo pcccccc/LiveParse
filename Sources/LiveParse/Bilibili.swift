@@ -529,7 +529,7 @@ public struct Bilibili: LiveParse {
         return dataReq
     }
     
-    public static func getQRCodeState(qrcode_key: String) async throws -> BilibiliQRMainModel {
+    public static func getQRCodeState(qrcode_key: String) async throws -> (BilibiliQRMainModel, String) {
         let resp = AF.request(
             "https://passport.bilibili.com/x/passport-login/web/qrcode/poll",
             method: .get,
@@ -540,9 +540,9 @@ public struct Bilibili: LiveParse {
         
         let dataReq = try await resp.serializingDecodable(BilibiliQRMainModel.self).value
         if dataReq.data.code == 0 {
-            UserDefaults.standard.setValue(resp.response?.headers["Set-Cookie"] ?? "", forKey: "BilibiliCookie")
+            return (dataReq, resp.response?.headers["Set-Cookie"] ?? "")
         }
-        return dataReq
+        return (dataReq, "")
     }
     
     public static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {

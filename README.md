@@ -1,4 +1,4 @@
-# LiveParse ![GitHub release](https://img.shields.io/badge/release-v1.0.6-blue.svg)
+# LiveParse ![GitHub release](https://img.shields.io/badge/release-v1.0.8-blue.svg)
 
 ## 介绍： 
 
@@ -11,7 +11,7 @@
 ## Swift Package Manager：
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pcccccc/LiveParse.git", .upToNextMajor(from:"1.0.1"))
+    .package(url: "https://github.com/pcccccc/LiveParse.git", .upToNextMajor(from:"1.0.8"))
 ]
 ```
 ## 使用：
