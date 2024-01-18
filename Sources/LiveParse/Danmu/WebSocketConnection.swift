@@ -118,21 +118,24 @@ extension WebSocketConnection: WebSocketDelegate {
     public func didReceive(event: Starscream.WebSocketEvent, client: Starscream.WebSocketClient) {
         receiveCounter += 1
         switch event {
-        case .connected(let headers):
-            print("WebSocket connected: \(headers)")
+            case .connected(let headers):
+                print("WebSocket connected: \(headers)")
                 tryCount = 0
                 parser.performHandshake(connection: self)
                 delegate?.webSocketDidConnect()
-        case .disconnected(let reason, let code):
+            case .disconnected(let reason, let code):
                 let error = NSError(domain: reason, code: Int(code), userInfo: ["reason" : reason])
                 delegate?.webSocketDidDisconnect(error: error)
                 reConnect()
-        case .text(let string): break
-        case .binary(let data):
+            case .text(let string): break
+            case .binary(let data):
                 parser.parse(data: data, connection: self)
-        case .error(let error):
+            case .error(let error):
                 reConnect()
                 delegate?.webSocketDidDisconnect(error: error)
+            case .peerClosed:
+                reConnect()
+                delegate?.webSocketDidDisconnect(error: nil)
         default:
             break
         }
