@@ -335,7 +335,7 @@ public struct Bilibili: LiveParse {
                 "qn": ""
             ],
             headers: BiliBiliCookie.cookie == "" ? nil : [
-                "cookie": BiliBiliCookie.cookie
+                "cookie": BiliBiliCookie.cookie,
             ]
         ).serializingDecodable(BilibiliMainData<BiliBiliQualityModel>.self).value
         var liveQualitys: [LiveQualityDetail] = []
@@ -380,7 +380,46 @@ public struct Bilibili: LiveParse {
                 tempArray.append(LiveQualityModel(cdn: "线路 \(i + 1)", qualitys: qualitys))
             }
             return tempArray
+        }else {
+            let dataReq = try await AF.request(
+                "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
+                method: .get,
+                parameters: [
+                    "platform": "h5",
+                    "room_id": roomId,
+                    "qn": "1500",
+                    "protocol": "0,1",
+                    "format": "0,2",
+                    "codec": "0,1",
+                    "mask": "0"
+                ],
+                headers: BiliBiliCookie.cookie == "" ? nil : [
+                    "cookie": BiliBiliCookie.cookie
+                ]
+            ).serializingDecodable(BilibiliMainData<BiliBiliPlayURLInfoMain>.self).value
+            for streamInfo in dataReq.data.playurl_info.playurl.stream {
+                if streamInfo.protocol_name == "http_hls" || streamInfo.protocol_name == "http_stream" {
+                    if hostArray.contains((streamInfo.format.last?.codec.last?.url_info.last?.host ?? "")) == false {
+                        hostArray.append((streamInfo.format.last?.codec.last?.url_info.last?.host ?? ""))
+                    }
+                    let url = (streamInfo.format.last?.codec.last?.url_info.last?.host ?? "") + (streamInfo.format.last?.codec.last?.base_url ?? "") + (streamInfo.format.last?.codec.last?.url_info.last?.extra ?? "")
+                    liveQualitys.append(.init(roomId: roomId, title: "默认", qn: 1500, url: url, liveCodeType: streamInfo.protocol_name == "http_hls" ? .hls : .flv, liveType: .bilibili))
+                }
+            }
+            var tempArray: [LiveQualityModel] = []
+            for i in 0..<hostArray.count {
+                let host = hostArray[i]
+                var qualitys: [LiveQualityDetail] = []
+                for item in liveQualitys {
+                    if item.url.contains(host) == true {
+                        qualitys.append(item)
+                    }
+                }
+                tempArray.append(LiveQualityModel(cdn: "线路 \(i + 1)", qualitys: qualitys))
+            }
+            return tempArray
         }
+        
         return []
     }
     
