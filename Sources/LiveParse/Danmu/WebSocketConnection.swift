@@ -31,6 +31,11 @@ public class WebSocketConnection {
     public var delegate: WebSocketConnectionDelegate?
     let liveType: LiveType
     var heartbeatTimer: Timer?
+    var reConnectTimer: Timer?
+    var receiveCounter: UInt64 = 0
+    var lastReceiveCounts: UInt64 = 0
+    var tryCount: Int = 0
+    
     var url: URL {
         switch liveType {
             case .bilibili:
@@ -94,22 +99,39 @@ public class WebSocketConnection {
     public func disconnect() {
         socket?.disconnect()
     }
+    
+    func reConnect() {
+        if reConnectTimer == nil {
+            reConnectTimer = Timer(timeInterval: TimeInterval(10), repeats: true) {_ in
+                self.socket?.connect()
+                self.tryCount += 1
+            }
+            RunLoop.current.add(reConnectTimer!, forMode: .common)
+        }
+        if tryCount > 10 {
+            reConnectTimer?.invalidate()
+        }
+    }
 }
 
 extension WebSocketConnection: WebSocketDelegate {
     public func didReceive(event: Starscream.WebSocketEvent, client: Starscream.WebSocketClient) {
+        receiveCounter += 1
         switch event {
         case .connected(let headers):
             print("WebSocket connected: \(headers)")
+                tryCount = 0
                 parser.performHandshake(connection: self)
                 delegate?.webSocketDidConnect()
         case .disconnected(let reason, let code):
                 let error = NSError(domain: reason, code: Int(code), userInfo: ["reason" : reason])
                 delegate?.webSocketDidDisconnect(error: error)
+                reConnect()
         case .text(let string): break
         case .binary(let data):
                 parser.parse(data: data, connection: self)
         case .error(let error):
+                reConnect()
                 delegate?.webSocketDidDisconnect(error: error)
         default:
             break
