@@ -416,29 +416,28 @@ public struct Douyin: LiveParse {
                     let regex = try NSRegularExpression(pattern: secUserIdPattern)
                     let nsString = redirectUrl as NSString
                     let results = regex.matches(in: redirectUrl, range: NSRange(location: 0, length: nsString.length))
+                    var sec_user_id = ""
                     if let match = results.first {
                         let range = match.range(at: 1) // sec_user_id
-                        let sec_user_id = nsString.substring(with: range)
-                        let requestUrl = "https://webcast.amemv.com/webcast/room/reflow/info/?verifyFp=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf&type_id=0&live_id=1&room_id=\(roomId)&sec_user_id=\(sec_user_id)&app_id=1128&msToken=wrqzbEaTlsxt52-vxyZo_mIoL0RjNi1ZdDe7gzEGMUTVh_HvmbLLkQrA_1HKVOa2C6gkxb6IiY6TY2z8enAkPEwGq--gM-me3Yudck2ailla5Q4osnYIHxd9dI4WtQ=="
-                        let douyinTK = try await Douyin.signURL(requestUrl)
-                        let res = try await AF.request(douyinTK.url, headers: [
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
-                            "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2",
-                            "Cookie": "s_v_web_id=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf"
-                        ]).serializingDecodable(DouyinSecUserIdRoomData.self).value
-                        var liveStatus = LiveState.unknow.rawValue
-                        switch res.data.room.status {
-                        case 4:
-                            liveStatus = LiveState.close.rawValue
-                        case 2:
-                            liveStatus = LiveState.live.rawValue
-                        default:
-                            liveStatus = LiveState.unknow.rawValue
-                        }
-                        return LiveModel(userName: res.data.room.owner.nickname, roomTitle: res.data.room.title, roomCover: res.data.room.cover.url_list.first ?? "", userHeadImg: res.data.room.owner.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveStatus, userId: res.data.room.id_str, roomId: res.data.room.owner.web_rid ?? "", liveWatchedCount: res.data.room.user_count_str ?? "")
-                    } else {
-                        throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+                        sec_user_id = nsString.substring(with: range)
                     }
+                    let requestUrl = "https://webcast.amemv.com/webcast/room/reflow/info/?verifyFp=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf&type_id=0&live_id=1&room_id=\(roomId)&sec_user_id=\(sec_user_id)&app_id=1128&msToken=wrqzbEaTlsxt52-vxyZo_mIoL0RjNi1ZdDe7gzEGMUTVh_HvmbLLkQrA_1HKVOa2C6gkxb6IiY6TY2z8enAkPEwGq--gM-me3Yudck2ailla5Q4osnYIHxd9dI4WtQ=="
+                    let douyinTK = try await Douyin.signURL(requestUrl)
+                    let res = try await AF.request(douyinTK.url, headers: [
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+                        "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2",
+                        "Cookie": "s_v_web_id=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf"
+                    ]).serializingDecodable(DouyinSecUserIdRoomData.self).value
+                    var liveStatus = LiveState.unknow.rawValue
+                    switch res.data.room.status {
+                    case 4:
+                        liveStatus = LiveState.close.rawValue
+                    case 2:
+                        liveStatus = LiveState.live.rawValue
+                    default:
+                        liveStatus = LiveState.unknow.rawValue
+                    }
+                    return LiveModel(userName: res.data.room.owner.nickname, roomTitle: res.data.room.title, roomCover: res.data.room.cover.url_list.first ?? "", userHeadImg: res.data.room.owner.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveStatus, userId: res.data.room.id_str, roomId: res.data.room.owner.web_rid ?? "", liveWatchedCount: res.data.room.user_count_str ?? "")
                 } else {
                     throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
                 }
