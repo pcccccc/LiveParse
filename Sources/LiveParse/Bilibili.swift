@@ -424,57 +424,28 @@ public struct Bilibili: LiveParse {
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
-        do {
-            let dataReq = try await AF.request(
-                "https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom",
-                parameters: [
-                    "room_id": roomId
-                ],
-                headers: BiliBiliCookie.cookie == "" ? nil : [
-                    "cookie": BiliBiliCookie.cookie
-                ]
-            ).serializingDecodable(BilibiliMainData<BilibiliRoomInfoData>.self).value
-            var liveStatus = LiveState.unknow.rawValue
-            switch dataReq.data.room_info.live_status {
-            case 0:
-                liveStatus = LiveState.close.rawValue
-            case 1:
-                liveStatus = LiveState.live.rawValue
-            case 2:
-                liveStatus = LiveState.close.rawValue
-            default:
-                liveStatus = LiveState.unknow.rawValue
-            }
-            var realRoomId = roomId
-            if roomId != "\(dataReq.data.room_info.room_id)" { //如果两个RoomId不想等，用服务器返回的真实ID
-                realRoomId = "\(dataReq.data.room_info.room_id)"
-            }
-            return LiveModel(userName: dataReq.data.anchor_info.base_info.uname, roomTitle: dataReq.data.room_info.title, roomCover: dataReq.data.room_info.cover, userHeadImg: dataReq.data.anchor_info.base_info.face, liveType: .bilibili, liveState: liveStatus, userId: "\(dataReq.data.room_info.uid)", roomId: realRoomId, liveWatchedCount: dataReq.data.watched_show?.text_small ?? "")
-        }catch {
-            print(error)
-            let dataReq = try await AF.request(
-                "https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom",
-                parameters: [
-                    "room_id": roomId
-                ]
-            ).serializingDecodable(BilibiliMainData<BilibiliRoomInfoData>.self).value
-            var liveStatus = LiveState.unknow.rawValue
-            switch dataReq.data.room_info.live_status {
-            case 0:
-                liveStatus = LiveState.close.rawValue
-            case 1:
-                liveStatus = LiveState.live.rawValue
-            case 2:
-                liveStatus = LiveState.close.rawValue
-            default:
-                liveStatus = LiveState.unknow.rawValue
-            }
-            var realRoomId = roomId
-            if roomId != "\(dataReq.data.room_info.room_id)" { //如果两个RoomId不想等，用服务器返回的真实ID
-                realRoomId = "\(dataReq.data.room_info.room_id)"
-            }
-            return LiveModel(userName: dataReq.data.anchor_info.base_info.uname, roomTitle: dataReq.data.room_info.title, roomCover: dataReq.data.room_info.cover, userHeadImg: dataReq.data.anchor_info.base_info.face, liveType: .bilibili, liveState: liveStatus, userId: "\(dataReq.data.room_info.uid)", roomId: realRoomId, liveWatchedCount: dataReq.data.watched_show?.text_small ?? "")
+        let dataReq = try await AF.request(
+            "https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom",
+            parameters: [
+                "room_id": roomId
+            ]
+        ).serializingDecodable(BilibiliMainData<BilibiliRoomInfoData>.self).value
+        var liveStatus = LiveState.unknow.rawValue
+        switch dataReq.data.room_info.live_status {
+        case 0:
+            liveStatus = LiveState.close.rawValue
+        case 1:
+            liveStatus = LiveState.live.rawValue
+        case 2:
+            liveStatus = LiveState.close.rawValue
+        default:
+            liveStatus = LiveState.unknow.rawValue
         }
+        var realRoomId = roomId
+        if roomId != "\(dataReq.data.room_info.room_id)" { //如果两个RoomId不想等，用服务器返回的真实ID
+            realRoomId = "\(dataReq.data.room_info.room_id)"
+        }
+        return LiveModel(userName: dataReq.data.anchor_info.base_info.uname, roomTitle: dataReq.data.room_info.title, roomCover: dataReq.data.room_info.cover, userHeadImg: dataReq.data.anchor_info.base_info.face, liveType: .bilibili, liveState: liveStatus, userId: "\(dataReq.data.room_info.uid)", roomId: realRoomId, liveWatchedCount: dataReq.data.watched_show?.text_small ?? "")
     }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
