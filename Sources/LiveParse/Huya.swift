@@ -201,7 +201,7 @@ public struct Huya: LiveParse {
             "https://m.huya.com/\(roomId)",
             method: .get,
             headers: [
-                HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
+                HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Mobile/15E148 Safari/604.1")
             ]
         ).serializingString().value
         let regex = try NSRegularExpression(pattern: "window\\.HNF_GLOBAL_INIT.=.\\{(.*?)\\}.</script>", options: [])
@@ -222,15 +222,15 @@ public struct Huya: LiveParse {
                 }
             }
             playQualitiesInfo.updateValue("1", forKey: "ver")
-            playQualitiesInfo.updateValue("2110211124", forKey: "sv")
+            playQualitiesInfo.updateValue("2402211431", forKey: "sv")
             let uid = try await Huya.getAnonymousUid()
             let now = Int(Date().timeIntervalSince1970) * 1000
             playQualitiesInfo.updateValue("\((Int(uid) ?? 0) + Int(now))", forKey: "seqid")
             playQualitiesInfo.updateValue(uid, forKey: "uid")
             playQualitiesInfo.updateValue(Huya.getUUID(), forKey: "uuid")
-            playQualitiesInfo.updateValue("100", forKey: "t")
-            playQualitiesInfo.updateValue("huya_live", forKey: "ctype")
-            let ss = "\(playQualitiesInfo["seqid"] ?? "")|\("huya_live")|\("100")".md5
+            playQualitiesInfo.updateValue("102", forKey: "t")
+            playQualitiesInfo.updateValue("tars_mp", forKey: "ctype")
+            let ss = "\(playQualitiesInfo["seqid"] ?? "")|\(playQualitiesInfo["ctype"] ?? "")|\(playQualitiesInfo["t"] ?? "")".md5
             let base64EncodedData = (playQualitiesInfo["fm"] ?? "").data(using: .utf8)!
             if let data = Data(base64Encoded: base64EncodedData) {
                 let fm = String(data: data, encoding: .utf8)!
@@ -257,9 +257,9 @@ public struct Huya: LiveParse {
                         let bitRateInfo = bitRateInfoArray[index]
                         if streamInfo.iMobilePriorityRate > 15 { //15帧以下，KSPlayer可能会产生抽动问题。如果使用IINA则可以正常播放
                             if bitRateInfo.iBitRate > 0 && bitRateInfo.sDisplayName.contains("HDR") == false { //如果HDR视频包含ratio参数会直接报错
-                                url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&ratio=\(bitRateInfo.iBitRate)"
+                                url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&dMod=mesh-0&ratio=\(bitRateInfo.iBitRate)"
                             }else {
-                                url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)"
+                                url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&dMod=mesh-0"
                             }
                             liveQualtys.append(.init(roomId: roomId, title: bitRateInfo.sDisplayName, qn: bitRateInfo.iBitRate, url: url, liveCodeType: .flv, liveType: .huya))
                         }
