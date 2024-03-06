@@ -157,6 +157,15 @@ struct DouyinPlayQualitiesInfo: Codable {
     let owner: DouyinRoomOwnerData?
 }
 
+struct DouyinLiveCoreSDKData: Codable {
+    let pull_data: DouyinLivePullData?
+}
+
+
+struct DouyinLivePullData: Codable {
+    let stream_data: String?
+}
+
 struct DouyinLiveUserInfo: Codable {
     let id_str: String
     let nickname: String
@@ -171,6 +180,7 @@ struct DouyinLiveUserAvatarInfo: Codable {
 
 struct DouyinPlayQualities: Codable {
     let hls_pull_url_map: DouyinPlayQualitiesHlsMap
+    let live_core_sdk_data: DouyinLiveCoreSDKData?
 }
 
 struct DouyinPlayQualitiesHlsMap: Codable {
@@ -262,25 +272,103 @@ public struct Douyin: LiveParse {
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
         let liveData = try await Douyin.getDouyinRoomDetail(roomId: roomId, userId: userId ?? "")
+        var tempArray: [LiveQualityDetail] = []
         if liveData.data?.data?.count ?? 0 > 0 {
-            let FULL_HD1 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.FULL_HD1 ?? ""
-            let HD1 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.HD1 ?? ""
-            let SD1 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.SD1 ?? ""
-            let SD2 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.SD2 ?? ""
-            var tempArray: [LiveQualityDetail] = []
-            if FULL_HD1 != "" {
-                tempArray.append(.init(roomId: roomId, title: "超清", qn: 0, url: FULL_HD1, liveCodeType: .hls, liveType: .douyin))
+            if liveData.data?.data?.first?.stream_url?.live_core_sdk_data?.pull_data?.stream_data ?? "" != "" {
+                var resJson = liveData.data?.data?.first?.stream_url?.live_core_sdk_data?.pull_data?.stream_data ?? ""
+                if let jsonData = resJson.data(using: .utf8) {
+                    do {
+                        let dictionary = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any]
+                        let liveData = dictionary?["data"] as? [String: Any]
+                        let origin = liveData?["origin"] as? [String: Any]
+                        let origin_main = origin?["main"] as? [String: Any]
+                        if let origin_flv = origin_main?["flv"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "原画_FLV", qn: 0, url: origin_flv, liveCodeType: .flv, liveType: .douyin))
+                        }
+                        if let origin_hls = origin_main?["hls"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "原画_HLS", qn: 0, url: origin_hls, liveCodeType: .hls, liveType: .douyin))
+                        }
+                        
+                        let uhd = liveData?["uhd"] as? [String: Any]
+                        let uhd_main = uhd?["main"] as? [String: Any]
+                        if let uhd_flv = uhd_main?["flv"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "蓝光_FLV", qn: 0, url: uhd_flv, liveCodeType: .flv, liveType: .douyin))
+                        }
+                        if let uhd_hls = uhd_main?["hls"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "蓝光_HLS", qn: 0, url: uhd_hls, liveCodeType: .hls, liveType: .douyin))
+                        }
+                        
+                        let hd = liveData?["hd"] as? [String: Any]
+                        let hd_main = hd?["main"] as? [String: Any]
+                        if let hd_flv = hd_main?["flv"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "超清_FLV", qn: 0, url: hd_flv, liveCodeType: .flv, liveType: .douyin))
+                        }
+                        if let hd_hls = hd_main?["hls"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "超清_HLS", qn: 0, url: hd_hls, liveCodeType: .hls, liveType: .douyin))
+                        }
+                        
+                        let sd = liveData?["sd"] as? [String: Any]
+                        let sd_main = sd?["main"] as? [String: Any]
+                        if let sd_flv = sd_main?["flv"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "高清_FLV", qn: 0, url: sd_flv, liveCodeType: .flv, liveType: .douyin))
+                        }
+                        if let sd_hls = sd_main?["hls"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "高清_HLS", qn: 0, url: sd_hls, liveCodeType: .hls, liveType: .douyin))
+                        }
+                        
+                        let ld = liveData?["ld"] as? [String: Any]
+                        let ld_main = ld?["main"] as? [String: Any]
+                        if let ld_flv = ld_main?["flv"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "标清_FLV", qn: 0, url: ld_flv, liveCodeType: .flv, liveType: .douyin))
+                        }
+                        if let ld_hls = ld_main?["hls"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "标清_HLS", qn: 0, url: ld_hls, liveCodeType: .hls, liveType: .douyin))
+                        }
+                        
+                        let md = liveData?["md"] as? [String: Any]
+                        let md_main = md?["main"] as? [String: Any]
+                        if let md_flv = md_main?["flv"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "标清2_FLV", qn: 0, url: md_flv, liveCodeType: .flv, liveType: .douyin))
+                        }
+                        if let md_hls = md_main?["hls"] as? String {
+                            tempArray.append(.init(roomId: roomId, title: "标清2_HLS", qn: 0, url: md_hls, liveCodeType: .hls, liveType: .douyin))
+                        }
+                        var qualityHls = LiveQualityModel(cdn: "线路 HLS", qualitys: [])
+                        var qualityFlv = LiveQualityModel(cdn: "线路 FLV", qualitys: [])
+                        for model in tempArray {
+                            if model.liveCodeType == .hls {
+                                qualityHls.qualitys.append(model)
+                            }
+                            if model.liveCodeType == .flv {
+                                qualityFlv.qualitys.append(model)
+                            }
+                        }
+                        return [qualityFlv, qualityHls]
+                    } catch {
+                        print(error)
+                    }
+                }
             }
-            if HD1 != "" {
-                tempArray.append(.init(roomId: roomId, title: "高清", qn: 0, url: HD1, liveCodeType: .hls, liveType: .douyin))
+            if tempArray.isEmpty { //尝试原始方法
+                let FULL_HD1 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.FULL_HD1 ?? ""
+                let HD1 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.HD1 ?? ""
+                let SD1 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.SD1 ?? ""
+                let SD2 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.SD2 ?? ""
+                
+                if FULL_HD1 != "" {
+                    tempArray.append(.init(roomId: roomId, title: "超清", qn: 0, url: FULL_HD1, liveCodeType: .hls, liveType: .douyin))
+                }
+                if HD1 != "" {
+                    tempArray.append(.init(roomId: roomId, title: "高清", qn: 0, url: HD1, liveCodeType: .hls, liveType: .douyin))
+                }
+                if SD1 != "" {
+                    tempArray.append(.init(roomId: roomId, title: "标清 1", qn: 0, url: SD1, liveCodeType: .hls, liveType: .douyin))
+                }
+                if SD2 != "" {
+                    tempArray.append(.init(roomId: roomId, title: "标清 2", qn: 0, url: SD2, liveCodeType: .hls, liveType: .douyin))
+                }
+                return [.init(cdn: "线路 1", qualitys: tempArray)]
             }
-            if SD1 != "" {
-                tempArray.append(.init(roomId: roomId, title: "标清 1", qn: 0, url: SD1, liveCodeType: .hls, liveType: .douyin))
-            }
-            if SD2 != "" {
-                tempArray.append(.init(roomId: roomId, title: "标清 2", qn: 0, url: SD2, liveCodeType: .hls, liveType: .douyin))
-            }
-            return [.init(cdn: "线路 1", qualitys: tempArray)]
         }
         return []
     }
@@ -393,8 +481,6 @@ public struct Douyin: LiveParse {
             "browser_name": "Edge",
             "browser_version": "114.0.1823.51"
         ]
-        
-
         let res = try await AF.request("https://live.douyin.com/webcast/room/web/enter/", method: .get, parameters: parameter, headers: headers).serializingDecodable(DouyinRoomPlayInfoMainData.self).value
         return res
     }
