@@ -583,7 +583,7 @@ public struct Bilibili: LiveParse {
     public static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
         let buvid = try await getBuvid()
         let resp = try await getRoomDanmuDetail(roomId: roomId)
-        return (["roomId": roomId, "buvid": buvid, "token": resp.token, "ws_url": "wss://\(resp.host_list.first?.host ?? "broadcastlv.chat.bilibili.com")/sub"], BiliBiliCookie.cookie == "" ? nil : ["cookie": BiliBiliCookie.cookie])
+        return (["roomId": roomId, "buvid": buvid, "token": resp.token, "ws_url": "wss://\(resp.host_list.first?.host ?? "broadcastlv.chat.bilibili.com")/sub"], nil)
     }
     
     public static func getBuvid() async throws -> String {
@@ -600,10 +600,10 @@ public struct Bilibili: LiveParse {
             }else {
                 let dataReq = try await AF.request(
                     "https://api.bilibili.com/x/frontend/finger/spi",
-                    method: .get,
-                    headers: BiliBiliCookie.cookie == "" ? nil : [
-                        "cookie": BiliBiliCookie.cookie
-                    ]
+                    method: .get
+//                    headers: BiliBiliCookie.cookie == "" ? nil : [
+//                        "cookie": BiliBiliCookie.cookie
+//                    ]
                 ).serializingDecodable(BilibiliMainData<BilibiliBuvidModel>.self).value
                 return dataReq.data.b_3
             }
