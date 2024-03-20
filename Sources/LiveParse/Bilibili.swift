@@ -619,10 +619,10 @@ public struct Bilibili: LiveParse {
             method: .get,
             parameters: [
                 "id":roomId
-            ],
-            headers: BiliBiliCookie.cookie == "" ? nil : [
-                "cookie": BiliBiliCookie.cookie
             ]
+//            headers: BiliBiliCookie.cookie == "" ? nil : [
+//                "cookie": BiliBiliCookie.cookie
+//            ]
         ).serializingDecodable(BilibiliMainData<BilibiliDanmuModel>.self).value
         return dataReq.data
     }
