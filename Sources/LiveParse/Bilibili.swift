@@ -14,6 +14,11 @@ public struct BiliBiliCookie {
             UserDefaults.standard.setValue(cookie, forKey: "LiveParse.Bilibili.Cookie")
         }
     }
+    public static var uid = UserDefaults.standard.value(forKey: "LiveParse.Bilibili.uid") as? String ?? "0" {
+        didSet {
+            UserDefaults.standard.setValue(uid, forKey: "LiveParse.Bilibili.uid")
+        }
+    }
 }
 
 struct BilibiliMainData<T: Codable>: Codable {
@@ -575,6 +580,23 @@ public struct Bilibili: LiveParse {
         let dataReq = try await resp.serializingDecodable(BilibiliQRMainModel.self).value
         if dataReq.data.code == 0 {
             BiliBiliCookie.cookie = resp.response?.headers["Set-Cookie"] ?? ""
+            if let respUrl = dataReq.data.url {
+                let pattern = "DedeUserID=(\\d+)"
+                    do {
+                        let regex = try NSRegularExpression(pattern: pattern, options: [])
+                        let nsString = respUrl as NSString
+                        let results = regex.matches(in: respUrl, options: [], range: NSRange(location: 0, length: nsString.length))
+                        
+                        // 检查是否有匹配结果，并返回第一个匹配的DedeUserID值
+                        if let match = results.first {
+                            let range = match.range(at: 1) // 获取第一个捕获组的范围
+                            BiliBiliCookie.uid = nsString.substring(with: range)
+                        }
+                    } catch let error {
+                        print("Invalid regex: \(error.localizedDescription)")
+                    }
+                
+            }
             return (dataReq, resp.response?.headers["Set-Cookie"] ?? "")
         }
         return (dataReq, "")

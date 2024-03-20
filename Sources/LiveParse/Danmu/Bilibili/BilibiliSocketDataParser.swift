@@ -31,7 +31,7 @@ public class BilibiliSocketDataParser: WebSocketDataParser {
         
         switch type {
         case 7: //认证包
-                let str = "{\"uid\": 0,\"roomid\": \(connection.parameters?["roomId"] ?? ""),\"protover\": 2,\"buvid\":\"\(connection.parameters?["buvid"] ?? "")\",\"platform\":\"web\",\"type\": 2,\"key\": \"\(connection.parameters?["token"] ?? "")\",\"clientver\":\"1.8.2\"}"
+                let str = "{\"uid\": \(BiliBiliCookie.uid),\"roomid\": \(connection.parameters?["roomId"] ?? ""),\"protover\": 2,\"buvid\":\"\(connection.parameters?["buvid"] ?? "")\",\"platform\":\"web\",\"type\": 2,\"key\": \"\(connection.parameters?["token"] ?? "")\",\"clientver\":\"1.8.2\"}"
             bodyDatas = str.data(using: String.Encoding.utf8)!
             
         default: //心跳包
