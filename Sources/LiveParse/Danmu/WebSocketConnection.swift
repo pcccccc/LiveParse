@@ -39,7 +39,7 @@ public class WebSocketConnection {
     var url: URL {
         switch liveType {
             case .bilibili:
-                URL(string: "ws://broadcastlv.chat.bilibili.com:2244/sub")!
+                URL(string: "wss://broadcastlv.chat.bilibili.com:443/sub")!
             case .huya:
                 URL(string: "wss://cdnws.api.huya.com")!
             case .douyin:
@@ -47,7 +47,7 @@ public class WebSocketConnection {
             case .douyu:
                 URL(string: "wss://danmuproxy.douyu.com:8506/")!
             default:
-                URL(string: "ws://broadcastlv.chat.bilibili.com:2244/sub")!
+                URL(string: "wss://broadcastlv.chat.bilibili.com:443/sub")!
         }
     }
     var parser: WebSocketDataParser {
@@ -79,6 +79,8 @@ public class WebSocketConnection {
         var request = URLRequest(url: url)
         if liveType == .douyin { //抖音需要把parameters拼到url上
             request = URLRequest(url: formatDouyinFinalUrl(url: url, parameters: self.parameters!))
+        }else if liveType == .bilibili {
+            request = URLRequest(url: URL(string: parameters?["ws_url"] ?? "")!)
         }
         
         socket = WebSocket(request: request)
