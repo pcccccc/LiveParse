@@ -442,7 +442,17 @@ public struct Douyin: LiveParse {
         case 4:
             liveState = LiveState.close.rawValue
         case 2:
-            liveState = LiveState.live.rawValue
+            let playArgs = try await getPlayArgs(roomId: roomId, userId: userId) //增加一个如果能解析出直播地址，则算作正在直播
+            if playArgs.count > 0 {
+                let playItem = playArgs.first
+                if playItem?.qualitys.count > 0 {
+                    liveState = LiveState.live.rawValue
+                }else {
+                    liveState = LiveState.close.rawValue
+                }
+            }else {
+                liveState = LiveState.close.rawValue
+            }
         default:
             liveState = LiveState.unknow.rawValue
         }
