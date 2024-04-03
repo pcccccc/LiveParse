@@ -445,7 +445,7 @@ public struct Douyin: LiveParse {
             let playArgs = try await getPlayArgs(roomId: roomId, userId: userId) //增加一个如果能解析出直播地址，则算作正在直播
             if playArgs.count > 0 {
                 let playItem = playArgs.first
-                if playItem?.qualitys.count > 0 {
+                if playItem?.qualitys.count ?? 0 > 0 {
                     liveState = LiveState.live.rawValue
                 }else {
                     liveState = LiveState.close.rawValue
