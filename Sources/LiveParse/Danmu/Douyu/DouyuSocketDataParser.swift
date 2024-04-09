@@ -62,7 +62,7 @@ public class DouyuSocketDataParser: WebSocketDataParser {
                 buffer.load(fromByteOffset: 0, as: Int32.self)
             }) - 12
             
-            if _length > data.count {
+            if _length + 12 >= data.count {
                 break
             }
             

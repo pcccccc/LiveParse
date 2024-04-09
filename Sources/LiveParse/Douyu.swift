@@ -303,8 +303,8 @@ public struct Douyu: LiveParse {
         ).serializingData().value
         let jsEncJson = try JSONSerialization.jsonObject(with: jsEncReq, options: .mutableContainers)
         let jsEncDict = jsEncJson as! Dictionary<String, Any>
-        let jsEncData = jsEncDict["data"] as! Dictionary<String, Any>
-        let cryText = jsEncData["room\(roomId)"] as? String ?? ""
+        let jsEncData = jsEncDict["data"] as? Dictionary<String, Any>
+        let cryText = jsEncData?["room\(roomId)"] as? String ?? ""
         
         let regex = try NSRegularExpression(pattern: "(vdwdae325w_64we[\\s\\S]*function ub98484234[\\s\\S]*?)function", options: [])
         let matchs =  regex.matches(in: cryText, range: NSRange(location: 0, length:  cryText.count))
