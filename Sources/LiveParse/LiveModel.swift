@@ -90,7 +90,10 @@ public enum LiveType: String, Codable {
          huya = "1",
          douyin = "2",
          douyu = "3",
-         qie = "4"
+         cc = "4",
+         ks = "5",
+         yy = "6",
+         youtube = "7"
 }
 
 public enum LiveState: String, Codable {
@@ -98,10 +101,10 @@ public enum LiveState: String, Codable {
          live = "1", //直播中
          video = "2", //录播、轮播
          unknow = "3" //未知
-    
 }
 
 public enum LiveCodeType: String, Codable {
     case flv = "flv",
          hls = "m3u8"
 }
+

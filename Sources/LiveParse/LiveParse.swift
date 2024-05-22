@@ -64,8 +64,8 @@ protocol LiveParse {
      刷新用户信息（如用户进行收藏，需要单独更新主播直播标题封面等信息）。
      
      - Parameters:
-     - roomId: 对应平台主播房间号（并不一定url中出现的房间号， 抖音对应原始字段为webrid）。
-     - userId: 对应平台用户id（抖音对应原始字段为room_id_str）。
+     - roomId: 对应平台主播房间号（并不一定url中出现的房间号， 抖音对应原始字段为webrid， cc对应字段为cuteid）。
+     - userId: 对应平台用户id（抖音对应原始字段为room_id_str， cc对应字段为channel_id **必填**）。
      
      - Returns: 对应平台主播信息。
      
@@ -123,4 +123,54 @@ protocol LiveParse {
      - Throws: 如果无法完成请求或解析数据，将抛出错误。
      */
     static func getDanmukuArgs(roomId: String) async throws -> ([String: String], [String: String]?)
+}
+
+public final class LiveParsePlatformInfo: Codable {
+    public let liveType: LiveType
+    public let livePlatformName: String
+    
+    init(liveType: LiveType, livePlatformName: String) {
+        self.liveType = liveType
+        self.livePlatformName = livePlatformName
+    }
+}
+
+public final class LiveParseTools {
+    public class func getLivePlatformName(_ liveType: LiveType) -> String {
+        switch liveType {
+        case .bilibili:
+            return "哔哩哔哩"
+        case .huya:
+            return "虎牙"
+        case .douyin:
+            return "抖音"
+        case .douyu:
+            return "斗鱼"
+        case .cc:
+            return "网易CC"
+        case .ks:
+            return "快手"
+        case .yy:
+            return "YY直播"
+        case .youtube:
+            return "Youtube"
+        }
+    }
+
+    public class func getAllSupportPlatform() -> [LiveParsePlatformInfo] {
+        return [
+            LiveParsePlatformInfo(liveType: .bilibili, livePlatformName: getLivePlatformName(.bilibili)),
+            LiveParsePlatformInfo(liveType: .huya, livePlatformName: getLivePlatformName(.huya)),
+            LiveParsePlatformInfo(liveType: .douyin, livePlatformName: getLivePlatformName(.douyin)),
+            LiveParsePlatformInfo(liveType: .douyu, livePlatformName: getLivePlatformName(.douyu)),
+            LiveParsePlatformInfo(liveType: .cc, livePlatformName: getLivePlatformName(.cc)),
+            LiveParsePlatformInfo(liveType: .ks, livePlatformName: getLivePlatformName(.ks)),
+            LiveParsePlatformInfo(liveType: .yy, livePlatformName: getLivePlatformName(.yy)),
+            LiveParsePlatformInfo(liveType: .youtube, livePlatformName: getLivePlatformName(.youtube)),
+        ]
+    }
+}
+
+enum LiveParseError: Error {
+    case throwError(String)
 }
