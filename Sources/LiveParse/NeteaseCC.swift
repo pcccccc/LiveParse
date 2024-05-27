@@ -42,7 +42,7 @@ struct CCLastestRoomModel: Codable {
 struct CCRoomModel: Codable {
     var visitor: Int
     var title: String
-    var roomid: Int
+    var roomid: Int?
     var channel_id: Int
     var nickname: String
     var hot_score: Int
@@ -84,24 +84,16 @@ struct CCLiveResolutionDetail: Codable {
     var xy: String?
 }
 
+struct CCLiveSearchResult: Codable {
+    var webcc_anchor: CCLiveAnchorModel
+}
+
+struct CCLiveAnchorModel: Codable {
+    var result: [CCRoomModel]
+}
+
 
 public struct NeteaseCC: LiveParse {
-    
-    static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
-        return []
-    }
-    
-    static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
-        return .close
-    }
-    
-    static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
-        return LiveModel(userName: "", roomTitle: "", roomCover: "", userHeadImg: "", liveType: .bilibili, liveState: "", userId: "", roomId: "", liveWatchedCount: "")
-    }
-    
-    static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
-        return ([:], [:])
-    }
     
 
     public static func getCategoryList() async throws -> [LiveMainListModel] {
@@ -336,6 +328,31 @@ public struct NeteaseCC: LiveParse {
         return liveQuality
     }
     
+    public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+        let dataReq = try await AF.request(
+            "https://cc.163.com/search/anchor",
+            method: .get,
+            parameters: [
+                "query": keyword,
+                "page": page,
+                "size": 20
+            ],
+            headers: [
+                "User-Agent": userAgent
+            ]
+        ).serializingDecodable(CCLiveSearchResult.self).value
+        var tempArray: [LiveModel] = []
+        let roomList = dataReq.webcc_anchor.result
+        for item in roomList {
+            tempArray.append(LiveModel(userName: item.nickname, roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id)", roomId: "\(item.cuteid)", liveWatchedCount: "\(item.visitor)"))
+        }
+        return tempArray
+    }
+    
+    public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+        return LiveState(rawValue: try await getLiveLastestInfo(roomId: roomId, userId: userId).liveState ?? "3")!
+    }
+    
     static func getPropertyNames<T: Codable>(of type: T.Type) -> [String] {
         // 创建一个默认实例
         guard let instance = try? JSONDecoder().decode(T.self, from: Data("{}".utf8)) else {
@@ -344,5 +361,45 @@ public struct NeteaseCC: LiveParse {
         
         let mirror = Mirror(reflecting: instance)
         return mirror.children.compactMap { $0.label }
+    }
+    
+
+    
+    public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+        var roomId = ""
+        var realUrl = ""
+        if shareCode.contains("cc.163.com") { //长链接
+            // 定义正则表达式模式
+            let pattern = #"https://h5\.cc\.163\.com/cc/(\d+)\?rid=(\d+)&cid=(\d+)"#
+            do {
+                let regex = try NSRegularExpression(pattern: pattern, options: [])
+                let nsString = shareCode as NSString
+                let results = regex.matches(in: shareCode, options: [], range: NSRange(location: 0, length: nsString.length))
+                
+                if let match = results.first {
+                    // 提取匹配到的值
+                    let id = nsString.substring(with: match.range(at: 1))
+                    let rid = nsString.substring(with: match.range(at: 2))
+                    let cid = nsString.substring(with: match.range(at: 3))
+                    return try await NeteaseCC.getLiveLastestInfo(roomId: id, userId: cid)
+                } else {
+                    print("No match found")
+                }
+            } catch let error {
+                print("Invalid regex: \(error.localizedDescription)")
+            }
+        }else {
+            roomId = shareCode
+        }
+
+        if roomId == "" || Int(roomId) ?? -1 < 0 {
+            throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+        }
+        
+        return try await NeteaseCC.getLiveLastestInfo(roomId: roomId, userId: nil)
+    }
+    
+    static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
+        return ([:], [:])
     }
 }
