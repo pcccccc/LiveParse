@@ -293,6 +293,9 @@ public struct Huya: LiveParse {
             let matchRange = Range(match.range, in: dataReq)!
             let matchedSubstring = dataReq[matchRange]
             var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
+            nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
+            nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
+            nsstr = convertUnicodeEscapes(in: nsstr as String) as NSString
             nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
             do {
                 let data = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
