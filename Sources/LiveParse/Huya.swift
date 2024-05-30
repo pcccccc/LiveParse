@@ -286,7 +286,8 @@ public struct Huya: LiveParse {
                 HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
             ]
         ).serializingString().value
-        let regex = try NSRegularExpression(pattern: "window\\.HNF_GLOBAL_INIT.=.\\{(.*?)\\}.</script>", options: [])
+        let pattern = #"window\.HNF_GLOBAL_INIT\s*=\s*(.*?)</script>"#
+        let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
         let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
         for match in matchs {
             let matchRange = Range(match.range, in: dataReq)!
@@ -404,12 +405,16 @@ public struct Huya: LiveParse {
                 HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
             ]
         ).serializingString().value
-        let regex = try NSRegularExpression(pattern: "window\\.HNF_GLOBAL_INIT.=.\\{(.*?)\\}.</script>", options: [])
+        let pattern = #"window\.HNF_GLOBAL_INIT\s*=\s*(.*?)</script>"#
+        let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
         let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
         for match in matchs {
             let matchRange = Range(match.range, in: dataReq)!
             let matchedSubstring = dataReq[matchRange]
             var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
+            nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
+            nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
+            nsstr = convertUnicodeEscapes(in: nsstr as String) as NSString
             nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
             let liveData = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
             return (
