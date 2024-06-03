@@ -66,6 +66,10 @@ public class DouyuSocketDataParser: WebSocketDataParser {
                 break
             }
             
+            if _length < 0 {
+                break
+            }
+            
             // 截取相应的数据
             let contentData = subData.subdata(in: 12..<_length + 12)
             if let content = String(data: contentData, encoding: .utf8) {
