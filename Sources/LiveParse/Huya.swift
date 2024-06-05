@@ -214,7 +214,7 @@ public struct Huya: LiveParse {
             nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
             nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
             nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
-            nsstr = convertUnicodeEscapes(in: nsstr as String) as NSString
+            nsstr = String.convertUnicodeEscapes(in: nsstr as String) as NSString
             let liveData = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
             let streamInfo = liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value.first
             var playQualitiesInfo: Dictionary<String, String> = [:]
@@ -295,7 +295,7 @@ public struct Huya: LiveParse {
             var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
             nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
             nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
-            nsstr = convertUnicodeEscapes(in: nsstr as String) as NSString
+            nsstr = String.convertUnicodeEscapes(in: nsstr as String) as NSString
             nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
             do {
                 let data = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
@@ -417,7 +417,7 @@ public struct Huya: LiveParse {
             var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
             nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
             nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
-            nsstr = convertUnicodeEscapes(in: nsstr as String) as NSString
+            nsstr = String.convertUnicodeEscapes(in: nsstr as String) as NSString
             nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
             let liveData = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
             return (
@@ -460,33 +460,6 @@ public struct Huya: LiveParse {
             return data?["uid"] as? String ?? ""
         }
         return ""
-    }
-    
-    static func convertUnicodeEscapes(in string: String) -> String {
-        let pattern = #"\\u([0-9A-Fa-f]{4})"#
-        do {
-            let regex = try NSRegularExpression(pattern: pattern, options: [])
-            let nsRange = NSRange(string.startIndex..<string.endIndex, in: string)
-            let mutableInput = NSMutableString(string: string)
-            
-            // 查找所有匹配项
-            let matches = regex.matches(in: string, options: [], range: nsRange)
-            
-            // 从最后一个匹配项开始替换，以保持索引正确
-            for match in matches.reversed() {
-                if let range = Range(match.range(at: 1), in: string) {
-                    let hexCode = String(string[range])
-                    if let unicodeScalar = UnicodeScalar(UInt32(hexCode, radix: 16)!) {
-                        let character = String(unicodeScalar)
-                        mutableInput.replaceCharacters(in: match.range, with: character)
-                    }
-                }
-            }
-            return mutableInput as String
-        } catch {
-            return string
-        }
-        return string
     }
     
     static func removeIncludeFunctionValue(in string: String) -> String {

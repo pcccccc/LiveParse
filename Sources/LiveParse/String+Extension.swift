@@ -47,4 +47,31 @@ extension String {
             return ""
         }
     }
+    
+    public static func convertUnicodeEscapes(in string: String) -> String {
+        let pattern = #"\\u([0-9A-Fa-f]{4})"#
+        do {
+            let regex = try NSRegularExpression(pattern: pattern, options: [])
+            let nsRange = NSRange(string.startIndex..<string.endIndex, in: string)
+            let mutableInput = NSMutableString(string: string)
+            
+            // 查找所有匹配项
+            let matches = regex.matches(in: string, options: [], range: nsRange)
+            
+            // 从最后一个匹配项开始替换，以保持索引正确
+            for match in matches.reversed() {
+                if let range = Range(match.range(at: 1), in: string) {
+                    let hexCode = String(string[range])
+                    if let unicodeScalar = UnicodeScalar(UInt32(hexCode, radix: 16)!) {
+                        let character = String(unicodeScalar)
+                        mutableInput.replaceCharacters(in: match.range, with: character)
+                    }
+                }
+            }
+            return mutableInput as String
+        } catch {
+            return string
+        }
+        return string
+    }
 }
