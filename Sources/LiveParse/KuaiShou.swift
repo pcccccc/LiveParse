@@ -332,7 +332,7 @@ public struct KuaiShou: LiveParse {
         var liveQuaityModel = LiveQualityModel(cdn: "线路1", douyuCdnName: "", qualitys: [])
         if let playList = dataReq.liveroom.playList?.first?.liveStream.playUrls?.first?.adaptationSet.representation {
             for item in playList {
-                liveQuaityModel.qualitys.append(.init(roomId: roomId, title: roomId, qn: item.bitrate, url: item.url, liveCodeType: .flv, liveType: .ks))
+                liveQuaityModel.qualitys.append(.init(roomId: roomId, title: item.name, qn: item.bitrate, url: item.url, liveCodeType: .flv, liveType: .ks))
             }
         }
         return [liveQuaityModel]

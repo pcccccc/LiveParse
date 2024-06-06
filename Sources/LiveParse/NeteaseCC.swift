@@ -40,17 +40,17 @@ struct CCLastestRoomModel: Codable {
 }
 
 struct CCRoomModel: Codable {
-    var visitor: Int
+    var visitor: Int?
     var title: String
     var roomid: Int?
-    var channel_id: Int
-    var nickname: String
-    var hot_score: Int
+    var channel_id: Int?
+    var nickname: String?
+    var hot_score: Int?
     var poster: String?
     var portraiturl: String?
     var adv_img: String?
     var purl: String?
-    var cuteid: Int
+    var cuteid: Int?
     var quickplay: CCLiveQuickModel?
 }
 
@@ -139,23 +139,27 @@ public struct NeteaseCC: LiveParse {
         ).serializingDecodable(CCRoomListModel.self).value
         var tempArray: [LiveModel] = []
         for item in dataReq.lives {
-            tempArray.append(LiveModel(userName: item.nickname, roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id)", roomId: "\(item.cuteid)", liveWatchedCount: "\(item.visitor)"))
+            tempArray.append(LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id ?? 0)", roomId: "\(item.cuteid ?? 0)", liveWatchedCount: "\(item.visitor ?? 0)"))
         }
         return tempArray
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
-        let dataReq = try await AF.request(
-            "https://cc.163.com/live/channel/?channelids=\(userId ?? roomId)",
-            method: .get,
-            headers: [
-                "User-Agent": userAgent
-            ]
-        ).serializingDecodable(CCLastestRoomModel.self).value
-        guard let item = dataReq.data.first else {
+        do {
+            let dataReq = try await AF.request(
+                "https://cc.163.com/live/channel/?channelids=\(userId ?? roomId)",
+                method: .get,
+                headers: [
+                    "User-Agent": userAgent
+                ]
+            ).serializingDecodable(CCLastestRoomModel.self).value
+            guard let item = dataReq.data.first else {
+                throw LiveParseError.throwError("获取房间信息失败，请检查房间号等信息")
+            }
+            return LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id ?? 0)", roomId: "\(item.cuteid ?? 0)", liveWatchedCount: "\(item.visitor)")
+        }catch {
             throw LiveParseError.throwError("获取房间信息失败，请检查房间号等信息")
         }
-        return LiveModel(userName: item.nickname, roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id)", roomId: "\(item.cuteid)", liveWatchedCount: "\(item.visitor)")
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
@@ -344,7 +348,7 @@ public struct NeteaseCC: LiveParse {
         var tempArray: [LiveModel] = []
         let roomList = dataReq.webcc_anchor.result
         for item in roomList {
-            tempArray.append(LiveModel(userName: item.nickname, roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id)", roomId: "\(item.cuteid)", liveWatchedCount: "\(item.visitor)"))
+            tempArray.append(LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id ?? 0)", roomId: "\(item.cuteid ?? 0)", liveWatchedCount: "\(item.visitor)"))
         }
         return tempArray
     }
