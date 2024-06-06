@@ -100,6 +100,10 @@ protocol LiveParse {
      
         Douyin: 2- #在抖音，记录美好生活#【交个朋友直播间】正在直播，来和我一起支持Ta吧。复制下方链接，打开【抖音】，直接观看直播！ https://v.douyin.com/i8rhQQ2t/ 2@4.com 12/18 || https://live.douyin.com/168465302284 || 168465302284
      
+        网易CC: https://cc.163.com/364038534/ || 364038534
+     
+        快手：https://live.kuaishou.com/u/Boy333ks1203 || Boy333ks1203
+     
      - Returns: 对应平台主播信息。
      
      - Throws: 如果无法完成请求或解析数据，将抛出错误。

@@ -100,9 +100,9 @@ struct VerifiedStatus: Codable {
 
 // MARK: - GameInfo
 struct GameInfo: Codable {
-    let id: Int
-    let name: String
-    let poster: String
+    let id: Int?
+    let name: String?
+    let poster: String?
 }
 
 // MARK: - PlayUrl
@@ -175,9 +175,9 @@ struct KSPlayList: Codable {
 
 // MARK: - KSLiveStream
 struct KSLiveStream: Codable {
-    let id: String
-    let poster: String
-    let playUrls: [KSPlayUrl]
+    let id: String?
+    let poster: String?
+    let playUrls: [KSPlayUrl]?
 }
 
 // MARK: - KSPlayUrl
@@ -248,13 +248,13 @@ struct KSCounts: Codable {
 
 // MARK: - KSGameInfo
 struct KSGameInfo: Codable {
-    let id: String
-    let name: String
-    let poster: String
-    let description: String
-    let categoryAbbr: String
-    let categoryName: String
-    let watchingCount: String
+    let id: String?
+    let name: String?
+    let poster: String?
+    let description: String?
+    let categoryAbbr: String?
+    let categoryName: String?
+    let watchingCount: String?
 }
 
 // MARK: - KSConfig
@@ -330,7 +330,7 @@ public struct KuaiShou: LiveParse {
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
         let dataReq = try await getKSLiveRoom(roomId: roomId)
         var liveQuaityModel = LiveQualityModel(cdn: "线路1", douyuCdnName: "", qualitys: [])
-        if let playList = dataReq.liveroom.playList?.first?.liveStream.playUrls.first?.adaptationSet.representation {
+        if let playList = dataReq.liveroom.playList?.first?.liveStream.playUrls?.first?.adaptationSet.representation {
             for item in playList {
                 liveQuaityModel.qualitys.append(.init(roomId: roomId, title: roomId, qn: item.bitrate, url: item.url, liveCodeType: .flv, liveType: .ks))
             }
@@ -344,7 +344,7 @@ public struct KuaiShou: LiveParse {
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         let dataReq = try await getKSLiveRoom(roomId: roomId)
-        return LiveModel(userName: dataReq.liveroom.playList?.first?.author.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.playList?.first?.liveStream.playUrls.count ?? 0 > 0 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
+        return LiveModel(userName: dataReq.liveroom.playList?.first?.author.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.playList?.first?.liveStream.playUrls?.count ?? 0 > 0 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
     }
     
     static func getKSLiveRoom(roomId: String) async throws -> KSLiveRoot {
@@ -359,9 +359,11 @@ public struct KuaiShou: LiveParse {
             let matchRange = Range(match.range, in: dataReq)!
             let matchedSubstring = String(dataReq[matchRange])
             var tempStr = matchedSubstring.replacingOccurrences(of: "<script>window.__INITIAL_STATE__=", with: "")
+            
             tempStr = tempStr.replacingOccurrences(of: ";", with: "")
-            tempStr = tempStr.replacingOccurrences(of: "undefined", with: "\"\"")
+            tempStr = tempStr.replacingOccurrences(of: ":undefined", with: ":\"\"")
             tempStr = String.convertUnicodeEscapes(in: tempStr as String)
+            print(tempStr)
             do {
                 let data = try JSONDecoder().decode(KSLiveRoot.self, from: tempStr.data(using: .utf8)!)
                 return data
@@ -372,12 +374,38 @@ public struct KuaiShou: LiveParse {
         throw NSError(domain: "获取快手房间信息失败", code: -10000, userInfo: ["desc": "获取快手房间信息失败"])
     }
     
-    static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+    public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
         return LiveState(rawValue: try await getLiveLastestInfo(roomId: roomId, userId: userId).liveState ?? LiveState.unknow.rawValue)!
     }
     
-    static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
-        LiveModel(userName: "", roomTitle: "", roomCover: "", userHeadImg: "", liveType: .ks, liveState: "", userId: "", roomId: "", liveWatchedCount: "")
+    public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+        //https://live.kuaishou.com/u/ccyoutai
+        var roomId = ""
+        var realUrl = ""
+        if shareCode.contains("live.kuaishou.com/u") { //长链接
+            // 定义正则表达式模式
+            let pattern = #"/u/([a-zA-Z0-9]+)"#
+            do {
+                let regex = try NSRegularExpression(pattern: pattern, options: [])
+                let nsString = shareCode as NSString
+                let results = regex.matches(in: shareCode, options: [], range: NSRange(location: 0, length: nsString.length))
+                if let match = results.first {
+                    // 提取匹配到的值
+                    let id = nsString.substring(with: match.range(at: 1))
+                    return try await KuaiShou.getLiveLastestInfo(roomId: id, userId: nil)
+                } else {
+                    throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+                }
+            } catch let error {
+                throw error
+            }
+        }else {
+            roomId = shareCode
+        }
+        if roomId == "" {
+            throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+        }
+        return try await KuaiShou.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
     static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
