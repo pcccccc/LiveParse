@@ -28,50 +28,122 @@ struct YYCategoryListModel: Codable {
     let visible: Int
 }
 
+struct YYRoomResponse: Codable {
+    let code: Int
+    let message: String
+    let data: [YYRoomSection]
+}
+
+struct YYRoomSection: Codable {
+    let id: Int
+    let name: String
+    let data: [YYRoomListData]
+}
+
+struct YYRoomListData: Codable {
+    let uid: Int
+    let sid: Int
+    let name: String
+    let desc: String
+    let avatar: String
+    let users: Int
+    let img: String
+}
 
 public struct YY: LiveParse {
-    public static func getCategoryList() async throws -> [LiveMainListModel] {
-        return [
-            LiveMainListModel(id: "1", title: "娱乐", icon: "", subList: try await getCategorySubList(id: "1")),
-            LiveMainListModel(id: "2", title: "游戏", icon: "", subList: try await getCategorySubList(id: "2")),
-            LiveMainListModel(id: "3", title: "其他", icon: "", subList: try await getCategorySubList(id: "3")),
-        ]
-    }
     
-    public static func getCategorySubList(id: String) async throws -> [LiveCategoryModel] {
-        var tempArray: [LiveCategoryModel] = []
-        let dataReq = try await AF.request(
-            "https://www.yy.com/c/yycom/category/getCategory.action",
-            method: .get,
-            parameters: [
-                "parentId": id,
-            ]
-        ).serializingDecodable(YYCategoryResponse.self).value
-        if dataReq.result == "0" {
-            for item in dataReq.data {
-                tempArray.append(LiveCategoryModel(id: "\(item.id)", parentId: id, title: item.title, icon: item.cover))
+    fileprivate static let headers = [
+        "user-agent": " Platform/iOS17.5.1 APP/yymip8.40.0 Model/iPhone Browerser:Default Scale/3.00 YY(ClientVersion:8.40.0 ClientEdition:yymip) HostName/yy HostVersion/8.40.0 HostId/1 UnionVersion/2.690.0 Build1492 HostExtendInfo/b576b278cba95c5100f84a69b26dc36bf44f080608b937825dcd64ee5911351f74dbda4ac85cfb011f32eb00b7c16ecc6bad4eaa3cd9f69c923177e74f6212682492886a946abdcf921a84c93ff329d4fd9e2bc67f5fe727d9a7b10ee65fbbbf",
+        "accept-language": "zh-Hans-CN;q=1",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "content-type": "application/json; charset=utf-8",
+        "Accept": "application/json"
+    ]
+    
+
+    struct YYCategoryRoot: Codable {
+        let code: Int
+        let message: String
+        let data: [YYCategoryList]
+    }
+
+    struct YYCategoryList: Codable {
+        let id: Int
+        let name: String
+        let platform: Int
+        let biz: String
+        let sort: Int
+        let selected: Int
+        let url: String?
+        let pic: String?
+        let darkPic: String?
+        let serv: Int
+        let navs: [YYCategorySubList]
+        let icon: Int?
+    }
+
+    // MARK: - Nav
+    struct YYCategorySubList: Codable {
+        let id: Int
+        let name: String
+        let platform: Int
+        let biz: String
+        let sort: Int
+        let selected: Int
+        let serv: Int
+        let navs: [YYCategorySubList]
+    }
+
+    
+    public static func getCategoryList() async throws -> [LiveMainListModel] {
+        let dataReq = try await AF.request("https://rubiks-idx.yy.com/navs", method: .get, headers: HTTPHeaders(headers)).serializingDecodable( YYCategoryRoot.self).value
+        var categoryList = [LiveMainListModel]()
+        for item in dataReq.data {
+            if item.name == "附近" { //去掉附近选项
+                continue
             }
+            var subList = [LiveCategoryModel]()
+            for subItem in item.navs {
+                subList.append(.init(id: "\(subItem.id)", parentId: "item.id", title: subItem.name, icon: "", biz: subItem.biz ?? ""))
+            }
+            if item.navs.count == 0 { //处理热门等没有子菜单的
+                subList.append(.init(id: "0", parentId: "\(item.id)", title: item.name, icon: "", biz: "idx"))
+            }
+            categoryList.append(.init(id: "\(item.id)", title: item.name, icon: "", biz: item.biz ?? "", subList: subList))
         }
-        return tempArray
+        return categoryList
     }
     
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
-        let url = id.count >= 7 ? "https://live.kuaishou.com/live_api/non-gameboard/list" : "https://live.kuaishou.com/live_api/gameboard/list"
-        let dataReq = try await AF.request(
-            url,
-            method: .get,
-            parameters: [
-                "filterType": 0,
-                "page": page,
-                "pageSize": 20,
-                "gameId": id
-            ]
-        ).serializingDecodable(KSCategoryData<KSRoomList>.self).value
-        var tempArray = [LiveModel]()
-        for item in dataReq.data.list {
-            tempArray.append(LiveModel(userName: item.author.name, roomTitle: item.caption, roomCover: item.poster, userHeadImg: item.author.avatar, liveType: .ks, liveState: "1", userId: item.author.id, roomId: item.author.id, liveWatchedCount: item.watchingCount))
+        do {
+            let url = id == "index" ? "https://yyapp-idx.yy.com/mobyy/nav/\(id)/\(parentId ?? "")" : "https://rubiks-idx.yy.com/nav/\(id)/\(parentId)"
+            let dataReq = try await AF.request(
+                url,
+                method: .get,
+                headers: HTTPHeaders(headers)
+            ).serializingDecodable(YYRoomResponse.self).value
+            var tempArray = [LiveModel]()
+            for item in dataReq.data {
+                if item.name.contains("预告") { //去掉直播预告相关内容
+                    continue
+                }
+                for realItem in item.data {
+                    tempArray.append(LiveModel(userName: realItem.name, roomTitle: realItem.desc, roomCover: realItem.img, userHeadImg: realItem.avatar, liveType: .yy, liveState: "1", userId: "\(realItem.uid)", roomId: "\(realItem.sid)", liveWatchedCount: "\(realItem.users)"))
+                }
+            }
+            return tempArray
+        }catch {
+            print(error)
+        
+            let url = id == "index" ? "https://yyapp-idx.yy.com/mobyy/nav/\(id)/\(parentId ?? "")" : "https://rubiks-idx.yy.com/nav/\(id)/\(parentId)"
+            let dataReq = try await AF.request(
+                url,
+                method: .get,
+                headers: HTTPHeaders(headers)
+            ).serializingString().value
+            print(dataReq)
+            throw error
         }
-        return tempArray
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {

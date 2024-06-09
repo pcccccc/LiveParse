@@ -76,13 +76,31 @@ public struct LiveCategoryModel: Codable {
     public let parentId: String //B站: parent_id; Douyu: 不需要; Huya: 不需要; Douyin: partitionType
     public let title: String
     public let icon: String
+    public var biz: String? //YY请求子分类房间的biz，其他平台为空
+    
+    init(id: String, parentId: String, title: String, icon: String, biz: String? = "") {
+        self.id = id
+        self.parentId = parentId
+        self.title = title
+        self.icon = icon
+        self.biz = biz
+    }
 }
 
 public struct LiveMainListModel: Codable {
     public let id: String
     public let title: String
     public let icon: String
+    public let biz: String? //YY请求分类房间的biz，其他平台为空
     public var subList: [LiveCategoryModel]
+    
+    init(id: String, title: String, icon: String, biz: String? = "", subList: [LiveCategoryModel]) {
+        self.id = id
+        self.title = title
+        self.icon = icon
+        self.biz = biz
+        self.subList = subList
+    }
 }
 
 public enum LiveType: String, Codable {
