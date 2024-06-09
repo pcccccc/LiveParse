@@ -94,6 +94,77 @@ public struct YY: LiveParse {
         let navs: [YYCategorySubList]
     }
 
+    struct YYRoomInfoMain: Codable {
+        let resultCode: Int
+        let data: YYRoomInfo?
+    }
+
+    struct YYRoomInfo: Codable {
+        let type: Int
+        let uid: Int
+        let name: String
+        let thumb2: String
+        let desc: String
+        let biz: String
+        let users: Int
+        let sid: Int
+        let ssid: Int
+        let pid: String
+        let tag: String
+        let tagStyle: String
+        let tpl: Int
+        let linkMic: Int
+        let gameThumb: String
+        let avatar: String
+        let yyNum: Int
+        let totalViewer: String
+        let configId: Int
+    }
+
+    struct YYSearchMain: Codable {
+        let success: Bool
+        let status: Int
+        let message: String
+        let data: YYSearchMainData
+    }
+    
+    struct YYSearchMainData: Codable {
+        let searchResult: YYSearchResult
+    }
+    
+    struct YYSearchResult: Codable {
+        let response: YYSearchResponse?
+    }
+    
+    struct YYSearchResponse: Codable {
+        let one: YYDocs
+        enum CodingKeys: String, CodingKey {
+            case one = "1"
+        }
+    }
+    
+    struct YYDocs: Codable {
+        let docs: [YYSearchRoom]
+    }
+    
+    struct YYSearchRoom: Codable {
+        let asid: String
+        let liveOn: String
+        let aliasName: String
+        let yyid: Int
+        let subscribe: String
+        let dataType: Int
+        let yynum: String
+        let auth_state: String
+        let headurl: String
+        let ssid: String
+        let subbiz: String
+        let sid: String
+        let uid: String
+        let tpl: String
+        let stageName: String
+        let name: String
+    }
     
     public static func getCategoryList() async throws -> [LiveMainListModel] {
         let dataReq = try await AF.request("https://rubiks-idx.yy.com/navs", method: .get, headers: HTTPHeaders(headers)).serializingDecodable( YYCategoryRoot.self).value
@@ -147,50 +218,91 @@ public struct YY: LiveParse {
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
-        let dataReq = try await getKSLiveRoom(roomId: roomId)
-        var liveQuaityModel = LiveQualityModel(cdn: "线路1", douyuCdnName: "", qualitys: [])
-        if let playList = dataReq.liveroom.playList?.first?.liveStream.playUrls?.first?.adaptationSet.representation {
-            for item in playList {
-                liveQuaityModel.qualitys.append(.init(roomId: roomId, title: roomId, qn: item.bitrate, url: item.url, liveCodeType: .flv, liveType: .ks))
-            }
-        }
-        return [liveQuaityModel]
+        let millis_13 = Int(Date().timeIntervalSince1970 * 1000)
+        let millis_10 = Int(Date().timeIntervalSince1970)
+        let params: [String: Any] = [
+            "head": [
+              "seq": millis_13,
+              "appidstr": "0",
+              "bidstr": "121",
+              "cidstr": roomId,
+              "sidstr": roomId,
+              "uid64": 0,
+              "client_type": 108,
+              "client_ver": "5.18.2",
+              "stream_sys_ver": 1,
+              "app": "yylive_web",
+              "playersdk_ver": "5.18.2",
+              "thundersdk_ver": "0",
+              "streamsdk_ver": "5.18.2"
+            ],
+            "client_attribute": [
+              "client": "web",
+              "model": "web1",
+              "cpu": "",
+              "graphics_card": "",
+              "os": "chrome",
+              "osversion": "125.0.0.0",
+              "vsdk_version": "",
+              "app_identify": "",
+              "app_version": "",
+              "business": "",
+              "width": "1920",
+              "height": "1080",
+              "scale": "",
+              "client_type": 8,
+              "h265": 0
+            ],
+            "avp_parameter": [
+              "version": 1,
+              "client_type": 8,
+              "service_type": 0,
+              "imsi": 0,
+              "send_time": millis_10,
+              "line_seq": -1,
+              "gear": 4,
+              "ssl": 1,
+              "stream_format": 0
+            ]
+          ]
+        let jsonData = try! JSONSerialization.data(withJSONObject: params, options: [])
+        let jsonString = String(data: jsonData, encoding: .utf8)!
+        let dataReq = try await AF.request(
+            "https://stream-manager.yy.com/v3/channel/streams?uid=0&cid=\(roomId)&sid=\(roomId)&appid=0&sequence=\(millis_13)&encode=json",
+            method: .post,
+            encoding: JSONStringEncoding(jsonString),
+            headers: [HTTPHeader(name: "content-type", value: "text/plain;charset=UTF-8"), HTTPHeader(name: "referer", value: "https://www.yy.com")]
+        ).serializingString().value
+        print(dataReq)
+//        let dataReq = try await getKSLiveRoom(roomId: roomId)
+//        var liveQuaityModel = LiveQualityModel(cdn: "线路1", douyuCdnName: "", qualitys: [])
+//        if let playList = dataReq.liveroom.playList?.first?.liveStream.playUrls?.first?.adaptationSet.representation {
+//            for item in playList {
+//                liveQuaityModel.qualitys.append(.init(roomId: roomId, title: roomId, qn: item.bitrate, url: item.url, liveCodeType: .flv, liveType: .ks))
+//            }
+//        }
+//        return [liveQuaityModel]
+        return []
     }
     
-    static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
-        []
+    public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+        let dataReq = try await AF.request("https://www.yy.com/apiSearch/doSearch.json?q=\(keyword)&t=1&n=\(page)").serializingDecodable(YYSearchMain.self).value
+        var roomList = [LiveModel]()
+        if let searchResp = dataReq.data.searchResult.response {
+            for item in searchResp.one.docs {
+                roomList.append(.init(userName: item.name, roomTitle: item.stageName, roomCover: item.headurl, userHeadImg: item.headurl, liveType: .yy, liveState: item.liveOn, userId: item.uid, roomId: item.sid, liveWatchedCount: "0"))
+            }
+        }
+        return roomList
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
-        let dataReq = try await getKSLiveRoom(roomId: roomId)
-        return LiveModel(userName: dataReq.liveroom.playList?.first?.author.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.playList?.first?.liveStream.playUrls?.count ?? 0 > 0 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
-    }
-    
-    static func getKSLiveRoom(roomId: String) async throws -> KSLiveRoot {
-        let dataReq = try await AF.request(
-            "https://live.kuaishou.com/u/\(roomId)",
-            method: .get
-        ).serializingString().value
-        let pattern = #"<script>window.__INITIAL_STATE__=\s*(.*?)\;"#
-        let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
-        let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
-        for match in matchs {
-            let matchRange = Range(match.range, in: dataReq)!
-            let matchedSubstring = String(dataReq[matchRange])
-            var tempStr = matchedSubstring.replacingOccurrences(of: "<script>window.__INITIAL_STATE__=", with: "")
-            
-            tempStr = tempStr.replacingOccurrences(of: ";", with: "")
-            tempStr = tempStr.replacingOccurrences(of: ":undefined", with: ":\"\"")
-            tempStr = String.convertUnicodeEscapes(in: tempStr as String)
-            print(tempStr)
-            do {
-                let data = try JSONDecoder().decode(KSLiveRoot.self, from: tempStr.data(using: .utf8)!)
-                return data
-            }catch {
-                throw error
-            }
+        let dataReq = try await AF.request("https://www.yy.com/api/liveInfoDetail/\(roomId)/\(roomId)/0").serializingDecodable(YYRoomInfoMain.self).value
+        if let data = dataReq.data {
+            return LiveModel(userName: data.name, roomTitle: data.desc, roomCover: data.gameThumb, userHeadImg: data.avatar, liveType: .yy, liveState: "1", userId: roomId, roomId: roomId, liveWatchedCount: "data.users")
+        }else {
+            throw NSError(domain: "查询不到房间信息、可能是已经下播", code: -10000, userInfo: ["desc": "查询不到房间信息、可能是已经下播"])
         }
-        throw NSError(domain: "获取快手房间信息失败", code: -10000, userInfo: ["desc": "获取快手房间信息失败"])
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
@@ -229,5 +341,19 @@ public struct YY: LiveParse {
     
     static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
         ([:],[:])
+    }
+}
+
+struct JSONStringEncoding: ParameterEncoding {
+    private let jsonString: String
+
+    init(_ jsonString: String) {
+        self.jsonString = jsonString
+    }
+
+    func encode(_ urlRequest: URLRequestConvertible, with parameters: Parameters?) throws -> URLRequest {
+        var request = try urlRequest.asURLRequest()
+        request.httpBody = jsonString.data(using: .utf8)
+        return request
     }
 }
