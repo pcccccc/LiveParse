@@ -59,7 +59,15 @@ public struct LiveModel: Codable, Equatable {
 public struct LiveQualityModel: Codable {
     public var cdn: String
     public var douyuCdnName: String? = ""
+    public var yyLineSeq: String? = ""
     public var qualitys: [LiveQualityDetail]
+    
+    init(cdn: String, douyuCdnName: String? = nil, yyLineSeq: String? = nil, qualitys: [LiveQualityDetail]) {
+        self.cdn = cdn
+        self.douyuCdnName = douyuCdnName
+        self.yyLineSeq = yyLineSeq
+        self.qualitys = qualitys
+    }
 }
 
 public struct LiveQualityDetail: Codable {

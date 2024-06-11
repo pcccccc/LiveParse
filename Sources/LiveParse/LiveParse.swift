@@ -39,6 +39,8 @@ protocol LiveParse {
      
      - Warning: 斗鱼流程可能有些不同，需要首先调用本方法，如需要切换cdn/清晰度，需要再次调用getRealPlayArgs(roomId: String, rate: Int, cdn: String?),并且目前相当于只返回一个清晰度和CDN的链接
      
+     - Warning: YY流程可能有些不同，需要首先调用本方法，如需要切换cdn/清晰度，需要再次调用getRealPlayArgs(roomId: String, lineSeq: Int? = -1, gear: Int? = 4),并且目前相当于只返回一个清晰度和CDN的链接
+     
      - Returns: 直播真实地址和与相关清晰度字段。
      
      - Throws: 如果无法完成请求或解析数据，将抛出错误。

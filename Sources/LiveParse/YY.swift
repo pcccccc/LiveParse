@@ -217,7 +217,11 @@ public struct YY: LiveParse {
         }
     }
     
-    public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+    public static func getPlayArgs(roomId: String, userId: String? = "-1") async throws -> [LiveQualityModel] {
+        return try await getRealPlayArgs(roomId: roomId)
+    }
+    
+    public static func getRealPlayArgs(roomId: String, lineSeq: Int? = -1, gear: Int? = 4) async throws -> [LiveQualityModel] {
         let millis_13 = Int(Date().timeIntervalSince1970 * 1000)
         let millis_10 = Int(Date().timeIntervalSince1970)
         let params: [String: Any] = [
@@ -259,8 +263,8 @@ public struct YY: LiveParse {
               "service_type": 0,
               "imsi": 0,
               "send_time": millis_10,
-              "line_seq": -1,
-              "gear": 4,
+              "line_seq": lineSeq,
+              "gear": gear,
               "ssl": 1,
               "stream_format": 0
             ]
@@ -272,17 +276,63 @@ public struct YY: LiveParse {
             method: .post,
             encoding: JSONStringEncoding(jsonString),
             headers: [HTTPHeader(name: "content-type", value: "text/plain;charset=UTF-8"), HTTPHeader(name: "referer", value: "https://www.yy.com")]
-        ).serializingString().value
-        print(dataReq)
-//        let dataReq = try await getKSLiveRoom(roomId: roomId)
-//        var liveQuaityModel = LiveQualityModel(cdn: "线路1", douyuCdnName: "", qualitys: [])
-//        if let playList = dataReq.liveroom.playList?.first?.liveStream.playUrls?.first?.adaptationSet.representation {
-//            for item in playList {
-//                liveQuaityModel.qualitys.append(.init(roomId: roomId, title: roomId, qn: item.bitrate, url: item.url, liveCodeType: .flv, liveType: .ks))
-//            }
-//        }
-//        return [liveQuaityModel]
-        return []
+        ).serializingData().value
+        let json = try JSONSerialization.jsonObject(with: dataReq, options: .mutableContainers)
+        let jsonDict = json as! Dictionary<String, Any>
+        var liveQuality =  [LiveQualityModel]()
+        var realUrl = ""
+        if let roomDict = jsonDict["avp_info_res"] as? Dictionary<String, Any> {
+            if let stramLineList = roomDict["stream_line_list"] as? Dictionary<String, Any> {
+                for key in stramLineList.keys {
+                    if let lineDict = stramLineList[key] as? [String: Any] {
+                        if let lineInfos = lineDict["line_infos"] as? [[String: Any]] {
+                            for item in lineInfos {
+                                var liveQuaityModel = LiveQualityModel(cdn: "\(item["line_print_name"] as? String ?? "")", yyLineSeq: "\(item["line_seq"] as? Int ?? 0)", qualitys: [])
+                                if liveQuality.contains { $0.cdn == liveQuaityModel.cdn } == false {
+                                    liveQuality.append(liveQuaityModel)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if let lineAddr = roomDict["stream_line_addr"] as? Dictionary<String, Any> {
+                for key in lineAddr.keys {
+                    if let streamCdnInfo = lineAddr[key] as? Dictionary<String, Any> {
+                        if let cdnInfo = streamCdnInfo["cdn_info"] as? Dictionary<String, Any> {
+                            if let url = cdnInfo["url"] as? String {
+                                realUrl = url
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        var liveQualityDetails = [LiveQualityDetail]()
+        if let channelStreamInfo = jsonDict["channel_stream_info"] as? Dictionary<String, Any> {
+            if let streams = channelStreamInfo["streams"] as? [[String: Any]] {
+                for stream in streams {
+                    if let streamJsonString = stream["json"] as? String {
+                        let gearJson = try JSONSerialization.jsonObject(with: streamJsonString.data(using: .utf8)!, options: .mutableContainers)
+                        let gearDict = gearJson as! Dictionary<String, Any>
+                        print(gearDict)
+                        if let gearInfo = gearDict["gear_info"] as? Dictionary<String, Any> {
+                            print("=====\(gearInfo)")
+                            let rate = gearDict["rate"] as? Int ?? 0
+                            var liveQualityDetail = LiveQualityDetail(roomId: roomId, title: gearInfo["name"] as? String ?? "", qn: rate, url: realUrl, liveCodeType: .flv, liveType: .yy)
+                            if liveQualityDetails.contains { $0.title == liveQualityDetail.title } == false {
+                                liveQualityDetails.append(liveQualityDetail)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        var finalLiveQualitys = [LiveQualityModel]()
+        for item in liveQuality {
+            finalLiveQualitys.append(.init(cdn: item.cdn, yyLineSeq: item.yyLineSeq, qualitys: liveQualityDetails))
+        }
+        return finalLiveQualitys
     }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
