@@ -46,6 +46,8 @@ public class WebSocketConnection {
                 URL(string: "wss://webcast3-ws-web-lq.douyin.com/webcast/im/push/v2/")!
             case .douyu:
                 URL(string: "wss://danmuproxy.douyu.com:8506/")!
+            case .cc:
+                URL(string: "wss://weblink.cc.163.com/")!
             default:
                 URL(string: "wss://broadcastlv.chat.bilibili.com:443/sub")!
         }
@@ -60,6 +62,8 @@ public class WebSocketConnection {
                 DouyinSocketDataParser()
             case .douyu:
                 DouyuSocketDataParser()
+            case .cc:
+                CCSocketDataParser()
             default:
                 BilibiliSocketDataParser()
         }

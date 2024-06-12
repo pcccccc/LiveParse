@@ -403,7 +403,18 @@ public struct NeteaseCC: LiveParse {
         return try await NeteaseCC.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
-    static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
-        return ([:], [:])
+    public static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
+        let dataReq = try await AF.request("https://api.cc.163.com/v1/activitylives/anchor/lives?anchor_ccid=\(roomId)").serializingData().value
+        let json = try JSONSerialization.jsonObject(with: dataReq, options: .mutableContainers)
+        guard let dictionary = json as? [String: Any],
+              let data = dictionary["data"] as? [String: Any],
+              let channelData = data[roomId] as? [String: Any]
+               else {
+            return ([:],[:])
+        }
+        let channelId = channelData["channel_id"] as? Int ?? 0
+        let roomId = channelData["room_id"] as? Int ?? 0
+        let gametype = channelData["gametype"] as? Int ?? 0
+        return (["cid":"\(channelId)", "gametype": "\(gametype)", "roomId": "\(roomId)"],[:])
     }
 }
