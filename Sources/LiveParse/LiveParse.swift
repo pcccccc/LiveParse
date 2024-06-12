@@ -106,6 +106,10 @@ protocol LiveParse {
      
         快手：https://live.kuaishou.com/u/Boy333ks1203 || Boy333ks1203
      
+        YY: 1雪儿7156正在YY直播【她正在唱歌】，上YY 陪你一起唱！ 丫 https://www.yy.com/share/i/v2?platform=5&config_id=55&edition=1&sharedOid=5e9b07f01bcb028e927bf7932f74bc1b&userUid=a5a06fc73370b2af419dbe7f81ca540a&sid=87208093&ssid=87208093&timestamp=1718161221&version=8.40.0 丫，复制此消息，打开【YY直播】，直接观看！| https://www.yy.com/54880976/54880976?tempId=16777217 | 54880976
+     
+        Youtube: https://www.youtube.com/watch?v=DD-jLdHEh3c | DD-jLdHEh3c
+     
      - Returns: 对应平台主播信息。
      
      - Throws: 如果无法完成请求或解析数据，将抛出错误。

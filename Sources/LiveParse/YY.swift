@@ -112,7 +112,7 @@ public struct YY: LiveParse {
         let pid: String
         let tag: String
         let tagStyle: String
-        let tpl: Int
+        let tpl: String?
         let linkMic: Int
         let gameThumb: String
         let avatar: String
@@ -161,7 +161,7 @@ public struct YY: LiveParse {
         let subbiz: String
         let sid: String
         let uid: String
-        let tpl: String
+        let tpl: String?
         let stageName: String
         let name: String
     }
@@ -349,7 +349,7 @@ public struct YY: LiveParse {
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         let dataReq = try await AF.request("https://www.yy.com/api/liveInfoDetail/\(roomId)/\(roomId)/0").serializingDecodable(YYRoomInfoMain.self).value
         if let data = dataReq.data {
-            return LiveModel(userName: data.name, roomTitle: data.desc, roomCover: data.gameThumb, userHeadImg: data.avatar, liveType: .yy, liveState: "1", userId: roomId, roomId: roomId, liveWatchedCount: "data.users")
+            return LiveModel(userName: data.name, roomTitle: data.desc, roomCover: data.gameThumb, userHeadImg: data.avatar, liveType: .yy, liveState: "1", userId: roomId, roomId: roomId, liveWatchedCount: "\(data.users)")
         }else {
             throw NSError(domain: "查询不到房间信息、可能是已经下播", code: -10000, userInfo: ["desc": "查询不到房间信息、可能是已经下播"])
         }
@@ -360,25 +360,43 @@ public struct YY: LiveParse {
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
-        //https://live.kuaishou.com/u/ccyoutai
         var roomId = ""
         var realUrl = ""
-        if shareCode.contains("live.kuaishou.com/u") { //长链接
-            // 定义正则表达式模式
-            let pattern = #"/u/([a-zA-Z0-9]+)"#
-            do {
-                let regex = try NSRegularExpression(pattern: pattern, options: [])
-                let nsString = shareCode as NSString
-                let results = regex.matches(in: shareCode, options: [], range: NSRange(location: 0, length: nsString.length))
-                if let match = results.first {
-                    // 提取匹配到的值
-                    let id = nsString.substring(with: match.range(at: 1))
-                    return try await KuaiShou.getLiveLastestInfo(roomId: id, userId: nil)
-                } else {
-                    throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+        if shareCode.contains("yy.com") {
+            if shareCode.contains("sid") { //分享码
+                // 定义正则表达式模式
+                let pattern = "sid=(\\d+)"
+                do {
+                    let regex = try NSRegularExpression(pattern: pattern, options: [])
+                    let nsString = shareCode as NSString
+                    let results = regex.matches(in: shareCode, options: [], range: NSRange(location: 0, length: nsString.length))
+                    if let match = results.first {
+                        // 提取匹配到的值
+                        let id = nsString.substring(with: match.range(at: 1))
+                        roomId = id
+                    } else {
+                        throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+                    }
+                } catch let error {
+                    throw error
                 }
-            } catch let error {
-                throw error
+            }else { //长链接
+                // 定义正则表达式模式
+                let pattern = #"/([a-zA-Z0-9]+)/"#
+                do {
+                    let regex = try NSRegularExpression(pattern: pattern, options: [])
+                    let nsString = shareCode as NSString
+                    let results = regex.matches(in: shareCode, options: [], range: NSRange(location: 0, length: nsString.length))
+                    if let match = results.first {
+                        // 提取匹配到的值
+                        let id = nsString.substring(with: match.range(at: 1))
+                        roomId = id
+                    } else {
+                        throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+                    }
+                } catch let error {
+                    throw error
+                }
             }
         }else {
             roomId = shareCode
@@ -386,7 +404,7 @@ public struct YY: LiveParse {
         if roomId == "" {
             throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
         }
-        return try await KuaiShou.getLiveLastestInfo(roomId: roomId, userId: nil)
+        return try await YY.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
     static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {

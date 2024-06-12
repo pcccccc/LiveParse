@@ -19,6 +19,7 @@ let package = Package(
         .package(url: "https://github.com/daltoniam/Starscream", .upToNextMajor(from: "4.0.6")),
         .package(url: "https://github.com/tsolomko/SWCompression", .upToNextMajor(from: "4.8.5")),
         .package(url: "https://github.com/apple/swift-protobuf.git", .upToNextMajor(from: "1.25.1")),
+        .package(url: "https://github.com/pcccccc/YouTubeKit", .upToNextMajor(from: "0.0.3")),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -31,6 +32,7 @@ let package = Package(
                 .product(name: "Starscream", package: "Starscream"),
                 .product(name: "SWCompression", package: "SWCompression"),
                 .product(name: "SwiftProtobuf", package: "swift-protobuf"),
+                .product(name: "YouTubeKit", package: "YouTubeKit"),
             ],
             resources: [.process("Resources")]
         ),

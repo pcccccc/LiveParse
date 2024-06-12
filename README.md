@@ -1,8 +1,8 @@
-# LiveParse ![GitHub release](https://img.shields.io/badge/release-v1.0.8-blue.svg)
+# LiveParse ![GitHub release](https://img.shields.io/badge/release-v1.2.7-green.svg)
 
 ## 介绍： 
 
-解析 Bilibili/Douyin/Huya/Douyin 直播相关内容的Swift版本。
+解析 Bilibili/Douyin/Huya/Douyin/网易CC/快手/抖音/youtube 直播相关内容的Swift版本。
 
 ## 功能：
 
@@ -11,7 +11,7 @@
 ## Swift Package Manager：
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pcccccc/LiveParse.git", .upToNextMajor(from:"1.0.8"))
+    .package(url: "https://github.com/pcccccc/LiveParse.git", .upToNextMajor(from:"1.2.7"))
 ]
 ```
 ## 使用：
@@ -76,10 +76,20 @@ extension ViewModel: WebSocketConnectionDelegate {
 }
 ```
 
-## TODO：
+## 各平台功能概览：
 
-- [x] 增加对应平台观看人数（人气）。
-- [x] 弹幕监控。
+|  平台   | 分类列表 | 房间列表 | 地址解析 | 搜索  | 分享码/链接 | 弹幕（评论） |
+| :-----: | :------: | :------: | :------: | :---: | :---------: | :----------: |
+| B站直播 |  - [x]   |  - [x]   |  - [x]   | - [x] |    - [x]    |    - [x]     |
+|  斗鱼   |  - [x]   |  - [x]   |  - [x]   | - [x] |    - [x]    |    - [x]     |
+|  虎牙   |  - [x]   |  - [x]   |  - [x]   | - [x] |    - [x]    |    - [x]     |
+|  抖音   |  - [x]   |  - [x]   |  - [x]   | - [x] |    - [x]    |    - [x]     |
+|  快手   |  - [x]   |  - [x]   |  - [x]   | - [ ] |    - [x]    |    - [ ]     |
+|   YY    |  - [x]   |  - [x]   |  - [x]   | - [x] |    - [x]    |    - [ ]     |
+| 网易CC  |  - [x]   |  - [x]   |  - [x]   | - [x] |    - [x]    |    - [ ]     |
+| Youtube |  - [ ]   |  - [ ]   |  - [x]   | - [ ] |    - [x]    |    - [ ]     |
+
+
 
 
 ## 参考及引用：
@@ -91,6 +101,10 @@ extension ViewModel: WebSocketConnectionDelegate {
 [wbt5/real-url](https://github.com/wbt5/real-url)
 
 [ihmily/DouyinLiveRecorder](https://github.com/ihmily/DouyinLiveRecorder)
+
+[wbt5/real-url](https://github.com/wbt5/real-url)
+
+[YoutubeKit](https://github.com/alexeichhorn/YouTubeKit)
 
 ## 声明：
 
