@@ -80,8 +80,8 @@ public struct LiveQualityDetail: Codable {
 }
 
 public struct LiveCategoryModel: Codable {
-    public let id: String //B站: id; Douyu:cid2; Huya: gid; Douyin: partitionId
-    public let parentId: String //B站: parent_id; Douyu: 不需要; Huya: 不需要; Douyin: partitionType
+    public var id: String //B站: id; Douyu:cid2; Huya: gid; Douyin: partitionId
+    public var parentId: String //B站: parent_id; Douyu: 不需要; Huya: 不需要; Douyin: partitionType
     public let title: String
     public let icon: String
     public var biz: String? //YY请求子分类房间的biz，其他平台为空
