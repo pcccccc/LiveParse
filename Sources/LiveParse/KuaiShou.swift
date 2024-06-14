@@ -20,8 +20,8 @@ struct KSCategoryModel: Codable {
 
 // Define the struct for the list of games
 struct KSCategoryList: Codable {
-    let list: [KSCategoryModel]
-    let hasMore: Bool
+    let list: [KSCategoryModel]?
+    let hasMore: Bool?
 }
 
 struct KSCategoryData<T: Codable>: Codable {
@@ -29,8 +29,8 @@ struct KSCategoryData<T: Codable>: Codable {
 }
 
 struct KSRoomList: Codable {
-    let list: [KSRoomListModel]
-    let hasMore: Bool
+    let list: [KSRoomListModel]?
+    let hasMore: Bool?
 }
 
 // MARK: - List
@@ -51,34 +51,33 @@ struct KSRoomListModel: Codable {
     let quality: String
     let watchingCount: String
     let landscape: Bool
-    let likeCount: String
     let type: String
 
     enum CodingKeys: String, CodingKey {
         case id, poster, playUrls, caption
         case startTime = "statrtTime"
-        case author, gameInfo, hasRedPack, hasBet, followed, expTag, hotIcon, living, quality, watchingCount, landscape, likeCount, type
+        case author, gameInfo, hasRedPack, hasBet, followed, expTag, hotIcon, living, quality, watchingCount, landscape, type
     }
 }
 
 // MARK: - Author
 struct Author: Codable {
-    let id: String
-    let name: String
-    let description: String
-    let avatar: String
-    let sex: String
-    let living: Bool
-    let followStatus: String
-    let constellation: String
-    let cityName: String
-    let originUserId: Int
-    let privacy: Bool
-    let isNew: Bool
-    let timestamp: Int
-    let verifiedStatus: VerifiedStatus
-    let bannedStatus: BannedStatus
-    let counts: Counts
+    let id: String?
+    let name: String?
+    let description: String?
+    let avatar: String?
+    let sex: String?
+    let living: Bool?
+    let followStatus: String?
+    let constellation: String?
+    let cityName: String?
+    let originUserId: Int?
+    let privacy: Bool?
+    let isNew: Bool?
+    let timestamp: Int?
+    let verifiedStatus: VerifiedStatus?
+    let bannedStatus: BannedStatus?
+    let counts: Counts?
 }
 
 // MARK: - BannedStatus
@@ -165,12 +164,12 @@ struct KSPlayList: Codable {
     let liveGuess: Bool?
     let expTag: String?
     let privateLive: Bool?
-    let author: KSAuthor
-    let gameInfo: KSGameInfo
-    let isLiving: Bool
-    let authToken: String
-    let config: KSConfig
-    let status: KSStatus
+    let author: KSAuthor?
+    let gameInfo: KSGameInfo?
+    let isLiving: Bool?
+    let authToken: String?
+    let config: KSConfig?
+    let status: KSStatus?
 }
 
 // MARK: - KSLiveStream
@@ -209,22 +208,22 @@ struct KSRepresentation: Codable {
 
 // MARK: - KSAuthor
 struct KSAuthor: Codable {
-    let id: String
-    let name: String
-    let description: String
-    let avatar: String
-    let sex: String
-    let living: Bool
-    let followStatus: String
-    let constellation: String
-    let cityName: String
-    let originUserId: Int
-    let privacy: Bool
-    let isNew: Bool
-    let timestamp: Int
-    let verifiedStatus: KSVerifiedStatus
-    let bannedStatus: KSBannedStatus
-    let counts: KSCounts
+    let id: String?
+    let name: String?
+    let description: String?
+    let avatar: String?
+    let sex: String?
+    let living: Bool?
+    let followStatus: String?
+    let constellation: String?
+    let cityName: String?
+    let originUserId: Int?
+    let privacy: Bool?
+    let isNew: Bool?
+    let timestamp: Int?
+    let verifiedStatus: KSVerifiedStatus?
+    let bannedStatus: KSBannedStatus?
+    let counts: KSCounts?
 }
 
 // MARK: - KSVerifiedStatus
@@ -284,47 +283,87 @@ public struct KuaiShou: LiveParse {
     }
     
     public static func getCategorySubList(id: String) async throws -> [LiveCategoryModel] {
-        var hasMore = true
-        var page = 1
-        var tempArray: [LiveCategoryModel] = []
-        while hasMore == true {
-            let dataReq = try await AF.request(
-                "https://live.kuaishou.com/live_api/category/data",
-                method: .get,
-                parameters: [
-                    "type": id,
-                    "page": page,
-                    "pageSize": 20
-                ]
-            ).serializingDecodable(KSCategoryData<KSCategoryList?>.self).value
-            if let list = dataReq.data?.list {
-                for item in list {
-                    tempArray.append(LiveCategoryModel(id: item.id, parentId: "", title: item.name, icon: item.poster))
+        do {
+            var hasMore = true
+            var page = 1
+            var tempArray: [LiveCategoryModel] = []
+            while hasMore == true {
+                let dataReq = try await AF.request(
+                    "https://live.kuaishou.com/live_api/category/data",
+                    method: .get,
+                    parameters: [
+                        "type": id,
+                        "page": page,
+                        "pageSize": 20
+                    ]
+                ).serializingDecodable(KSCategoryData<KSCategoryList?>.self).value
+                if let list = dataReq.data?.list {
+                    for item in list {
+                        tempArray.append(LiveCategoryModel(id: item.id, parentId: "", title: item.name, icon: item.poster))
+                    }
+                    hasMore = dataReq.data?.hasMore ?? false
+                    page += 1
                 }
+            }
+            return tempArray
+        }catch {
+            print(error)
+            var hasMore = true
+            var page = 1
+            var tempArray: [LiveCategoryModel] = []
+            while hasMore == true {
+                let dataReq = try await AF.request(
+                    "https://live.kuaishou.com/live_api/category/data",
+                    method: .get,
+                    parameters: [
+                        "type": id,
+                        "page": page,
+                        "pageSize": 20
+                    ]
+                ).serializingDecodable(KSCategoryData<KSCategoryList?>.self).value
                 hasMore = dataReq.data?.hasMore ?? false
                 page += 1
             }
+            throw(error)
         }
-        return tempArray
     }
     
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
-        let url = id.count >= 7 ? "https://live.kuaishou.com/live_api/non-gameboard/list" : "https://live.kuaishou.com/live_api/gameboard/list"
-        let dataReq = try await AF.request(
-            url,
-            method: .get,
-            parameters: [
-                "filterType": 0,
-                "page": page,
-                "pageSize": 20,
-                "gameId": id
-            ]
-        ).serializingDecodable(KSCategoryData<KSRoomList>.self).value
-        var tempArray = [LiveModel]()
-        for item in dataReq.data.list {
-            tempArray.append(LiveModel(userName: item.author.name, roomTitle: item.caption, roomCover: item.poster, userHeadImg: item.author.avatar, liveType: .ks, liveState: "1", userId: item.author.id, roomId: item.author.id, liveWatchedCount: item.watchingCount))
+        do {
+            let url = id.count >= 7 ? "https://live.kuaishou.com/live_api/non-gameboard/list" : "https://live.kuaishou.com/live_api/gameboard/list"
+            let dataReq = try await AF.request(
+                url,
+                method: .get,
+                parameters: [
+                    "filterType": 0,
+                    "page": page,
+                    "pageSize": 20,
+                    "gameId": id
+                ]
+            ).serializingDecodable(KSCategoryData<KSRoomList>.self).value
+            var tempArray = [LiveModel]()
+            if let list = dataReq.data.list {
+                for item in list {
+                    tempArray.append(LiveModel(userName: item.author.name ?? "", roomTitle: item.caption, roomCover: item.poster, userHeadImg: item.author.avatar ?? "", liveType: .ks, liveState: "1", userId: item.author.id ?? "", roomId: item.author.id ?? "", liveWatchedCount: item.watchingCount))
+                }
+            }
+            return tempArray
+        }catch {
+            print(error)
+            let url = id.count >= 7 ? "https://live.kuaishou.com/live_api/non-gameboard/list" : "https://live.kuaishou.com/live_api/gameboard/list"
+            let dataReq = try await AF.request(
+                url,
+                method: .get,
+                parameters: [
+                    "filterType": 0,
+                    "page": page,
+                    "pageSize": 20,
+                    "gameId": id
+                ]
+            ).serializingString().value
+            print(dataReq)
+            throw error
         }
-        return tempArray
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
@@ -344,7 +383,7 @@ public struct KuaiShou: LiveParse {
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         let dataReq = try await getKSLiveRoom(roomId: roomId)
-        return LiveModel(userName: dataReq.liveroom.playList?.first?.author.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.playList?.first?.liveStream.playUrls?.count ?? 0 > 0 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
+        return LiveModel(userName: dataReq.liveroom.playList?.first?.author?.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author?.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author?.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.playList?.first?.liveStream.playUrls?.count ?? 0 > 0 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
     }
     
     static func getKSLiveRoom(roomId: String) async throws -> KSLiveRoot {

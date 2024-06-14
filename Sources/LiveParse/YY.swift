@@ -315,10 +315,8 @@ public struct YY: LiveParse {
                     if let streamJsonString = stream["json"] as? String {
                         let gearJson = try JSONSerialization.jsonObject(with: streamJsonString.data(using: .utf8)!, options: .mutableContainers)
                         let gearDict = gearJson as! Dictionary<String, Any>
-                        print(gearDict)
                         if let gearInfo = gearDict["gear_info"] as? Dictionary<String, Any> {
-                            print("=====\(gearInfo)")
-                            let rate = gearDict["rate"] as? Int ?? 0
+                            let rate = gearInfo["gear"] as? Int ?? 0
                             var liveQualityDetail = LiveQualityDetail(roomId: roomId, title: gearInfo["name"] as? String ?? "", qn: rate, url: realUrl, liveCodeType: .flv, liveType: .yy)
                             if liveQualityDetails.contains { $0.title == liveQualityDetail.title } == false {
                                 liveQualityDetails.append(liveQualityDetail)

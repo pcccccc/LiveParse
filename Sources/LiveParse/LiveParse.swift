@@ -138,10 +138,12 @@ protocol LiveParse {
 public final class LiveParsePlatformInfo: Codable {
     public let liveType: LiveType
     public let livePlatformName: String
+    public let description: String
     
-    init(liveType: LiveType, livePlatformName: String) {
+    init(liveType: LiveType, livePlatformName: String, description: String) {
         self.liveType = liveType
         self.livePlatformName = livePlatformName
+        self.description = description
     }
 }
 
@@ -169,14 +171,14 @@ public final class LiveParseTools {
 
     public class func getAllSupportPlatform() -> [LiveParsePlatformInfo] {
         return [
-            LiveParsePlatformInfo(liveType: .bilibili, livePlatformName: getLivePlatformName(.bilibili)),
-            LiveParsePlatformInfo(liveType: .huya, livePlatformName: getLivePlatformName(.huya)),
-            LiveParsePlatformInfo(liveType: .douyin, livePlatformName: getLivePlatformName(.douyin)),
-            LiveParsePlatformInfo(liveType: .douyu, livePlatformName: getLivePlatformName(.douyu)),
-            LiveParsePlatformInfo(liveType: .cc, livePlatformName: getLivePlatformName(.cc)),
-            LiveParsePlatformInfo(liveType: .ks, livePlatformName: getLivePlatformName(.ks)),
-            LiveParsePlatformInfo(liveType: .yy, livePlatformName: getLivePlatformName(.yy)),
-            LiveParsePlatformInfo(liveType: .youtube, livePlatformName: getLivePlatformName(.youtube)),
+            LiveParsePlatformInfo(liveType: .bilibili, livePlatformName: getLivePlatformName(.bilibili), description: "超清直播须在设置扫码"),
+            LiveParsePlatformInfo(liveType: .huya, livePlatformName: getLivePlatformName(.huya), description: "竞技由我，玩在虎牙"),
+            LiveParsePlatformInfo(liveType: .douyin, livePlatformName: getLivePlatformName(.douyin), description: "无法使用请在PC浏览器扫码登录"),
+            LiveParsePlatformInfo(liveType: .douyu, livePlatformName: getLivePlatformName(.douyu), description: "每个人的直播平台"),
+            LiveParsePlatformInfo(liveType: .cc, livePlatformName: getLivePlatformName(.cc), description: "网易游戏直播(暂无弹幕)"),
+            LiveParsePlatformInfo(liveType: .ks, livePlatformName: getLivePlatformName(.ks), description: "解析时间较长请耐心等待(暂无弹幕)"),
+            LiveParsePlatformInfo(liveType: .yy, livePlatformName: getLivePlatformName(.yy), description: "全民娱乐的互动直播平台(暂无弹幕)"),
+            LiveParsePlatformInfo(liveType: .youtube, livePlatformName: getLivePlatformName(.youtube), description: "需要自行解决代理问题，仅支持搜索观看(暂无弹幕)"),
         ]
     }
 }
