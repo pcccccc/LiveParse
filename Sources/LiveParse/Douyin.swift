@@ -8,7 +8,7 @@
 import Foundation
 import Alamofire
 import SwiftyJSON
-
+import JavaScriptCore
 
 struct DouyinMainModel: Codable {
     let pathname: String
@@ -565,16 +565,27 @@ public struct Douyin: LiveParse {
         let room = try await getLiveLastestInfo(roomId: roomId, userId: nil) //防止传进来的roomId不是真实的web_rid，而是链接的短roomid
         let douyinTK = try await signURL("https://live.douyin.com/\(roomId)")
         let cookie = try await getCookie(roomId: roomId)
-        
+        let jsContext = JSContext()
+        if let huyaFilePath = Bundle.module.path(forResource: "douyin", ofType: "js") {
+            print(try? String(contentsOfFile: huyaFilePath))
+            jsContext?.evaluateScript(try? String(contentsOfFile: huyaFilePath))
+        }
+        if let huyaFilePath = Bundle.module.path(forResource: "webmssdk.es5", ofType: "js") {
+            print(try? String(contentsOfFile: huyaFilePath))
+            jsContext?.evaluateScript(try? String(contentsOfFile: huyaFilePath))
+        }
+        print("creatSignature('\(roomId)')")
+        let result = jsContext?.evaluateScript("creatSignature(\(roomId))")
+        print(result?.toString())
         let ts = Int(Date().timeIntervalSince1970 * 1000)
         return (
             [
                 "app_name": "douyin_web",
                 "version_code": "180800",
-                "webcast_sdk_version": "1.3.0",
-                "update_version_code": "1.3.0",
+                "webcast_sdk_version": "1.0.14-beta.0",
+                "update_version_code": "1.0.14-beta.0",
                 "compress": "gzip",
-                "cursor": "h-1_t-\(ts)_r-1_d-1_u-1",
+                "cursor": "t-\(ts)_r-1_d-1_u-1_h-\(roomId)",
                 "host": "https://live.douyin.com",
                 "aid": "6383",
                 "live_id": "1",
@@ -598,13 +609,15 @@ public struct Douyin: LiveParse {
                 "identity": "audience",
                 "room_id": room.userId, // Replace with your room ID
                 "heartbeatDuration": "0",
-                "signature": "00000000"
+                "internal_ext": "internal_src:dim|wss_push_room_id:\(roomId)|wss_push_did:7382775908066035252|first_req_ms:\(ts)|fetch_time:1718967203902|seq:1|wss_info:0-1718967203902-0-0|wrds_v:7382907902601725472",
+                "signature": "00000000",
             ],
             [
                 "cookie": "\(cookie); ttwid=\(douyinTK.ttwid)",
                 "User-Agnet": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
             ]
         )
+        ///wss://webcast5-ws-web-hl.douyin.com/webcast/im/push/v2/?app_name=douyin_web&version_code=180800&webcast_sdk_version=1.0.14-beta.0&update_version_code=1.0.14-beta.0&compress=gzip&device_platform=web&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Mozilla&browser_version=5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36&browser_online=true&tz_name=Asia/Shanghai&cursor=t-1718967203902_r-1_d-1_u-1_h-7382907816740803596&internal_ext=internal_src:dim|wss_push_room_id:7382847960272489256|wss_push_did:7382775908066035252|first_req_ms:1718967203817|fetch_time:1718967203902|seq:1|wss_info:0-1718967203902-0-0|wrds_v:7382907902601725472&host=https://live.douyin.com&aid=6383&live_id=1&did_rule=3&endpoint=live_pc&support_wrds=1&user_unique_id=7382775908066035252&im_path=/webcast/im/fetch/&identity=audience&need_persist_msg_count=15&insert_task_id=&live_reason=&room_id=7382847960272489256&heartbeatDuration=0&signature=fswAcYRWALRmgHVh"
     }
     
     public static func randomHexString(length: Int) -> String {
