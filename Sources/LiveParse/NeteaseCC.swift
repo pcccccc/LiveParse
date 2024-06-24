@@ -403,7 +403,7 @@ public struct NeteaseCC: LiveParse {
         return try await NeteaseCC.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
-    public static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
+    public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
         let dataReq = try await AF.request("https://api.cc.163.com/v1/activitylives/anchor/lives?anchor_ccid=\(roomId)").serializingData().value
         let json = try JSONSerialization.jsonObject(with: dataReq, options: .mutableContainers)
         guard let dictionary = json as? [String: Any],

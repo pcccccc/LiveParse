@@ -43,7 +43,7 @@ public class WebSocketConnection {
             case .huya:
                 URL(string: "wss://cdnws.api.huya.com")!
             case .douyin:
-                URL(string: "wss://webcast3-ws-web-lq.douyin.com/webcast/im/push/v2/")!
+                URL(string: "wss://webcast5-ws-web-lf.douyin.com/webcast/im/push/v2/")!
             case .douyu:
                 URL(string: "wss://danmuproxy.douyu.com:8506/")!
             case .cc:
@@ -82,6 +82,7 @@ public class WebSocketConnection {
     public func connect() {
         var request = URLRequest(url: url)
         if liveType == .douyin { //抖音需要把parameters拼到url上
+            print(formatDouyinFinalUrl(url: url, parameters: self.parameters!))
             request = URLRequest(url: formatDouyinFinalUrl(url: url, parameters: self.parameters!))
         }else if liveType == .bilibili {
             request = URLRequest(url: URL(string: parameters?["ws_url"] ?? "")!)

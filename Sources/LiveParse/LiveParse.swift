@@ -132,7 +132,7 @@ protocol LiveParse {
      
      - Throws: 如果无法完成请求或解析数据，将抛出错误。
      */
-    static func getDanmukuArgs(roomId: String) async throws -> ([String: String], [String: String]?)
+    static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String: String], [String: String]?)
 }
 
 public final class LiveParsePlatformInfo: Codable {

@@ -271,7 +271,7 @@ public struct Douyu: LiveParse {
         return try await Douyu.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
-    public static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
+    public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
         (["roomId": roomId], nil)
     }
     

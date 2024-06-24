@@ -9,6 +9,7 @@ import Foundation
 import Alamofire
 import SwiftyJSON
 import JavaScriptCore
+import CryptoKit
 
 struct DouyinMainModel: Codable {
     let pathname: String
@@ -561,63 +562,65 @@ public struct Douyin: LiveParse {
         throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
     }
     
-    public static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
+    public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
         let room = try await getLiveLastestInfo(roomId: roomId, userId: nil) //防止传进来的roomId不是真实的web_rid，而是链接的短roomid
+        var finalUserId = Douyin.getUserUniqueId()
         let douyinTK = try await signURL("https://live.douyin.com/\(roomId)")
         let cookie = try await getCookie(roomId: roomId)
+        
+        let sigParams = [
+            "live_id": "1",
+            "aid": "6383",
+            "version_code": "180800",
+            "webcast_sdk_version": "1.0.14-beta.0",
+            "room_id": userId ?? "",
+            "sub_room_id": "",
+            "sub_channel_id": "",
+            "did_rule": "3",
+            "user_unique_id": finalUserId,
+            "device_platform": "web",
+            "device_type": "",
+            "ac": "",
+            "identity": "audience",
+        ]
+        let xmsStub = Douyin.getXMsStub(params: sigParams)
+        let jsDom = """
+                document = {};
+                window = {};
+                navigator = {
+                'userAgent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+                };
+                """
         let jsContext = JSContext()
-        if let huyaFilePath = Bundle.module.path(forResource: "douyin", ofType: "js") {
-            print(try? String(contentsOfFile: huyaFilePath))
-            jsContext?.evaluateScript(try? String(contentsOfFile: huyaFilePath))
+        if let huyaFilePath = Bundle.module.path(forResource: "webmssdk", ofType: "js") {
+            jsContext?.evaluateScript(try? jsDom + String(contentsOfFile: huyaFilePath))
+
         }
-        if let huyaFilePath = Bundle.module.path(forResource: "webmssdk.es5", ofType: "js") {
-            print(try? String(contentsOfFile: huyaFilePath))
-            jsContext?.evaluateScript(try? String(contentsOfFile: huyaFilePath))
-        }
-        print("creatSignature('\(roomId)')")
-        let result = jsContext?.evaluateScript("creatSignature(\(roomId))")
-        print(result?.toString())
+        let signature = jsContext?.evaluateScript("get_sign('\(xmsStub)')").toString()
         let ts = Int(Date().timeIntervalSince1970 * 1000)
         return (
             [
-                "app_name": "douyin_web",
+                "room_id": userId ?? "",
+                "compress": "gzip",
                 "version_code": "180800",
                 "webcast_sdk_version": "1.0.14-beta.0",
-                "update_version_code": "1.0.14-beta.0",
-                "compress": "gzip",
-                "cursor": "t-\(ts)_r-1_d-1_u-1_h-\(roomId)",
-                "host": "https://live.douyin.com",
-                "aid": "6383",
                 "live_id": "1",
                 "did_rule": "3",
-                "debug": "false",
-                "maxCacheMessageNumber": "20",
-                "endpoint": "live_pc",
-                "support_wrds": "1",
-                "im_path": "/webcast/im/fetch/",
-                "user_unique_id": room.userId, // Replace with your user ID
-                "device_platform": "web",
-                "cookie_enabled": "true",
-                "screen_width": "1920",
-                "screen_height": "1080",
-                "browser_language": "zh-CN",
-                "browser_platform": "Win32",
-                "browser_name": "Mozilla",
-                "browser_version": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
-                "browser_online": "true",
-                "tz_name": "Asia/Shanghai",
+                "user_unique_id": finalUserId,
                 "identity": "audience",
-                "room_id": room.userId, // Replace with your room ID
-                "heartbeatDuration": "0",
-                "internal_ext": "internal_src:dim|wss_push_room_id:\(roomId)|wss_push_did:7382775908066035252|first_req_ms:\(ts)|fetch_time:1718967203902|seq:1|wss_info:0-1718967203902-0-0|wrds_v:7382907902601725472",
-                "signature": "00000000",
+                "signature": signature ?? "",
+                "aid": "6383",
+                "device_platform": "web",
+                "browser_language": "zh-CN",
+                "browser_platform": "MacIntel",
+                "browser_name": "Mozilla",
+                "browser_version": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
             ],
             [
                 "cookie": "\(cookie); ttwid=\(douyinTK.ttwid)",
-                "User-Agnet": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
+                "User-Agnet": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
             ]
         )
-        ///wss://webcast5-ws-web-hl.douyin.com/webcast/im/push/v2/?app_name=douyin_web&version_code=180800&webcast_sdk_version=1.0.14-beta.0&update_version_code=1.0.14-beta.0&compress=gzip&device_platform=web&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Mozilla&browser_version=5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36&browser_online=true&tz_name=Asia/Shanghai&cursor=t-1718967203902_r-1_d-1_u-1_h-7382907816740803596&internal_ext=internal_src:dim|wss_push_room_id:7382847960272489256|wss_push_did:7382775908066035252|first_req_ms:1718967203817|fetch_time:1718967203902|seq:1|wss_info:0-1718967203902-0-0|wrds_v:7382907902601725472&host=https://live.douyin.com&aid=6383&live_id=1&did_rule=3&endpoint=live_pc&support_wrds=1&user_unique_id=7382775908066035252&im_path=/webcast/im/fetch/&identity=audience&need_persist_msg_count=15&insert_task_id=&live_reason=&room_id=7382847960272489256&heartbeatDuration=0&signature=fswAcYRWALRmgHVh"
     }
     
     public static func randomHexString(length: Int) -> String {
@@ -713,5 +716,20 @@ public struct Douyin: LiveParse {
         return dataReq.data
     }
     
+    static func getXMsStub(params: [String: String]) -> String {
+//        let sigParams = params.map { "\($0)=\($1)" }.joined(separator: ",")
+        let sigParams = "live_id=\(params["live_id"] ?? ""),aid=\(params["aid"] ?? ""),version_code=\(params["version_code"] ?? ""),webcast_sdk_version=\(params["webcast_sdk_version"] ?? ""),room_id=\(params["room_id"] ?? ""),sub_room_id=,sub_channel_id=,did_rule=\(params["did_rule"] ?? ""),user_unique_id=\(params["user_unique_id"] ?? ""),device_platform=\(params["device_platform"] ?? ""),device_type=,ac=,identity=\(params["identity"] ?? "")"
+        let sigParamsData = Data(sigParams.utf8)
+        let md5Digest = Insecure.MD5.hash(data: sigParamsData)
+        let md5Hex = md5Digest.map { String(format: "%02hhx", $0) }.joined()
+        return md5Hex
+    }
+    
+    static func getUserUniqueId() -> String {
+        let lowerBound: UInt64 = 7300000000000000000
+        let upperBound: UInt64 = 7999999999999999999
+        let randomId = UInt64.random(in: lowerBound...upperBound)
+        return String(randomId)
+    }
 }
 

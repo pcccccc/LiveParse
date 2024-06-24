@@ -447,7 +447,7 @@ public struct KuaiShou: LiveParse {
         return try await KuaiShou.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
-    static func getDanmukuArgs(roomId: String) async throws -> ([String : String], [String : String]?) {
+    static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
         ([:],[:])
     }
 }
