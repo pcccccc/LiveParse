@@ -563,8 +563,14 @@ public struct Douyin: LiveParse {
     }
     
     public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
+        var finalUserId = ""
         let room = try await getLiveLastestInfo(roomId: roomId, userId: nil) //防止传进来的roomId不是真实的web_rid，而是链接的短roomid
-        var finalUserId = Douyin.getUserUniqueId()
+        if userId != nil && userId != "" {
+            finalUserId = userId ?? ""
+        }else {
+            finalUserId = room.userId
+        }
+        var userUniqueId = Douyin.getUserUniqueId()
         let douyinTK = try await signURL("https://live.douyin.com/\(roomId)")
         let cookie = try await getCookie(roomId: roomId)
         
@@ -573,11 +579,11 @@ public struct Douyin: LiveParse {
             "aid": "6383",
             "version_code": "180800",
             "webcast_sdk_version": "1.0.14-beta.0",
-            "room_id": userId ?? "",
+            "room_id": finalUserId,
             "sub_room_id": "",
             "sub_channel_id": "",
             "did_rule": "3",
-            "user_unique_id": finalUserId,
+            "user_unique_id": userUniqueId,
             "device_platform": "web",
             "device_type": "",
             "ac": "",
@@ -592,21 +598,21 @@ public struct Douyin: LiveParse {
                 };
                 """
         let jsContext = JSContext()
-        if let huyaFilePath = Bundle.module.path(forResource: "webmssdk", ofType: "js") {
-            jsContext?.evaluateScript(try? jsDom + String(contentsOfFile: huyaFilePath))
+        if let jsPath = Bundle.module.path(forResource: "webmssdk", ofType: "js") {
+            jsContext?.evaluateScript(try? jsDom + String(contentsOfFile: jsPath))
 
         }
         let signature = jsContext?.evaluateScript("get_sign('\(xmsStub)')").toString()
         let ts = Int(Date().timeIntervalSince1970 * 1000)
         return (
             [
-                "room_id": userId ?? "",
+                "room_id": finalUserId,
                 "compress": "gzip",
                 "version_code": "180800",
                 "webcast_sdk_version": "1.0.14-beta.0",
                 "live_id": "1",
                 "did_rule": "3",
-                "user_unique_id": finalUserId,
+                "user_unique_id": userUniqueId,
                 "identity": "audience",
                 "signature": signature ?? "",
                 "aid": "6383",
