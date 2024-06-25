@@ -187,7 +187,7 @@ public struct YY: LiveParse {
     
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         do {
-            let url = id == "index" ? "https://yyapp-idx.yy.com/mobyy/nav/\(id)/\(parentId ?? "")" : "https://rubiks-idx.yy.com/nav/\(id)/\(parentId)"
+            let url = id == "index" ? "https://yyapp-idx.yy.com/mobyy/nav/\(id)/\(parentId ?? "")" : "https://rubiks-idx.yy.com/nav/\(id)/\(parentId ?? "")"
             let dataReq = try await AF.request(
                 url,
                 method: .get,
