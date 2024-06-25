@@ -195,7 +195,7 @@ public struct YY: LiveParse {
             ).serializingDecodable(YYRoomResponse.self).value
             var tempArray = [LiveModel]()
             for item in dataReq.data {
-                if item.name.contains("预告") { //去掉直播预告相关内容
+                if item.name.contains("预告") || item.name.contains("活动") { //去掉直播预告，活动相关内容
                     continue
                 }
                 for realItem in item.data {
