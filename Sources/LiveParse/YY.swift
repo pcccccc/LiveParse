@@ -41,13 +41,13 @@ struct YYRoomSection: Codable {
 }
 
 struct YYRoomListData: Codable {
-    let uid: Int
-    let sid: Int
-    let name: String
-    let desc: String
-    let avatar: String
-    let users: Int
-    let img: String
+    let uid: Int?
+    let sid: Int?
+    let name: String?
+    let desc: String?
+    let avatar: String?
+    let users: Int?
+    let img: String?
 }
 
 public struct YY: LiveParse {
@@ -199,7 +199,7 @@ public struct YY: LiveParse {
                     continue
                 }
                 for realItem in item.data {
-                    tempArray.append(LiveModel(userName: realItem.name, roomTitle: realItem.desc, roomCover: realItem.img, userHeadImg: realItem.avatar, liveType: .yy, liveState: "1", userId: "\(realItem.uid)", roomId: "\(realItem.sid)", liveWatchedCount: "\(realItem.users)"))
+                    tempArray.append(LiveModel(userName: realItem.name ?? "", roomTitle: realItem.desc ?? "", roomCover: realItem.img ?? "", userHeadImg: realItem.avatar ?? "", liveType: .yy, liveState: "1", userId: "\(realItem.uid ?? 0)", roomId: "\(realItem.sid ?? 0)", liveWatchedCount: "\(realItem.users ?? 0)"))
                 }
             }
             return tempArray
