@@ -222,7 +222,7 @@ var headers = HTTPHeaders.init([
     "Authority": "live.douyin.com",
     "Referer": "https://live.douyin.com",
     "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
 ])
 
 public struct Douyin: LiveParse {
@@ -401,10 +401,10 @@ public struct Douyin: LiveParse {
             URLQueryItem(name: "browser_language", value: "zh-CN"),
             URLQueryItem(name: "browser_platform", value: "Win32"),
             URLQueryItem(name: "browser_name", value: "Edge"),
-            URLQueryItem(name: "browser_version", value: "114.0.1823.58"),
+            URLQueryItem(name: "browser_version", value: "126.0.0.0"),
             URLQueryItem(name: "browser_online", value: "true"),
             URLQueryItem(name: "engine_name", value: "Blink"),
-            URLQueryItem(name: "engine_version", value: "114.0.0.0"),
+            URLQueryItem(name: "engine_version", value: "126.0.0.0"),
             URLQueryItem(name: "os_name", value: "Windows"),
             URLQueryItem(name: "os_version", value: "10"),
             URLQueryItem(name: "cpu_core_num", value: "12"),
@@ -417,16 +417,33 @@ public struct Douyin: LiveParse {
         ]
         
         components.queryItems = queryItems
-        let douyinTK = try await Douyin.signURL(components.url!.absoluteString)
-        let requestUrl = douyinTK.url
+        var msstub: [String: String] = [:]
+        for item in queryItems {
+            msstub.updateValue(item.value ?? "", forKey: item.name)
+        }
+        let xmsStub = Douyin.getXMsStub(params: msstub)
+        let jsDom = """
+                document = {};
+                window = {};
+                navigator = {
+                'userAgent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+                };
+                """
+        let jsContext = JSContext()
+        if let jsPath = Bundle.module.path(forResource: "webmssdk", ofType: "js") {
+            jsContext?.evaluateScript(try? jsDom + String(contentsOfFile: jsPath))
+        }
+        let signature = jsContext?.evaluateScript("get_sign('\(xmsStub)')").toString()
+        let requestUrl = components.url!.absoluteString + "a_bogus=\(signature)"
         let reqHeaders = HTTPHeaders.init([
             "Accept":"application/json, text/plain, */*",
             "Authority": "live.douyin.com",
             "Referer": "https://www.douyin.com/search/\(text ?? "")?source=switch_tab&type=live",
             "User-Agent":
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
-            "Cookie": "ttwid=\(douyinTK.ttwid);msToken=\(douyinTK.mstoken);__ac_nonce=\(String.generateRandomString(length: 21))"
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            "Cookie": headers["cookie"] ?? "" + "__ac_nonce=\(String.generateRandomString(length: 21))"
         ])
+        let dataReq0 = try await AF.request(requestUrl, method: .get, headers:reqHeaders).serializingString().value
         let dataReq = try await AF.request(requestUrl, method: .get, headers:reqHeaders).serializingDecodable(DouyinSearchMain.self).value
         var tempArray: Array<LiveModel> = []
         for item in dataReq.data {
@@ -518,10 +535,10 @@ public struct Douyin: LiveParse {
                         let range = match.range(at: 1) // sec_user_id
                         sec_user_id = nsString.substring(with: range)
                     }
+                
                     let requestUrl = "https://webcast.amemv.com/webcast/room/reflow/info/?verifyFp=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf&type_id=0&live_id=1&room_id=\(roomId)&sec_user_id=\(sec_user_id)&app_id=1128&msToken=wrqzbEaTlsxt52-vxyZo_mIoL0RjNi1ZdDe7gzEGMUTVh_HvmbLLkQrA_1HKVOa2C6gkxb6IiY6TY2z8enAkPEwGq--gM-me3Yudck2ailla5Q4osnYIHxd9dI4WtQ=="
-                    let douyinTK = try await Douyin.signURL(requestUrl)
-                    let res = try await AF.request(douyinTK.url, headers: [
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+                    let res = try await AF.request(requestUrl, headers: [
+                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
                         "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2",
                         "Cookie": "s_v_web_id=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf"
                     ]).serializingDecodable(DouyinSecUserIdRoomData.self).value
@@ -571,7 +588,6 @@ public struct Douyin: LiveParse {
             finalUserId = room.userId
         }
         var userUniqueId = Douyin.getUserUniqueId()
-        let douyinTK = try await signURL("https://live.douyin.com/\(roomId)")
         let cookie = try await getCookie(roomId: roomId)
         
         let sigParams = [
@@ -623,7 +639,7 @@ public struct Douyin: LiveParse {
                 "browser_version": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
             ],
             [
-                "cookie": "\(cookie); ttwid=\(douyinTK.ttwid)",
+                "cookie": headers["cookie"] ?? "",
                 "User-Agnet": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
             ]
         )
@@ -677,29 +693,6 @@ public struct Douyin: LiveParse {
         return ""
     }
     
-    public static func getDouyinWebRid(roomId: String) async throws {
-        do {
-            let dataReq = try await getDouyinRoomDetail(roomId: roomId, userId: "")
-            let realRoomId = dataReq.data?.data?.first?.owner?.id_str ?? roomId
-            let sec_uid = dataReq.data?.data?.first?.owner?.sec_uid ?? ""
-            let url = "https://webcast.amemv.com/webcast/room/reflow/info/?verifyFp=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf&type_id=0&live_id=1&room_id=\(realRoomId)&sec_user_id=\(sec_uid)&app_id=1128&msToken=wrqzbEaTlsxt52-vxyZo_mIoL0RjNi1ZdDe7gzEGMUTVh_HvmbLLkQrA_1HKVOa2C6gkxb6IiY6TY2z8enAkPEwGq--gM-me3Yudck2ailla5Q4osnYIHxd9dI4WtQ=="
-            let douyinTK = try await Douyin.signURL(url)
-            let requestUrl = douyinTK.url
-            let reqHeaders = HTTPHeaders.init([
-                "Accept":"application/json, text/plain, */*",
-                "User-Agent":
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
-                "Cookie": "s_v_web_id=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf;ttwid=\(douyinTK.ttwid);msToken=\(douyinTK.mstoken);__ac_nonce=\(String.generateRandomString(length: 21))",
-                "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2'"
-            ])
-            let resp = try await AF.request(requestUrl, method: .get, headers:reqHeaders).serializingString().value
-            let json = try JSON(data: resp.data(using: .utf8) ?? Data())
-            print("id:\(json["data"]["room"]["id_str"].stringValue)")
-        }catch {
-            print(error)
-        }
-    }
-    
     public static func getCookie(roomId: String) async throws -> String {
         var httpHeaders = headers
         httpHeaders.add(name: "Cookie", value: "__ac_nonce=\(Douyin.randomHexString(length: 21))")
@@ -707,20 +700,20 @@ public struct Douyin: LiveParse {
         return dataReq?["Set-Cookie"] as? String ?? ""
     }
     
-    public static func signURL(_ url: String) async throws -> DouyinTKData {
-        
-        var request = URLRequest(url: URL(string: "https://tk.nsapps.cn/")!)
-        request.httpMethod = "post"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("application/json;charset=UTF-8", forHTTPHeaderField: "Content-Type")
-        let parameter = [
-            "url": url,
-            "userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: parameter)
-        let dataReq = try await AF.request(request).serializingDecodable(DouyinTKMainData.self).value
-        return dataReq.data
-    }
+//    public static func signURL(_ url: String) async throws -> DouyinTKData {
+//        
+//        var request = URLRequest(url: URL(string: "https://dy.nsapps.cn/abogus")!)
+//        request.httpMethod = "post"
+//        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+//        let parameter = [
+//            "url": url,
+//            "userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+//        ]
+//        request.httpBody = try JSONSerialization.data(withJSONObject: parameter)
+//        let dataReq2 = try await AF.request(request).serializingString().value
+//        let dataReq = try await AF.request(request).serializingDecodable(DouyinTKMainData.self).value
+//        return dataReq.data
+//    }
     
     static func getXMsStub(params: [String: String]) -> String {
 //        let sigParams = params.map { "\($0)=\($1)" }.joined(separator: ",")
