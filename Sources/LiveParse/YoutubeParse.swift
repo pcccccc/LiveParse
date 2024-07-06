@@ -46,8 +46,8 @@ public struct YoutubeParse: LiveParse {
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
         var roomId = ""
-        if shareCode.contains("youtube.com") { //长链接
-            let pattern = "v=([^&]+)"
+        if shareCode.contains("youtube.com") && shareCode.contains("v=") { //长链接
+            let pattern = "v=([^/?&]+)"
             guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
                throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
             }
@@ -56,9 +56,18 @@ public struct YoutubeParse: LiveParse {
             if let match = matches.first, match.numberOfRanges > 1 {
                 let videoIDRange = match.range(at: 1)
                 var videoID = nsText.substring(with: videoIDRange)
-                if videoID.hasSuffix("/") { //避免结尾为/报错
-                    videoID.dropLast()
-                }
+                roomId = videoID
+            }
+        }else if shareCode.contains("youtube.com") && shareCode.contains("live") { //长链接live
+            let pattern = "live/([^/?&]+)"
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+               throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+            }
+            let nsText = shareCode as NSString
+            let matches = regex.matches(in: shareCode, options: [], range: NSRange(location: 0, length: nsText.length))
+            if let match = matches.first, match.numberOfRanges > 1 {
+                let videoIDRange = match.range(at: 1)
+                var videoID = nsText.substring(with: videoIDRange)
                 roomId = videoID
             }
         }else {
