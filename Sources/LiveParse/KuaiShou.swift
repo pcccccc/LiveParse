@@ -383,7 +383,7 @@ public struct KuaiShou: LiveParse {
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         let dataReq = try await getKSLiveRoom(roomId: roomId)
-        return LiveModel(userName: dataReq.liveroom.playList?.first?.author?.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author?.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author?.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.playList?.first?.liveStream.playUrls?.count ?? 0 > 0 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
+        return LiveModel(userName: dataReq.liveroom.playList?.first?.author?.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author?.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author?.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.activeIndex == 1 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
     }
     
     static func getKSLiveRoom(roomId: String) async throws -> KSLiveRoot {
@@ -398,11 +398,9 @@ public struct KuaiShou: LiveParse {
             let matchRange = Range(match.range, in: dataReq)!
             let matchedSubstring = String(dataReq[matchRange])
             var tempStr = matchedSubstring.replacingOccurrences(of: "<script>window.__INITIAL_STATE__=", with: "")
-            
             tempStr = tempStr.replacingOccurrences(of: ";", with: "")
             tempStr = tempStr.replacingOccurrences(of: ":undefined", with: ":\"\"")
             tempStr = String.convertUnicodeEscapes(in: tempStr as String)
-            print(tempStr)
             do {
                 let data = try JSONDecoder().decode(KSLiveRoot.self, from: tempStr.data(using: .utf8)!)
                 return data
