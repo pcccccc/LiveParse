@@ -114,10 +114,10 @@ public struct YY: LiveParse {
         let tagStyle: String
         let tpl: String?
         let linkMic: Int
-        let gameThumb: String
+        let gameThumb: String?
         let avatar: String
-        let yyNum: Int
-        let totalViewer: String
+        let yyNum: Int?
+        let totalViewer: String?
         let configId: Int
     }
 
@@ -347,7 +347,7 @@ public struct YY: LiveParse {
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         let dataReq = try await AF.request("https://www.yy.com/api/liveInfoDetail/\(roomId)/\(roomId)/0").serializingDecodable(YYRoomInfoMain.self).value
         if let data = dataReq.data {
-            return LiveModel(userName: data.name, roomTitle: data.desc, roomCover: data.gameThumb, userHeadImg: data.avatar, liveType: .yy, liveState: "1", userId: roomId, roomId: roomId, liveWatchedCount: "\(data.users)")
+            return LiveModel(userName: data.name, roomTitle: data.desc, roomCover: data.thumb2 ?? "", userHeadImg: data.avatar, liveType: .yy, liveState: "1", userId: roomId, roomId: roomId, liveWatchedCount: "\(data.users)")
         }else {
             throw NSError(domain: "查询不到房间信息、可能是已经下播", code: -10000, userInfo: ["desc": "查询不到房间信息、可能是已经下播"])
         }

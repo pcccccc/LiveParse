@@ -156,7 +156,7 @@ public struct NeteaseCC: LiveParse {
             guard let item = dataReq.data.first else {
                 throw LiveParseError.throwError("获取房间信息失败，请检查房间号等信息")
             }
-            return LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id ?? 0)", roomId: "\(item.cuteid ?? 0)", liveWatchedCount: "\(item.visitor)")
+            return LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id ?? 0)", roomId: "\(item.cuteid ?? 0)", liveWatchedCount: "\(item.visitor ?? 0)")
         }catch {
             throw LiveParseError.throwError("获取房间信息失败，请检查房间号等信息")
         }

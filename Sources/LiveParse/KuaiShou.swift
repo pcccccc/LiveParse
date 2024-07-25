@@ -398,11 +398,9 @@ public struct KuaiShou: LiveParse {
             let matchRange = Range(match.range, in: dataReq)!
             let matchedSubstring = String(dataReq[matchRange])
             var tempStr = matchedSubstring.replacingOccurrences(of: "<script>window.__INITIAL_STATE__=", with: "")
-            
             tempStr = tempStr.replacingOccurrences(of: ";", with: "")
             tempStr = tempStr.replacingOccurrences(of: ":undefined", with: ":\"\"")
             tempStr = String.convertUnicodeEscapes(in: tempStr as String)
-            print(tempStr)
             do {
                 let data = try JSONDecoder().decode(KSLiveRoot.self, from: tempStr.data(using: .utf8)!)
                 return data
