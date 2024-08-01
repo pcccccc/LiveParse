@@ -38,7 +38,7 @@ struct KSRoomListModel: Codable {
     let id: String
     let poster: String
     let playUrls: [PlayUrl]
-    let caption: String
+    let caption: String?
     let startTime: Int
     let author: Author
     let gameInfo: GameInfo
@@ -344,7 +344,7 @@ public struct KuaiShou: LiveParse {
             var tempArray = [LiveModel]()
             if let list = dataReq.data.list {
                 for item in list {
-                    tempArray.append(LiveModel(userName: item.author.name ?? "", roomTitle: item.caption, roomCover: item.poster, userHeadImg: item.author.avatar ?? "", liveType: .ks, liveState: "1", userId: item.author.id ?? "", roomId: item.author.id ?? "", liveWatchedCount: item.watchingCount))
+                    tempArray.append(LiveModel(userName: item.author.name ?? "", roomTitle: item.caption ?? "\(item.author.name ?? "")的直播间", roomCover: item.poster, userHeadImg: item.author.avatar ?? "", liveType: .ks, liveState: "1", userId: item.author.id ?? "", roomId: item.author.id ?? "", liveWatchedCount: item.watchingCount))
                 }
             }
             return tempArray
