@@ -137,13 +137,20 @@ public struct Douyu: LiveParse {
     
     public static func getCategoryList() async throws -> [LiveMainListModel] {
         return [
-            LiveMainListModel(id: "PCgame", title: "网游竞技", icon: "", subList: try await getCategoryList(id: "PCgame")),
-            LiveMainListModel(id: "djry", title: "单机热游", icon: "", subList: try await getCategoryList(id: "djry")),
-            LiveMainListModel(id: "syxx", title: "手游休闲", icon: "", subList: try await getCategoryList(id: "syxx")),
-            LiveMainListModel(id: "yl", title: "娱乐天地", icon: "", subList: try await getCategoryList(id: "yl")),
-            LiveMainListModel(id: "yz", title: "颜值", icon: "", subList: try await getCategoryList(id: "yz")),
-            LiveMainListModel(id: "kjwh", title: "科技文化", icon: "", subList: try await getCategoryList(id: "kjwh")),
-            LiveMainListModel(id: "yp", title: "语言互动", icon: "", subList: try await getCategoryList(id: "yp")),
+            LiveMainListModel(id: "1", title: "推荐分类", icon: "", subList: try await getCategoryList(id: "1", name: "推荐分类")),
+            LiveMainListModel(id: "3", title: "网游竞技", icon: "", subList: try await getCategoryList(id: "3", name: "网游竞技")),
+            LiveMainListModel(id: "4", title: "单机热游", icon: "", subList: try await getCategoryList(id: "4", name: "单机热游")),
+            LiveMainListModel(id: "5", title: "手游休闲", icon: "", subList: try await getCategoryList(id: "5", name: "手游休闲")),
+            LiveMainListModel(id: "6", title: "FPS射击", icon: "", subList: try await getCategoryList(id: "6", name: "FPS射击")),
+            LiveMainListModel(id: "7", title: "卡牌棋牌", icon: "", subList: try await getCategoryList(id: "7", name: "卡牌棋牌")),
+            LiveMainListModel(id: "8", title: "体育游戏", icon: "", subList: try await getCategoryList(id: "8", name: "体育游戏")),
+            LiveMainListModel(id: "9", title: "经典怀旧", icon: "", subList: try await getCategoryList(id: "9", name: "经典怀旧")),
+            LiveMainListModel(id: "10", title: "娱乐天地", icon: "", subList: try await getCategoryList(id: "10", name: "娱乐天地")),
+            LiveMainListModel(id: "11", title: "颜值", icon: "", subList: try await getCategoryList(id: "11", name: "颜值")),
+            LiveMainListModel(id: "12", title: "科技文化", icon: "", subList: try await getCategoryList(id: "12", name: "科技文化")),
+            LiveMainListModel(id: "13", title: "语音互动", icon: "", subList: try await getCategoryList(id: "13", name: "语音互动")),
+            LiveMainListModel(id: "14", title: "语音直播", icon: "", subList: try await getCategoryList(id: "14", name: "语音直播")),
+            LiveMainListModel(id: "15", title: "正能量", icon: "", subList: try await getCategoryList(id: "15", name: "正能量")),
         ]
     }
     
@@ -275,12 +282,13 @@ public struct Douyu: LiveParse {
         (["roomId": roomId], nil)
     }
     
-    public static func getCategoryList(id: String) async throws -> Array<LiveCategoryModel> {
+    public static func getCategoryList(id: String, name: String) async throws -> Array<LiveCategoryModel> {
         let dataReq = try await AF.request(
-            "https://www.douyu.com/japi/weblist/api/getC2List",
+            "https://www.douyu.com/japi/weblist/apinc/getC2List",
             method: .get,
             parameters: [
-                "shortName": id,
+                "shortName": name,
+                "customClassId": id,
                 "offset": 0,
                 "limit": 200,
             ]
