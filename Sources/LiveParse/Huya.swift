@@ -80,7 +80,7 @@ struct HuyaRoomInfoModel: Codable {
     let eLiveStatus: Int
     let tLiveInfo: HuyaRoomTLiveInfo
     let tRecentLive: HuyaRoomTLiveInfo
-    let tReplayInfo: HuyaRoomTLiveInfo
+    let tReplayInfo: HuyaRoomTLiveInfo?
 }
 
 struct HuyaRoomTLiveInfo: Codable {
@@ -91,6 +91,13 @@ struct HuyaRoomTLiveInfo: Codable {
     let sIntroduction: String
     let sScreenshot: String
     let lTotalCount: Int
+    let tReplayVideoInfo: HuyaReplayVideoInfo?
+}
+
+struct HuyaReplayVideoInfo: Codable {
+    let sUrl: String
+    let sHlsUrl: String
+    let iVideoSyncTime: Int
 }
 
 struct HuyaRoomTLiveStreamInfo: Codable {
@@ -206,6 +213,7 @@ public struct Huya: LiveParse {
         ).serializingString().value
         let pattern = #"window\.HNF_GLOBAL_INIT\s*=\s*(.*?)</script>"#
         let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
+        var tempArray: [LiveQualityModel] = []
         let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
         for match in matchs {
             let matchRange = Range(match.range, in: dataReq)!
@@ -216,61 +224,70 @@ public struct Huya: LiveParse {
             nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
             nsstr = String.convertUnicodeEscapes(in: nsstr as String) as NSString
             let liveData = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
-            let streamInfo = liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value.first
-            var playQualitiesInfo: Dictionary<String, String> = [:]
-            if let urlComponent = URLComponents(string: "?\(streamInfo?.sFlvAntiCode ?? "")") {
-                if let queryItems = urlComponent.queryItems {
-                    for item in queryItems {
-                        playQualitiesInfo.updateValue(item.value ?? "", forKey: item.name)
-                    }
-                }
-            }
-            playQualitiesInfo.updateValue("1", forKey: "ver")
-            playQualitiesInfo.updateValue("2402211431", forKey: "sv")
-            let uid = try await Huya.getAnonymousUid()
-            let now = Int(Date().timeIntervalSince1970) * 1000
-            playQualitiesInfo.updateValue("\((Int(uid) ?? 0) + Int(now))", forKey: "seqid")
-            playQualitiesInfo.updateValue(uid, forKey: "uid")
-            playQualitiesInfo.updateValue(Huya.getUUID(), forKey: "uuid")
-            playQualitiesInfo.updateValue("102", forKey: "t")
-            playQualitiesInfo.updateValue("tars_mp", forKey: "ctype")
-            let ss = "\(playQualitiesInfo["seqid"] ?? "")|\(playQualitiesInfo["ctype"] ?? "")|\(playQualitiesInfo["t"] ?? "")".md5
-            let base64EncodedData = (playQualitiesInfo["fm"] ?? "").data(using: .utf8)!
-            if let data = Data(base64Encoded: base64EncodedData) {
-                let fm = String(data: data, encoding: .utf8)!
-                var nsFM = fm as NSString
-                nsFM = nsFM.replacingOccurrences(of: "$0", with: uid).replacingOccurrences(of: "$1", with: streamInfo?.sStreamName ?? "").replacingOccurrences(of: "$2", with: ss).replacingOccurrences(of: "$3", with: playQualitiesInfo["wsTime"] ?? "") as NSString
-                playQualitiesInfo.updateValue((nsFM as String).md5, forKey: "wsSecret")
-                playQualitiesInfo.removeValue(forKey: "fm")
-                playQualitiesInfo.removeValue(forKey: "txyp")
-                var playInfo: Array<URLQueryItem> = []
-                for key in playQualitiesInfo.keys {
-                    let value = playQualitiesInfo[key] ?? ""
-                    playInfo.append(.init(name: key, value: value))
-                }
-                var urlComps = URLComponents(string: "")!
-                urlComps.queryItems = playInfo
-                let result = urlComps.url!
-                let res = result.absoluteString as NSString
-                var tempArray: [LiveQualityModel] = []
-                for streamInfo in liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value {
-                    let bitRateInfoArray  = liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vBitRateInfo.value
-                    var liveQualtys: [LiveQualityDetail] = []
-                    for index in 0 ..< bitRateInfoArray.count {
-                        var url = ""
-                        let bitRateInfo = bitRateInfoArray[index]
-                        if streamInfo.iMobilePriorityRate > 15 { //15帧以下，KSPlayer可能会产生抽动问题。如果使用IINA则可以正常播放
-                            if bitRateInfo.iBitRate > 0 && bitRateInfo.sDisplayName.contains("HDR") == false { //如果HDR视频包含ratio参数会直接报错
-                                url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&dMod=mesh-0&ratio=\(bitRateInfo.iBitRate)"
-                            }else {
-                                url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&dMod=mesh-0"
-                            }
-                            liveQualtys.append(.init(roomId: roomId, title: bitRateInfo.sDisplayName, qn: bitRateInfo.iBitRate, url: url, liveCodeType: .flv, liveType: .huya))
+            if let streamInfo = liveData.roomInfo.tLiveInfo.tLiveStreamInfo?.vStreamInfo.value.first {
+                var playQualitiesInfo: Dictionary<String, String> = [:]
+                if let urlComponent = URLComponents(string: "?\(streamInfo.sFlvAntiCode ?? "")") {
+                    if let queryItems = urlComponent.queryItems {
+                        for item in queryItems {
+                            playQualitiesInfo.updateValue(item.value ?? "", forKey: item.name)
                         }
                     }
-                    if liveQualtys.isEmpty == false {
-                        tempArray.append(.init(cdn: "线路 \(streamInfo.sCdnType)", qualitys: liveQualtys))
+                }
+               
+                playQualitiesInfo.updateValue("1", forKey: "ver")
+                playQualitiesInfo.updateValue("2402211431", forKey: "sv")
+                let uid = try await Huya.getAnonymousUid()
+                let now = Int(Date().timeIntervalSince1970) * 1000
+                playQualitiesInfo.updateValue("\((Int(uid) ?? 0) + Int(now))", forKey: "seqid")
+                playQualitiesInfo.updateValue(uid, forKey: "uid")
+                playQualitiesInfo.updateValue(Huya.getUUID(), forKey: "uuid")
+                playQualitiesInfo.updateValue("102", forKey: "t")
+                playQualitiesInfo.updateValue("tars_mp", forKey: "ctype")
+                let ss = "\(playQualitiesInfo["seqid"] ?? "")|\(playQualitiesInfo["ctype"] ?? "")|\(playQualitiesInfo["t"] ?? "")".md5
+                let base64EncodedData = (playQualitiesInfo["fm"] ?? "").data(using: .utf8)!
+                if let data = Data(base64Encoded: base64EncodedData) {
+                    let fm = String(data: data, encoding: .utf8)!
+                    var nsFM = fm as NSString
+                    nsFM = nsFM.replacingOccurrences(of: "$0", with: uid).replacingOccurrences(of: "$1", with: streamInfo.sStreamName ?? "").replacingOccurrences(of: "$2", with: ss).replacingOccurrences(of: "$3", with: playQualitiesInfo["wsTime"] ?? "") as NSString
+                    playQualitiesInfo.updateValue((nsFM as String).md5, forKey: "wsSecret")
+                    playQualitiesInfo.removeValue(forKey: "fm")
+                    playQualitiesInfo.removeValue(forKey: "txyp")
+                    var playInfo: Array<URLQueryItem> = []
+                    for key in playQualitiesInfo.keys {
+                        let value = playQualitiesInfo[key] ?? ""
+                        playInfo.append(.init(name: key, value: value))
                     }
+                    var urlComps = URLComponents(string: "")!
+                    urlComps.queryItems = playInfo
+                    let result = urlComps.url!
+                    let res = result.absoluteString as NSString
+                    for streamInfo in liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value {
+                        let bitRateInfoArray  = liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vBitRateInfo.value
+                        var liveQualtys: [LiveQualityDetail] = []
+                        for index in 0 ..< bitRateInfoArray.count {
+                            var url = ""
+                            let bitRateInfo = bitRateInfoArray[index]
+                            if streamInfo.iMobilePriorityRate > 15 { //15帧以下，KSPlayer可能会产生抽动问题。如果使用IINA则可以正常播放
+                                if bitRateInfo.iBitRate > 0 && bitRateInfo.sDisplayName.contains("HDR") == false { //如果HDR视频包含ratio参数会直接报错
+                                    url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&dMod=mesh-0&ratio=\(bitRateInfo.iBitRate)"
+                                }else {
+                                    url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&dMod=mesh-0"
+                                }
+                                liveQualtys.append(.init(roomId: roomId, title: bitRateInfo.sDisplayName, qn: bitRateInfo.iBitRate, url: url, liveCodeType: .flv, liveType: .huya))
+                            }
+                        }
+                        if liveQualtys.isEmpty == false {
+                            tempArray.append(.init(cdn: "线路 \(streamInfo.sCdnType)", qualitys: liveQualtys))
+                        }
+                    }
+                    
+                    return tempArray
+                }
+            }else {
+                if let replyInfo = liveData.roomInfo.tReplayInfo?.tReplayVideoInfo {
+                    var liveQualtys: [LiveQualityDetail] = []
+                    liveQualtys.append(.init(roomId: roomId, title: "回放", qn: replyInfo.iVideoSyncTime, url: replyInfo.sHlsUrl ?? "", liveCodeType: .hls, liveType: .huya))
+                    tempArray.append(.init(cdn: "回放", qualitys: liveQualtys))
                 }
                 return tempArray
             }
@@ -307,7 +324,7 @@ public struct Huya: LiveParse {
                         liveInfo = data.roomInfo.tLiveInfo
                     case 3:
                         liveStatus = LiveState.video.rawValue
-                        liveInfo = data.roomInfo.tReplayInfo
+                        liveInfo = data.roomInfo.tReplayInfo!
                 default:
                     liveStatus = LiveState.close.rawValue
                         liveInfo = data.roomInfo.tRecentLive
