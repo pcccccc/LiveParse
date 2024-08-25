@@ -191,6 +191,8 @@ public struct Douyu: LiveParse {
             liveState = LiveState.live.rawValue
         }else if liveStatus == 0 && videoLoop == 1 {
             liveState = LiveState.video.rawValue
+        }else if liveStatus == 1 && videoLoop == 1 {
+            liveState = LiveState.video.rawValue
         }else {
             liveState = LiveState.close.rawValue
         }
