@@ -582,11 +582,7 @@ public struct Douyin: LiveParse {
     public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
         var finalUserId = ""
         let room = try await getLiveLastestInfo(roomId: roomId, userId: nil) //防止传进来的roomId不是真实的web_rid，而是链接的短roomid
-        if userId != nil && userId != "" {
-            finalUserId = userId ?? ""
-        }else {
-            finalUserId = room.userId
-        }
+        finalUserId = room.userId
         var userUniqueId = Douyin.getUserUniqueId()
         let cookie = try await getCookie(roomId: roomId)
         
