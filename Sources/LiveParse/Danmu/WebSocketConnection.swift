@@ -106,6 +106,7 @@ public class WebSocketConnection {
 
     public func disconnect() {
         socket?.disconnect()
+        socket?.forceDisconnect()
     }
     
     func reConnect() {
