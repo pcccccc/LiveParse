@@ -9,7 +9,8 @@ import Foundation
 import Alamofire
 import CloudKit
 
-public struct LiveModel: Codable, Equatable {
+public struct LiveModel: Identifiable, Codable, Equatable {
+    public let uuid = UUID()
     public let userName: String
     public let roomTitle: String
     public let roomCover: String
