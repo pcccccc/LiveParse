@@ -360,7 +360,7 @@ public struct Huya: LiveParse {
         ).serializingDecodable(HuyaSearchResult.self).value
         var tempArray: Array<LiveModel> = []
         for item in dataReq.response.three.docs {
-            tempArray.append(LiveModel(userName: item.game_nick, roomTitle: item.game_introduction, roomCover: item.game_screenshot, userHeadImg: item.game_imgUrl, liveType: .huya, liveState: "正在直播", userId: "\(item.uid)", roomId: "\(item.room_id)", liveWatchedCount: "\(item.game_total_count)"))
+            tempArray.append(LiveModel(userName: item.game_nick, roomTitle: item.game_introduction, roomCover: item.game_screenshot, userHeadImg: item.game_imgUrl, liveType: .huya, liveState: "1", userId: "\(item.uid)", roomId: "\(item.room_id)", liveWatchedCount: "\(item.game_total_count)"))
         }
         return tempArray
     }

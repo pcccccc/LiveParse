@@ -223,7 +223,7 @@ public struct Douyu: LiveParse {
         ).serializingDecodable(DouyuSearchResult.self).value
         var tempArray: Array<LiveModel> = []
         for item in dataReq.data.relateShow {
-            tempArray.append(LiveModel(userName: item.nickName, roomTitle: item.roomName, roomCover: item.roomSrc, userHeadImg: item.avatar, liveType: .douyu, liveState: item.roomType == 0 ? "正在直播" :"已下播", userId: "\(item.rid)", roomId: "\(item.rid)", liveWatchedCount: item.hot))
+            tempArray.append(LiveModel(userName: item.nickName, roomTitle: item.roomName, roomCover: item.roomSrc, userHeadImg: item.avatar, liveType: .douyu, liveState: item.roomType == 0 ? "1" :"0", userId: "\(item.rid)", roomId: "\(item.rid)", liveWatchedCount: item.hot))
         }
         return tempArray
     }
