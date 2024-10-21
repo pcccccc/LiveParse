@@ -436,6 +436,36 @@ public struct KuaiShou: LiveParse {
             } catch let error {
                 throw error
             }
+        }else if shareCode.contains("v.kuaishou.com") { //10.21 新增解析
+            let pattern = "https://v\\.kuaishou\\.com/[a-zA-Z0-9]+"
+            do {
+                let regex = try NSRegularExpression(pattern: pattern, options: [])
+                let nsRange = NSRange(shareCode.startIndex..<shareCode.endIndex, in: shareCode)
+                
+                if let match = regex.firstMatch(in: shareCode, options: [], range: nsRange) {
+                    let matchRange = match.range
+                    if let range = Range(matchRange, in: shareCode) {
+                        let link = String(shareCode[range])
+                        let response = try await AF.request(
+                            link,
+                            method: .get
+                        ).serializingResponse(using: .data).response
+                        if let finalURL = response.response?.url {
+                            if let liveIndex = finalURL.absoluteString.range(of: "live/")?.upperBound,
+                               let questionMarkIndex = finalURL.absoluteString[liveIndex...].firstIndex(of: "?") {
+                                let result = String(finalURL.absoluteString[liveIndex..<questionMarkIndex])
+                                return try await KuaiShou.getLiveLastestInfo(roomId: result, userId: nil)
+                            } else {
+                                throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+                            }
+                        }
+                    }
+                } else {
+                    throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+                }
+            } catch {
+                throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+            }
         }else {
             roomId = shareCode
         }
