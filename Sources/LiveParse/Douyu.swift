@@ -21,7 +21,7 @@ struct DouyuSubListMain: Codable {
 }
 
 struct DouyuSubListData: Codable {
-    let total: Int
+    let total: Int?
     let list: Array<DouyuSubListModel>
 }
 
