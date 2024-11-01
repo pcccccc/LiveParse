@@ -137,7 +137,6 @@ public struct Douyu: LiveParse {
     
     public static func getCategoryList() async throws -> [LiveMainListModel] {
         return [
-            LiveMainListModel(id: "1", title: "推荐分类", icon: "", subList: try await getCategoryList(id: "1", name: "推荐分类")),
             LiveMainListModel(id: "3", title: "网游竞技", icon: "", subList: try await getCategoryList(id: "3", name: "网游竞技")),
             LiveMainListModel(id: "4", title: "单机热游", icon: "", subList: try await getCategoryList(id: "4", name: "单机热游")),
             LiveMainListModel(id: "5", title: "手游休闲", icon: "", subList: try await getCategoryList(id: "5", name: "手游休闲")),
