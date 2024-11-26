@@ -45,6 +45,34 @@ struct DouyuSubListModel: Codable {
     let cate2Url: String
 }
 
+struct DouyuCate1Info: Codable {
+    let cate1Id: Int
+    let cate1Name: String
+    let shortName: String
+}
+
+struct DouyuCate2Info: Codable {
+    let cate1Id: Int
+    let cate2Id: Int
+    let cate2Name: String
+    let shortName: String
+    let pic: String
+    let icon: String
+    let smallIcon: String
+    let count: Int
+    let isVertical: Int
+}
+
+struct DouyuCateV2Model: Codable {
+    let code: Int
+    let data: DouyuCateV2Data
+}
+
+struct DouyuCateV2Data: Codable {
+    let cate1Info: [DouyuCate1Info]
+    let cate2Info: [DouyuCate2Info]
+}
+
 struct DouyuRoomMain: Codable {
     var code: Int
     var msg: String
@@ -136,21 +164,24 @@ struct DouyuSearchRelateShow: Codable {
 public struct Douyu: LiveParse {
     
     public static func getCategoryList() async throws -> [LiveMainListModel] {
-        return [
-            LiveMainListModel(id: "3", title: "网游竞技", icon: "", subList: try await getCategoryList(id: "3", name: "网游竞技")),
-            LiveMainListModel(id: "4", title: "单机热游", icon: "", subList: try await getCategoryList(id: "4", name: "单机热游")),
-            LiveMainListModel(id: "5", title: "手游休闲", icon: "", subList: try await getCategoryList(id: "5", name: "手游休闲")),
-            LiveMainListModel(id: "6", title: "FPS射击", icon: "", subList: try await getCategoryList(id: "6", name: "FPS射击")),
-            LiveMainListModel(id: "7", title: "卡牌棋牌", icon: "", subList: try await getCategoryList(id: "7", name: "卡牌棋牌")),
-            LiveMainListModel(id: "8", title: "体育游戏", icon: "", subList: try await getCategoryList(id: "8", name: "体育游戏")),
-            LiveMainListModel(id: "9", title: "经典怀旧", icon: "", subList: try await getCategoryList(id: "9", name: "经典怀旧")),
-            LiveMainListModel(id: "10", title: "娱乐天地", icon: "", subList: try await getCategoryList(id: "10", name: "娱乐天地")),
-            LiveMainListModel(id: "11", title: "颜值", icon: "", subList: try await getCategoryList(id: "11", name: "颜值")),
-            LiveMainListModel(id: "12", title: "科技文化", icon: "", subList: try await getCategoryList(id: "12", name: "科技文化")),
-            LiveMainListModel(id: "13", title: "语音互动", icon: "", subList: try await getCategoryList(id: "13", name: "语音互动")),
-            LiveMainListModel(id: "14", title: "语音直播", icon: "", subList: try await getCategoryList(id: "14", name: "语音直播")),
-            LiveMainListModel(id: "15", title: "正能量", icon: "", subList: try await getCategoryList(id: "15", name: "正能量")),
-        ]
+        let url = "https://m.douyu.com/api/cate/list"
+        let dataReq = try await AF.request(url, method: .get).serializingDecodable(DouyuCateV2Model.self).value
+        if dataReq.code == 0 {
+            var finalList: [LiveMainListModel] = []
+            for cate1 in dataReq.data.cate1Info {
+                var categoryArray: [LiveCategoryModel] = []
+                for cate2 in dataReq.data.cate2Info {
+                    if cate2.cate1Id == cate1.cate1Id {
+                        categoryArray.append(LiveCategoryModel(id: "\(cate2.cate2Id)", parentId: "\(cate2.cate1Id)", title: cate2.cate2Name, icon: cate2.icon))
+                    }
+                }
+                var listModel = LiveMainListModel(id: "\(cate1.cate1Id)", title: cate1.cate1Name, icon: "", biz: nil, subList: categoryArray)
+                finalList.append(listModel)
+            }
+            return finalList
+        }else {
+            throw NSError(domain: "斗鱼平台分类获取异常", code: -10001, userInfo: ["desc": "斗鱼平台分类获取异常"])
+        }
     }
     
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
