@@ -235,14 +235,18 @@ public struct Huya: LiveParse {
                 }
                
                 playQualitiesInfo.updateValue("1", forKey: "ver")
-                playQualitiesInfo.updateValue("2402211431", forKey: "sv")
+                playQualitiesInfo.updateValue("202411221719", forKey: "sv")
                 let uid = try await Huya.getAnonymousUid()
                 let now = Int(Date().timeIntervalSince1970) * 1000
                 playQualitiesInfo.updateValue("\((Int(uid) ?? 0) + Int(now))", forKey: "seqid")
                 playQualitiesInfo.updateValue(uid, forKey: "uid")
                 playQualitiesInfo.updateValue(Huya.getUUID(), forKey: "uuid")
-                playQualitiesInfo.updateValue("102", forKey: "t")
-                playQualitiesInfo.updateValue("tars_mp", forKey: "ctype")
+                playQualitiesInfo.updateValue("103", forKey: "t")
+                playQualitiesInfo.updateValue("tars_mobile", forKey: "ctype")
+                playQualitiesInfo.updateValue("mseh-0", forKey: "dMod")
+                playQualitiesInfo.updateValue("1_1", forKey: "sdkPcdn")
+                playQualitiesInfo.updateValue("1732862566708", forKey: "sdk_sid")
+                playQualitiesInfo.updateValue("0", forKey: "a_block")
                 let ss = "\(playQualitiesInfo["seqid"] ?? "")|\(playQualitiesInfo["ctype"] ?? "")|\(playQualitiesInfo["t"] ?? "")".md5
                 let base64EncodedData = (playQualitiesInfo["fm"] ?? "").data(using: .utf8)!
                 if let data = Data(base64Encoded: base64EncodedData) {
