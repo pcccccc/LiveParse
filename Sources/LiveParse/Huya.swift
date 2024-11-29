@@ -236,9 +236,9 @@ public struct Huya: LiveParse {
                
                 playQualitiesInfo.updateValue("1", forKey: "ver")
                 playQualitiesInfo.updateValue("202411221719", forKey: "sv")
-                let uid = try await Huya.getAnonymousUid()
+                let uid = Huya.getUid(t: 13, e: 10)
                 let now = Int(Date().timeIntervalSince1970) * 1000
-                playQualitiesInfo.updateValue("\((Int(uid) ?? 0) + Int(now))", forKey: "seqid")
+                playQualitiesInfo.updateValue("\(Int(uid) ?? 0 + Int(now))", forKey: "seqid")
                 playQualitiesInfo.updateValue(uid, forKey: "uid")
                 playQualitiesInfo.updateValue(Huya.getUUID(), forKey: "uuid")
                 playQualitiesInfo.updateValue("103", forKey: "t")
@@ -273,9 +273,9 @@ public struct Huya: LiveParse {
                             let bitRateInfo = bitRateInfoArray[index]
                             if streamInfo.iMobilePriorityRate > 15 { //15帧以下，KSPlayer可能会产生抽动问题。如果使用IINA则可以正常播放
                                 if bitRateInfo.iBitRate > 0 && bitRateInfo.sDisplayName.contains("HDR") == false { //如果HDR视频包含ratio参数会直接报错
-                                    url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&dMod=mesh-0&ratio=\(bitRateInfo.iBitRate)"
+                                    url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&ratio=\(bitRateInfo.iBitRate)"
                                 }else {
-                                    url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&dMod=mesh-0"
+                                    url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)"
                                 }
                                 liveQualtys.append(.init(roomId: roomId, title: bitRateInfo.sDisplayName, qn: bitRateInfo.iBitRate, url: url, liveCodeType: .flv, liveType: .huya))
                             }
@@ -481,6 +481,32 @@ public struct Huya: LiveParse {
             return data?["uid"] as? String ?? ""
         }
         return ""
+    }
+    
+    static func getUid(t: Int? = nil, e: Int? = nil) -> String {
+        let n = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+        var o = Array(repeating: "", count: 36)
+
+        if let t = t {
+            for i in 0..<t {
+                let randomIndex = Int(arc4random_uniform(UInt32(e ?? n.count)))
+                o[i] = String(n[randomIndex])
+            }
+        } else {
+            o[8] = "-"
+            o[13] = "-"
+            o[18] = "-"
+            o[23] = "-"
+            o[14] = "4"
+
+            for i in 0..<36 {
+                if o[i].isEmpty {
+                    let r = Int(arc4random_uniform(16))
+                    o[i] = String(n[i == 19 ? (r & 3) | 8 : r])
+                }
+            }
+        }
+        return o.joined()
     }
     
     static func removeIncludeFunctionValue(in string: String) -> String {
