@@ -6,8 +6,8 @@ import PackageDescription
 let package = Package(
     name: "LiveParse",
     platforms: [.macOS(.v10_15),
-                .iOS(.v13),
-                .tvOS(.v13)],
+                .iOS(.v14),
+                .tvOS(.v14)],
     products: [
         .library(
             name: "LiveParse",
@@ -20,6 +20,7 @@ let package = Package(
         .package(url: "https://github.com/tsolomko/SWCompression", .upToNextMajor(from: "4.8.6")),
         .package(url: "https://github.com/apple/swift-protobuf.git", .upToNextMajor(from: "1.25.1")),
         .package(url: "https://github.com/pcccccc/YouTubeKit", .upToNextMajor(from: "0.0.3")),
+        .package(url: "https://github.com/pcccccc/TarsKit", .upToNextMajor(from: "1.1.0"))
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -33,6 +34,7 @@ let package = Package(
                 .product(name: "SWCompression", package: "SWCompression"),
                 .product(name: "SwiftProtobuf", package: "swift-protobuf"),
                 .product(name: "YouTubeKit", package: "YouTubeKit"),
+                .product(name: "TarsKit", package: "TarsKit"),
             ],
             resources: [.process("Resources")]
         ),

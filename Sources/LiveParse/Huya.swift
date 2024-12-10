@@ -8,6 +8,7 @@
 import Foundation
 import Alamofire
 import CommonCrypto
+import TarsKit
 
 struct HuyaMainListModel: Codable {
     let id: String
@@ -165,6 +166,8 @@ struct HuyaSearchDocs: Codable {
 }
 
 public struct Huya: LiveParse {
+    
+    static let tupClient = TarsHttp(baseUrl: "http://wup.huya.com", servantName: "liveui")
 
     public static func getCategoryList() async throws -> [LiveMainListModel] {
         return [
@@ -273,15 +276,17 @@ public struct Huya: LiveParse {
                             let bitRateInfo = bitRateInfoArray[index]
                             if streamInfo.iMobilePriorityRate > 15 { //15帧以下，KSPlayer可能会产生抽动问题。如果使用IINA则可以正常播放
                                 if bitRateInfo.iBitRate > 0 && bitRateInfo.sDisplayName.contains("HDR") == false { //如果HDR视频包含ratio参数会直接报错
-                                    url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)&ratio=\(bitRateInfo.iBitRate)"
+                                    url = try await Huya.getPlayURL(url: streamInfo.sFlvUrl, cdnType: streamInfo.sCdnType, streamName: streamInfo.sStreamName, iBitRate: bitRateInfo.iBitRate)
                                 }else {
-                                    url = "\(streamInfo.sFlvUrl)/\(streamInfo.sStreamName).\(streamInfo.sFlvUrlSuffix)\(res)"
+                                    url = try await Huya.getPlayURL(url: streamInfo.sFlvUrl, cdnType: streamInfo.sCdnType, streamName: streamInfo.sStreamName, iBitRate: bitRateInfo.iBitRate)
                                 }
+                                
                                 liveQualtys.append(.init(roomId: roomId, title: bitRateInfo.sDisplayName, qn: bitRateInfo.iBitRate, url: url, liveCodeType: .flv, liveType: .huya))
                             }
                         }
                         if liveQualtys.isEmpty == false {
                             tempArray.append(.init(cdn: "线路 \(streamInfo.sCdnType)", qualitys: liveQualtys))
+                           
                         }
                     }
                     
@@ -297,6 +302,22 @@ public struct Huya: LiveParse {
             }
         }
         return []
+    }
+    
+    public static func getPlayURL(url: String, cdnType: String, streamName: String, iBitRate: Int) async throws -> String {
+        var req = GetCdnTokenReq()
+        req.cdnType = cdnType
+        req.streamName = streamName
+        do {
+            let resp = try await tupClient.tupRequest("getCdnTokenInfo", tReq: req, tRsp: GetCdnTokenResp())
+            var url = "\(url)/\(resp.streamName).flv?\(resp.antiCode)&codec=264"
+            if iBitRate > 0 {
+                url += "&ratio=\(iBitRate)"
+            }
+            return url
+        }catch {
+            throw error
+        }
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
