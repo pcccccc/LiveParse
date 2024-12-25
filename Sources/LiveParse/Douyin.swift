@@ -222,7 +222,7 @@ var headers = HTTPHeaders.init([
     "Authority": "live.douyin.com",
     "Referer": "https://live.douyin.com",
     "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
 ])
 
 public struct Douyin: LiveParse {
@@ -507,8 +507,11 @@ public struct Douyin: LiveParse {
             "browser_language": "zh-CN",
             "browser_platform": "Win32",
             "browser_name": "Edge",
-            "browser_version": "114.0.1823.51"
+            "browser_version": "125.0.0.0"
         ]
+        let cookie = try await Douyin.getCookie(roomId: roomId)
+        var headers = headers
+        headers.add(name: "cookie", value: cookie)
         let res = try await AF.request("https://live.douyin.com/webcast/room/web/enter/", method: .get, parameters: parameter, headers: headers).serializingDecodable(DouyinRoomPlayInfoMainData.self).value
         return res
     }
@@ -546,6 +549,8 @@ public struct Douyin: LiveParse {
                     switch res.data.room.status {
                     case 4:
                         liveStatus = LiveState.close.rawValue
+                    case 0:
+                        liveStatus = LiveState.close.rawValue
                     case 2:
                         liveStatus = LiveState.live.rawValue
                     default:
@@ -568,7 +573,7 @@ public struct Douyin: LiveParse {
                 if let match = results.first {
                     let range = match.range(at: 1) // 临时roomId
                     let roomId = nsString.substring(with: range)
-                    return try await Douyin.getLiveLastestInfo(roomId: roomId, userId: nil)
+                    return try await Douyin.getLiveLastestInfo(roomId: roomId, userId: roomId)
                 }
             }catch {
                 throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
