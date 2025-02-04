@@ -176,7 +176,12 @@ struct KSPlayList: Codable {
 struct KSLiveStream: Codable {
     let id: String?
     let poster: String?
-    let playUrls: [KSPlayUrl]?
+    let playUrls: KSPlayUrls?
+}
+
+struct KSPlayUrls: Codable {
+    let h264: KSPlayUrl?
+    let hevc: KSPlayUrl?
 }
 
 // MARK: - KSPlayUrl
@@ -369,7 +374,7 @@ public struct KuaiShou: LiveParse {
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
         let dataReq = try await getKSLiveRoom(roomId: roomId)
         var liveQuaityModel = LiveQualityModel(cdn: "线路1", douyuCdnName: "", qualitys: [])
-        if let playList = dataReq.liveroom.playList?.first?.liveStream.playUrls?.first?.adaptationSet.representation {
+        if let playList = dataReq.liveroom.playList?.first?.liveStream.playUrls?.h264?.adaptationSet.representation {
             for item in playList {
                 liveQuaityModel.qualitys.append(.init(roomId: roomId, title: item.name, qn: item.bitrate, url: item.url, liveCodeType: .flv, liveType: .ks))
             }
@@ -383,7 +388,7 @@ public struct KuaiShou: LiveParse {
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         let dataReq = try await getKSLiveRoom(roomId: roomId)
-        return LiveModel(userName: dataReq.liveroom.playList?.first?.author?.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author?.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author?.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.playList?.first?.liveStream.playUrls?.count ?? 0 > 0 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
+        return LiveModel(userName: dataReq.liveroom.playList?.first?.author?.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author?.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author?.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.playList?.first?.liveStream.playUrls?.h264?.adaptationSet.representation.count ?? 0 > 0 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
     }
     
     static func getKSLiveRoom(roomId: String) async throws -> KSLiveRoot {
