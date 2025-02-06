@@ -9,7 +9,7 @@ import Foundation
 import Alamofire
 import CloudKit
 
-public struct LiveModel: Identifiable, Codable, Equatable {
+public struct LiveModel: Identifiable, Codable, Equatable, Sendable {
     
     public let id = UUID()
     public let userName: String
@@ -58,7 +58,7 @@ public struct LiveModel: Identifiable, Codable, Equatable {
     }
 }
 
-public struct LiveQualityModel: Codable {
+public struct LiveQualityModel: Codable, Sendable {
     public var cdn: String
     public var douyuCdnName: String? = ""
     public var yyLineSeq: String? = ""
