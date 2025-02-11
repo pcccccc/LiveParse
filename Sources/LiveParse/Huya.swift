@@ -531,24 +531,15 @@ public struct Huya: LiveParse {
     }
     
     static func removeIncludeFunctionValue(in string: String) -> String {
-        let pattern = #"function\s*\((.*?)\;\s*\}"#
-        do {
-            let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
-            let nsRange = NSRange(string.startIndex..<string.endIndex, in: string)
-            var mutableInput = string as NSString
-            // 查找所有匹配项
-            let matches = regex.matches(in: string, options: [], range: nsRange)
-            // 从最后一个匹配项开始替换，以保持索引正确
-            for match in matches {
-                let matchRange = Range(match.range, in: string)!
-                let matchedSubstring = string[matchRange]
-                mutableInput = mutableInput.replacingOccurrences(of: "\(matchedSubstring)", with: "\"\"") as NSString
-            }
-            return mutableInput as String
-        } catch {
-            return string
+        let pattern = "function\\s*\\([^}]*\\}"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return string }
+        let mutableString = NSMutableString(string: string)
+        let matches = regex.matches(in: string, range: NSRange(string.startIndex..<string.endIndex, in: string))
+        for match in matches.reversed() {
+            mutableString.replaceCharacters(in: match.range, with: "\"\"")
         }
-        return string
+        return mutableString as String
     }
+    
 }
 
