@@ -433,6 +433,9 @@ public struct Bilibili: LiveParse {
             "https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom",
             parameters: [
                 "room_id": roomId
+            ],
+            headers: BiliBiliCookie.cookie == "" ? nil : [
+                "cookie": BiliBiliCookie.cookie,
             ]
         ).serializingDecodable(BilibiliMainData<BilibiliRoomInfoData>.self).value
         var liveStatus = LiveState.unknow.rawValue
