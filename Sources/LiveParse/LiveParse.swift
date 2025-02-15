@@ -183,6 +183,24 @@ public final class LiveParseTools {
     }
 }
 
-enum LiveParseError: Error {
-    case throwError(String)
+
+enum LiveParseError: Error, CustomStringConvertible {
+
+    var description: String {
+        switch self {
+        case let .liveParseError(_, _):
+            return "平台解析错误"
+        case let .liveStateParseError(_, _):
+            return "直播状态解析错误"
+        case let .danmuArgsParseError(_, _):
+            return "弹幕参数解析错误"
+        case let .shareCodeParseError(_, _):
+            return "分享码解析错误"
+        }
+    }
+    
+    case shareCodeParseError(String, String)
+    case liveParseError(String, String)
+    case liveStateParseError(String, String)
+    case danmuArgsParseError(String, String)
 }
