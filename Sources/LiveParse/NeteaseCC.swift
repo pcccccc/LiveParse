@@ -154,11 +154,11 @@ public struct NeteaseCC: LiveParse {
                 ]
             ).serializingDecodable(CCLastestRoomModel.self).value
             guard let item = dataReq.data.first else {
-                throw LiveParseError.throwError("获取房间信息失败，请检查房间号等信息")
+                throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("解析直播数据失败")")
             }
             return LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id ?? 0)", roomId: "\(item.cuteid ?? 0)", liveWatchedCount: "\(item.visitor ?? 0)")
         }catch {
-            throw LiveParseError.throwError("获取房间信息失败，请检查房间号等信息")
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
     
@@ -172,7 +172,7 @@ public struct NeteaseCC: LiveParse {
         ).serializingDecodable(CCLastestRoomModel.self).value
         var liveQuality: [LiveQualityModel] = []
         guard let allCdnArray = dataReq.data.first?.quickplay?.priority else {
-            throw LiveParseError.throwError("获取房间线路失败,请检查房间号")
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("解析直播数据失败")")
         }
         if let original = dataReq.data.first?.quickplay?.resolution?.original {
             var tempArray: [LiveQualityDetail] = []
