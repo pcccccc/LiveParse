@@ -179,129 +179,141 @@ public struct Huya: LiveParse {
     }
     
     public static func getCategorySubList(id: String) async throws -> [LiveCategoryModel] {
-        let dataReq = try await AF.request("https://live.cdn.huya.com/liveconfig/game/bussLive", method: .get, parameters: ["bussType": id]).serializingDecodable(HuyaMainData<[HuyaSubListModel]>.self).value
-        var tempArray: [LiveCategoryModel] = []
-        for item in dataReq.data {
-            tempArray.append(LiveCategoryModel(id: "\(item.gid)", parentId: "", title: item.gameFullName, icon: item.pic))
+        do {
+            let dataReq = try await AF.request("https://live.cdn.huya.com/liveconfig/game/bussLive", method: .get, parameters: ["bussType": id]).serializingDecodable(HuyaMainData<[HuyaSubListModel]>.self).value
+            var finalArray: [LiveCategoryModel] = []
+            for item in dataReq.data {
+                finalArray.append(LiveCategoryModel(id: "\(item.gid)", parentId: "", title: item.gameFullName, icon: item.pic))
+            }
+            return finalArray
+        }catch {
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-        return tempArray
     }
     
     public static func getRoomList(id: String, parentId: String?, page: Int = 1) async throws -> [LiveModel] {
-        let dataReq = try await AF.request(
-            "https://www.huya.com/cache.php",
-            method: .get,
-            parameters: [
-                "m": "LiveList",
-                "do": "getLiveListByPage",
-                "tagAll": 0,
-                "gameId": id,
-                "page": page
-            ]
-        ).serializingDecodable(HuyaRoomMainData.self).value
-        var tempArray: Array<LiveModel> = []
-        for item in dataReq.data.datas {
-            tempArray.append(LiveModel(userName: item.nick, roomTitle: item.introduction, roomCover: item.screenshot, userHeadImg: item.avatar180, liveType: .huya, liveState: "", userId: item.uid, roomId: item.profileRoom, liveWatchedCount: item.totalCount))
+        do {
+            let dataReq = try await AF.request(
+                "https://www.huya.com/cache.php",
+                method: .get,
+                parameters: [
+                    "m": "LiveList",
+                    "do": "getLiveListByPage",
+                    "tagAll": 0,
+                    "gameId": id,
+                    "page": page
+                ]
+            ).serializingDecodable(HuyaRoomMainData.self).value
+            var finalArray: Array<LiveModel> = []
+            for item in dataReq.data.datas {
+                finalArray.append(LiveModel(userName: item.nick, roomTitle: item.introduction, roomCover: item.screenshot, userHeadImg: item.avatar180, liveType: .huya, liveState: "", userId: item.uid, roomId: item.profileRoom, liveWatchedCount: item.totalCount))
+            }
+            return finalArray
+        }catch {
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-        return tempArray
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
-        let dataReq = try await AF.request(
-            "https://m.huya.com/\(roomId)",
-            method: .get,
-            headers: [
-                HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Mobile/15E148 Safari/604.1")
-            ]
-        ).serializingString().value
-        let pattern = #"window\.HNF_GLOBAL_INIT\s*=\s*(.*?)</script>"#
-        let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
-        var tempArray: [LiveQualityModel] = []
-        let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
-        for match in matchs {
-            let matchRange = Range(match.range, in: dataReq)!
-            let matchedSubstring = dataReq[matchRange]
-            var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
-            nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
-            nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
-            nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
-            nsstr = String.convertUnicodeEscapes(in: nsstr as String) as NSString
-            let liveData = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
-            if let streamInfo = liveData.roomInfo.tLiveInfo.tLiveStreamInfo?.vStreamInfo.value.first {
-                var playQualitiesInfo: Dictionary<String, String> = [:]
-                if let urlComponent = URLComponents(string: "?\(streamInfo.sFlvAntiCode ?? "")") {
-                    if let queryItems = urlComponent.queryItems {
-                        for item in queryItems {
-                            playQualitiesInfo.updateValue(item.value ?? "", forKey: item.name)
-                        }
-                    }
-                }
-               
-                playQualitiesInfo.updateValue("1", forKey: "ver")
-                playQualitiesInfo.updateValue("202411221719", forKey: "sv")
-                let uid = Huya.getUid(t: 13, e: 10)
-                let now = Int(Date().timeIntervalSince1970) * 1000
-                playQualitiesInfo.updateValue("\(Int(uid) ?? 0 + Int(now))", forKey: "seqid")
-                playQualitiesInfo.updateValue(uid, forKey: "uid")
-                playQualitiesInfo.updateValue(Huya.getUUID(), forKey: "uuid")
-                playQualitiesInfo.updateValue("103", forKey: "t")
-                playQualitiesInfo.updateValue("tars_mobile", forKey: "ctype")
-                playQualitiesInfo.updateValue("mseh-0", forKey: "dMod")
-                playQualitiesInfo.updateValue("1_1", forKey: "sdkPcdn")
-                playQualitiesInfo.updateValue("1732862566708", forKey: "sdk_sid")
-                playQualitiesInfo.updateValue("0", forKey: "a_block")
-                let ss = "\(playQualitiesInfo["seqid"] ?? "")|\(playQualitiesInfo["ctype"] ?? "")|\(playQualitiesInfo["t"] ?? "")".md5
-                let base64EncodedData = (playQualitiesInfo["fm"] ?? "").data(using: .utf8)!
-                if let data = Data(base64Encoded: base64EncodedData) {
-                    let fm = String(data: data, encoding: .utf8)!
-                    var nsFM = fm as NSString
-                    nsFM = nsFM.replacingOccurrences(of: "$0", with: uid).replacingOccurrences(of: "$1", with: streamInfo.sStreamName ?? "").replacingOccurrences(of: "$2", with: ss).replacingOccurrences(of: "$3", with: playQualitiesInfo["wsTime"] ?? "") as NSString
-                    playQualitiesInfo.updateValue((nsFM as String).md5, forKey: "wsSecret")
-                    playQualitiesInfo.removeValue(forKey: "fm")
-                    playQualitiesInfo.removeValue(forKey: "txyp")
-                    var playInfo: Array<URLQueryItem> = []
-                    for key in playQualitiesInfo.keys {
-                        let value = playQualitiesInfo[key] ?? ""
-                        playInfo.append(.init(name: key, value: value))
-                    }
-                    var urlComps = URLComponents(string: "")!
-                    urlComps.queryItems = playInfo
-                    let result = urlComps.url!
-                    let res = result.absoluteString as NSString
-                    for streamInfo in liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value {
-                        let bitRateInfoArray  = liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vBitRateInfo.value
-                        var liveQualtys: [LiveQualityDetail] = []
-                        for index in 0 ..< bitRateInfoArray.count {
-                            var url = ""
-                            let bitRateInfo = bitRateInfoArray[index]
-                            if streamInfo.iMobilePriorityRate > 15 { //15帧以下，KSPlayer可能会产生抽动问题。如果使用IINA则可以正常播放
-                                if bitRateInfo.iBitRate > 0 && bitRateInfo.sDisplayName.contains("HDR") == false { //如果HDR视频包含ratio参数会直接报错
-                                    url = try await Huya.getPlayURL(url: streamInfo.sFlvUrl, cdnType: streamInfo.sCdnType, streamName: streamInfo.sStreamName, iBitRate: bitRateInfo.iBitRate)
-                                }else {
-                                    url = try await Huya.getPlayURL(url: streamInfo.sFlvUrl, cdnType: streamInfo.sCdnType, streamName: streamInfo.sStreamName, iBitRate: bitRateInfo.iBitRate)
-                                }
-                                
-                                liveQualtys.append(.init(roomId: roomId, title: bitRateInfo.sDisplayName, qn: bitRateInfo.iBitRate, url: url, liveCodeType: .flv, liveType: .huya))
+        do {
+            let dataReq = try await AF.request(
+                "https://m.huya.com/\(roomId)",
+                method: .get,
+                headers: [
+                    HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Mobile/15E148 Safari/604.1")
+                ]
+            ).serializingString().value
+            let pattern = #"window\.HNF_GLOBAL_INIT\s*=\s*(.*?)</script>"#
+            let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
+            var tempArray: [LiveQualityModel] = []
+            let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
+            for match in matchs {
+                let matchRange = Range(match.range, in: dataReq)!
+                let matchedSubstring = dataReq[matchRange]
+                var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
+                nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
+                nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
+                nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
+                nsstr = String.convertUnicodeEscapes(in: nsstr as String) as NSString
+                let liveData = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
+                if let streamInfo = liveData.roomInfo.tLiveInfo.tLiveStreamInfo?.vStreamInfo.value.first {
+                    var playQualitiesInfo: Dictionary<String, String> = [:]
+                    if let urlComponent = URLComponents(string: "?\(streamInfo.sFlvAntiCode ?? "")") {
+                        if let queryItems = urlComponent.queryItems {
+                            for item in queryItems {
+                                playQualitiesInfo.updateValue(item.value ?? "", forKey: item.name)
                             }
                         }
-                        if liveQualtys.isEmpty == false {
-                            tempArray.append(.init(cdn: "线路 \(streamInfo.sCdnType)", qualitys: liveQualtys))
-                           
-                        }
                     }
-                    
+                   
+                    playQualitiesInfo.updateValue("1", forKey: "ver")
+                    playQualitiesInfo.updateValue("202411221719", forKey: "sv")
+                    let uid = Huya.getUid(t: 13, e: 10)
+                    let now = Int(Date().timeIntervalSince1970) * 1000
+                    playQualitiesInfo.updateValue("\(Int(uid) ?? 0 + Int(now))", forKey: "seqid")
+                    playQualitiesInfo.updateValue(uid, forKey: "uid")
+                    playQualitiesInfo.updateValue(Huya.getUUID(), forKey: "uuid")
+                    playQualitiesInfo.updateValue("103", forKey: "t")
+                    playQualitiesInfo.updateValue("tars_mobile", forKey: "ctype")
+                    playQualitiesInfo.updateValue("mseh-0", forKey: "dMod")
+                    playQualitiesInfo.updateValue("1_1", forKey: "sdkPcdn")
+                    playQualitiesInfo.updateValue("1732862566708", forKey: "sdk_sid")
+                    playQualitiesInfo.updateValue("0", forKey: "a_block")
+                    let ss = "\(playQualitiesInfo["seqid"] ?? "")|\(playQualitiesInfo["ctype"] ?? "")|\(playQualitiesInfo["t"] ?? "")".md5
+                    let base64EncodedData = (playQualitiesInfo["fm"] ?? "").data(using: .utf8)!
+                    if let data = Data(base64Encoded: base64EncodedData) {
+                        let fm = String(data: data, encoding: .utf8)!
+                        var nsFM = fm as NSString
+                        nsFM = nsFM.replacingOccurrences(of: "$0", with: uid).replacingOccurrences(of: "$1", with: streamInfo.sStreamName ?? "").replacingOccurrences(of: "$2", with: ss).replacingOccurrences(of: "$3", with: playQualitiesInfo["wsTime"] ?? "") as NSString
+                        playQualitiesInfo.updateValue((nsFM as String).md5, forKey: "wsSecret")
+                        playQualitiesInfo.removeValue(forKey: "fm")
+                        playQualitiesInfo.removeValue(forKey: "txyp")
+                        var playInfo: Array<URLQueryItem> = []
+                        for key in playQualitiesInfo.keys {
+                            let value = playQualitiesInfo[key] ?? ""
+                            playInfo.append(.init(name: key, value: value))
+                        }
+                        var urlComps = URLComponents(string: "")!
+                        urlComps.queryItems = playInfo
+                        let result = urlComps.url!
+                        let res = result.absoluteString as NSString
+                        for streamInfo in liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value {
+                            let bitRateInfoArray  = liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vBitRateInfo.value
+                            var liveQualtys: [LiveQualityDetail] = []
+                            for index in 0 ..< bitRateInfoArray.count {
+                                var url = ""
+                                let bitRateInfo = bitRateInfoArray[index]
+                                if streamInfo.iMobilePriorityRate > 15 { //15帧以下，KSPlayer可能会产生抽动问题。如果使用IINA则可以正常播放
+                                    if bitRateInfo.iBitRate > 0 && bitRateInfo.sDisplayName.contains("HDR") == false { //如果HDR视频包含ratio参数会直接报错
+                                        url = try await Huya.getPlayURL(url: streamInfo.sFlvUrl, cdnType: streamInfo.sCdnType, streamName: streamInfo.sStreamName, iBitRate: bitRateInfo.iBitRate)
+                                    }else {
+                                        url = try await Huya.getPlayURL(url: streamInfo.sFlvUrl, cdnType: streamInfo.sCdnType, streamName: streamInfo.sStreamName, iBitRate: bitRateInfo.iBitRate)
+                                    }
+                                    
+                                    liveQualtys.append(.init(roomId: roomId, title: bitRateInfo.sDisplayName, qn: bitRateInfo.iBitRate, url: url, liveCodeType: .flv, liveType: .huya))
+                                }
+                            }
+                            if liveQualtys.isEmpty == false {
+                                tempArray.append(.init(cdn: "线路 \(streamInfo.sCdnType)", qualitys: liveQualtys))
+                               
+                            }
+                        }
+                        
+                        return tempArray
+                    }
+                }else {
+                    if let replyInfo = liveData.roomInfo.tReplayInfo?.tReplayVideoInfo {
+                        var liveQualtys: [LiveQualityDetail] = []
+                        liveQualtys.append(.init(roomId: roomId, title: "回放", qn: replyInfo.iVideoSyncTime, url: replyInfo.sHlsUrl ?? "", liveCodeType: .hls, liveType: .huya))
+                        tempArray.append(.init(cdn: "回放", qualitys: liveQualtys))
+                    }
                     return tempArray
                 }
-            }else {
-                if let replyInfo = liveData.roomInfo.tReplayInfo?.tReplayVideoInfo {
-                    var liveQualtys: [LiveQualityDetail] = []
-                    liveQualtys.append(.init(roomId: roomId, title: "回放", qn: replyInfo.iVideoSyncTime, url: replyInfo.sHlsUrl ?? "", liveCodeType: .hls, liveType: .huya))
-                    tempArray.append(.init(cdn: "回放", qualitys: liveQualtys))
-                }
-                return tempArray
             }
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("获取Huya直播地址失败，服务器返回信息为：\(dataReq)")")
+        }catch {
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-        return []
     }
     
     public static func getPlayURL(url: String, cdnType: String, streamName: String, iBitRate: Int) async throws -> String {
@@ -316,162 +328,181 @@ public struct Huya: LiveParse {
             }
             return url
         }catch {
-            throw error
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
-        let dataReq = try await AF.request(
-            "https://m.huya.com/\(roomId)",
-            method: .get,
-            headers: [
-                HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
-            ]
-        ).serializingString().value
-        let pattern = #"window\.HNF_GLOBAL_INIT\s*=\s*(.*?)</script>"#
-        let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
-        let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
-        for match in matchs {
-            let matchRange = Range(match.range, in: dataReq)!
-            let matchedSubstring = dataReq[matchRange]
-            var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
-            nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
-            nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
-            nsstr = String.convertUnicodeEscapes(in: nsstr as String) as NSString
-            nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
-            do {
-                let data = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
-                var liveStatus = ""
-                var liveInfo = data.roomInfo.tLiveInfo
-                switch data.roomInfo.eLiveStatus {
-                    case 2:
-                        liveStatus = LiveState.live.rawValue
-                        liveInfo = data.roomInfo.tLiveInfo
-                    case 3:
-                        liveStatus = LiveState.video.rawValue
-                        liveInfo = data.roomInfo.tReplayInfo!
-                default:
-                    liveStatus = LiveState.close.rawValue
-                        liveInfo = data.roomInfo.tRecentLive
+        do {
+            let dataReq = try await AF.request(
+                "https://m.huya.com/\(roomId)",
+                method: .get,
+                headers: [
+                    HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
+                ]
+            ).serializingString().value
+            let pattern = #"window\.HNF_GLOBAL_INIT\s*=\s*(.*?)</script>"#
+            let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
+            let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
+            for match in matchs {
+                let matchRange = Range(match.range, in: dataReq)!
+                let matchedSubstring = dataReq[matchRange]
+                var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
+                nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
+                nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
+                nsstr = String.convertUnicodeEscapes(in: nsstr as String) as NSString
+                nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
+                do {
+                    let data = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
+                    var liveStatus = ""
+                    var liveInfo = data.roomInfo.tLiveInfo
+                    switch data.roomInfo.eLiveStatus {
+                        case 2:
+                            liveStatus = LiveState.live.rawValue
+                            liveInfo = data.roomInfo.tLiveInfo
+                        case 3:
+                            liveStatus = LiveState.video.rawValue
+                            liveInfo = data.roomInfo.tReplayInfo!
+                    default:
+                        liveStatus = LiveState.close.rawValue
+                            liveInfo = data.roomInfo.tRecentLive
+                    }
+                    return LiveModel(userName: liveInfo.sNick, roomTitle: liveInfo.sIntroduction, roomCover: liveInfo.sScreenshot, userHeadImg: liveInfo.sAvatar180, liveType: .huya, liveState: liveStatus, userId: "\(liveInfo.lYyid)", roomId: roomId, liveWatchedCount: "\(liveInfo.lTotalCount)")
+                }catch {
+                    throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
                 }
-                return LiveModel(userName: liveInfo.sNick, roomTitle: liveInfo.sIntroduction, roomCover: liveInfo.sScreenshot, userHeadImg: liveInfo.sAvatar180, liveType: .huya, liveState: liveStatus, userId: "\(liveInfo.lYyid)", roomId: roomId, liveWatchedCount: "\(liveInfo.lTotalCount)")
-            }catch {
-                print(error)
-                throw NSError(domain: "获取房间信息失败", code: -9999, userInfo: ["desc": "获取房间信息失败"])
             }
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("获取虎牙直播信息失败，服务器返回信息为：\(dataReq)")")
+        }catch {
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-        throw NSError(domain: "获取房间信息失败", code: -9999, userInfo: ["desc": "获取房间信息失败"])
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
-        guard let liveStatus = try await Huya.getLiveLastestInfo(roomId: roomId, userId: userId).liveState else { return .unknow }
-        return LiveState(rawValue: liveStatus)!
+        do {
+            guard let liveStatus = try await Huya.getLiveLastestInfo(roomId: roomId, userId: userId).liveState else { return .unknow }
+            return LiveState(rawValue: liveStatus)!
+        }catch {
+            throw LiveParseError.liveStateParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        }
     }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
-        let dataReq = try await AF.request(
-            "https://search.cdn.huya.com/",
-            parameters: [
-                "m": "Search",
-                "do": "getSearchContent",
-                "q": keyword,
-                "uid": 0,
-                "v": 4,
-                "typ": -5,
-                "livestate": 0,
-                "rows": 20,
-                "start": (page - 1) * 20,
-            ]
-        ).serializingDecodable(HuyaSearchResult.self).value
-        var tempArray: Array<LiveModel> = []
-        for item in dataReq.response.three.docs {
-            tempArray.append(LiveModel(userName: item.game_nick, roomTitle: item.game_introduction, roomCover: item.game_screenshot, userHeadImg: item.game_imgUrl, liveType: .huya, liveState: "1", userId: "\(item.uid)", roomId: "\(item.room_id)", liveWatchedCount: "\(item.game_total_count)"))
+        do {
+            let dataReq = try await AF.request(
+                "https://search.cdn.huya.com/",
+                parameters: [
+                    "m": "Search",
+                    "do": "getSearchContent",
+                    "q": keyword,
+                    "uid": 0,
+                    "v": 4,
+                    "typ": -5,
+                    "livestate": 0,
+                    "rows": 20,
+                    "start": (page - 1) * 20,
+                ]
+            ).serializingDecodable(HuyaSearchResult.self).value
+            var finalArray: Array<LiveModel> = []
+            for item in dataReq.response.three.docs {
+                finalArray.append(LiveModel(userName: item.game_nick, roomTitle: item.game_introduction, roomCover: item.game_screenshot, userHeadImg: item.game_imgUrl, liveType: .huya, liveState: "1", userId: "\(item.uid)", roomId: "\(item.room_id)", liveWatchedCount: "\(item.game_total_count)"))
+            }
+            return finalArray
+        }catch {
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-        return tempArray
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
-        var roomId = ""
-        var realUrl = ""
-        if shareCode.contains("huya.com") { //长链接
-            realUrl = shareCode
-        }else { //默认为房间号处理
-            roomId = shareCode
-        }
-        if roomId == "" { //如果不是房间号，就解析链接中的房间号
-            let pattern = "(?:huya\\.com/)(\\d+)"
-            do {
-                let regex = try NSRegularExpression(pattern: pattern)
-                let nsString = realUrl as NSString
-                let results = regex.matches(in: realUrl, range: NSRange(location: 0, length: nsString.length))
-                if let match = results.first {
-                    let range = match.range(at: 1) // 第1个捕获组
-                    let numberString = nsString.substring(with: range)
-                    roomId = numberString
-                } else {
+        do {
+            var roomId = ""
+            var realUrl = ""
+            if shareCode.contains("huya.com") { //长链接
+                realUrl = shareCode
+            }else { //默认为房间号处理
+                roomId = shareCode
+            }
+            if roomId == "" { //如果不是房间号，就解析链接中的房间号
+                let pattern = "(?:huya\\.com/)(\\d+)"
+                do {
+                    let regex = try NSRegularExpression(pattern: pattern)
+                    let nsString = realUrl as NSString
+                    let results = regex.matches(in: realUrl, range: NSRange(location: 0, length: nsString.length))
+                    if let match = results.first {
+                        let range = match.range(at: 1) // 第1个捕获组
+                        let numberString = nsString.substring(with: range)
+                        roomId = numberString
+                    } else {
+                        roomId = ""
+                    }
+                } catch {
                     roomId = ""
                 }
-            } catch {
-                roomId = ""
             }
-        }
-        if roomId == "" || Int(roomId) ?? -1 < 0 { //最后尝试是不是平台的短链接，从html里面把房间号找到
-            let dataReq = try await AF.request(shareCode, headers: [
-                HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
-            ]).serializingString().value
-            let pattern = "\"lProfileRoom\":(\\d+),"
-            do {
-                let regex = try NSRegularExpression(pattern: pattern)
-                let nsString = dataReq as NSString
-                let results = regex.matches(in: dataReq, range: NSRange(location: 0, length: nsString.length))
-                if let match = results.first {
-                    let range = match.range(at: 1) // 第1个捕获组
-                    let numberString = nsString.substring(with: range)
-                    roomId = numberString
-                } else {
+            if roomId == "" || Int(roomId) ?? -1 < 0 { //最后尝试是不是平台的短链接，从html里面把房间号找到
+                let dataReq = try await AF.request(shareCode, headers: [
+                    HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
+                ]).serializingString().value
+                let pattern = "\"lProfileRoom\":(\\d+),"
+                do {
+                    let regex = try NSRegularExpression(pattern: pattern)
+                    let nsString = dataReq as NSString
+                    let results = regex.matches(in: dataReq, range: NSRange(location: 0, length: nsString.length))
+                    if let match = results.first {
+                        let range = match.range(at: 1) // 第1个捕获组
+                        let numberString = nsString.substring(with: range)
+                        roomId = numberString
+                    } else {
+                        roomId = ""
+                    }
+                } catch {
                     roomId = ""
                 }
-            } catch {
-                roomId = ""
             }
+            
+            if roomId == "" || Int(roomId) ?? -1 < 0 {
+                throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\("解析房间号失败，请检查分享码/分享链接是否正确")")
+            }
+            return try await Huya.getLiveLastestInfo(roomId: roomId, userId: nil)
+        }catch {
+            throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-        
-        if roomId == "" || Int(roomId) ?? -1 < 0 {
-            throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
-        }
-        return try await Huya.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
     public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
-        let dataReq = try await AF.request(
-            "https://m.huya.com/\(roomId)",
-            method: .get,
-            headers: [
-                HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
-            ]
-        ).serializingString().value
-        let pattern = #"window\.HNF_GLOBAL_INIT\s*=\s*(.*?)</script>"#
-        let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
-        let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
-        for match in matchs {
-            let matchRange = Range(match.range, in: dataReq)!
-            let matchedSubstring = dataReq[matchRange]
-            var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
-            nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
-            nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
-            nsstr = String.convertUnicodeEscapes(in: nsstr as String) as NSString
-            nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
-            let liveData = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
-            return (
-                [
-                    "lYyid": "\(liveData.roomInfo.tLiveInfo.lYyid )",
-                    "lChannelId": "\(liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value.first?.lChannelId ?? 0)",
-                    "lSubChannelId": "\(liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value.first?.lSubChannelId ?? 0)"
-                ],
-                nil
-            )
+        do {
+            let dataReq = try await AF.request(
+                "https://m.huya.com/\(roomId)",
+                method: .get,
+                headers: [
+                    HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
+                ]
+            ).serializingString().value
+            let pattern = #"window\.HNF_GLOBAL_INIT\s*=\s*(.*?)</script>"#
+            let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
+            let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
+            for match in matchs {
+                let matchRange = Range(match.range, in: dataReq)!
+                let matchedSubstring = dataReq[matchRange]
+                var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 10))")
+                nsstr = nsstr.replacingOccurrences(of: "\n", with: "") as NSString
+                nsstr = removeIncludeFunctionValue(in: nsstr as String) as NSString
+                nsstr = String.convertUnicodeEscapes(in: nsstr as String) as NSString
+                nsstr = nsstr.replacingOccurrences(of: "window.HNF_GLOBAL_INIT =", with: "") as NSString
+                let liveData = try JSONDecoder().decode(HuyaRoomInfoMainModel.self, from: (nsstr as String).data(using: .utf8)!)
+                return (
+                    [
+                        "lYyid": "\(liveData.roomInfo.tLiveInfo.lYyid )",
+                        "lChannelId": "\(liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value.first?.lChannelId ?? 0)",
+                        "lSubChannelId": "\(liveData.roomInfo.tLiveInfo.tLiveStreamInfo!.vStreamInfo.value.first?.lSubChannelId ?? 0)"
+                    ],
+                    nil
+                )
+            }
+            throw LiveParseError.danmuArgsParseError("错误位置\(#file)-\(#function)", "错误信息：\("获取斗鱼弹幕信息失败，服务器返回信息为：\(dataReq)")")
+        }catch {
+            throw LiveParseError.danmuArgsParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-        return ([:], nil)
     }
     
     public static func getUUID() -> String {

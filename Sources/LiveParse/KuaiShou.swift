@@ -312,24 +312,7 @@ public struct KuaiShou: LiveParse {
             }
             return tempArray
         }catch {
-            print(error)
-            var hasMore = true
-            var page = 1
-            var tempArray: [LiveCategoryModel] = []
-            while hasMore == true {
-                let dataReq = try await AF.request(
-                    "https://live.kuaishou.com/live_api/category/data",
-                    method: .get,
-                    parameters: [
-                        "type": id,
-                        "page": page,
-                        "pageSize": 20
-                    ]
-                ).serializingDecodable(KSCategoryData<KSCategoryList?>.self).value
-                hasMore = dataReq.data?.hasMore ?? false
-                page += 1
-            }
-            throw(error)
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
     
@@ -354,32 +337,23 @@ public struct KuaiShou: LiveParse {
             }
             return tempArray
         }catch {
-            print(error)
-            let url = id.count >= 7 ? "https://live.kuaishou.com/live_api/non-gameboard/list" : "https://live.kuaishou.com/live_api/gameboard/list"
-            let dataReq = try await AF.request(
-                url,
-                method: .get,
-                parameters: [
-                    "filterType": 0,
-                    "page": page,
-                    "pageSize": 20,
-                    "gameId": id
-                ]
-            ).serializingString().value
-            print(dataReq)
-            throw error
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
-        let dataReq = try await getKSLiveRoom(roomId: roomId)
-        var liveQuaityModel = LiveQualityModel(cdn: "线路1", douyuCdnName: "", qualitys: [])
-        if let playList = dataReq.liveroom.playList?.first?.liveStream.playUrls?.h264?.adaptationSet.representation {
-            for item in playList {
-                liveQuaityModel.qualitys.append(.init(roomId: roomId, title: item.name, qn: item.bitrate, url: item.url, liveCodeType: .flv, liveType: .ks))
+        do {
+            let dataReq = try await getKSLiveRoom(roomId: roomId)
+            var liveQuaityModel = LiveQualityModel(cdn: "线路1", douyuCdnName: "", qualitys: [])
+            if let playList = dataReq.liveroom.playList?.first?.liveStream.playUrls?.h264?.adaptationSet.representation {
+                for item in playList {
+                    liveQuaityModel.qualitys.append(.init(roomId: roomId, title: item.name, qn: item.bitrate, url: item.url, liveCodeType: .flv, liveType: .ks))
+                }
             }
+            return [liveQuaityModel]
+        }catch {
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-        return [liveQuaityModel]
     }
     
     static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
@@ -387,41 +361,51 @@ public struct KuaiShou: LiveParse {
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
-        let dataReq = try await getKSLiveRoom(roomId: roomId)
-        return LiveModel(userName: dataReq.liveroom.playList?.first?.author?.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author?.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author?.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.playList?.first?.liveStream.playUrls?.h264?.adaptationSet.representation.count ?? 0 > 0 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
+        do {
+            let dataReq = try await getKSLiveRoom(roomId: roomId)
+            return LiveModel(userName: dataReq.liveroom.playList?.first?.author?.name ?? "", roomTitle: dataReq.liveroom.playList?.first?.author?.name ?? "", roomCover: dataReq.liveroom.playList?.first?.liveStream.poster ?? "", userHeadImg: dataReq.liveroom.playList?.first?.author?.avatar ?? "", liveType: .ks, liveState: dataReq.liveroom.playList?.first?.liveStream.playUrls?.h264?.adaptationSet.representation.count ?? 0 > 0 ? LiveState.live.rawValue : LiveState.close.rawValue, userId: "", roomId: roomId, liveWatchedCount: "")
+        }catch {
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        }
     }
     
     static func getKSLiveRoom(roomId: String) async throws -> KSLiveRoot {
-        let dataReq = try await AF.request(
-            "https://live.kuaishou.com/u/\(roomId)",
-            method: .get
-        ).serializingString().value
-        let pattern = #"<script>window.__INITIAL_STATE__=\s*(.*?)\;"#
-        let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
-        let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
-        for match in matchs {
-            let matchRange = Range(match.range, in: dataReq)!
-            let matchedSubstring = String(dataReq[matchRange])
-            var tempStr = matchedSubstring.replacingOccurrences(of: "<script>window.__INITIAL_STATE__=", with: "")
-            tempStr = tempStr.replacingOccurrences(of: ";", with: "")
-            tempStr = tempStr.replacingOccurrences(of: ":undefined", with: ":\"\"")
-            tempStr = String.convertUnicodeEscapes(in: tempStr as String)
-            do {
-                let data = try JSONDecoder().decode(KSLiveRoot.self, from: tempStr.data(using: .utf8)!)
-                return data
-            }catch {
-                throw error
+        do {
+            let dataReq = try await AF.request(
+                "https://live.kuaishou.com/u/\(roomId)",
+                method: .get
+            ).serializingString().value
+            let pattern = #"<script>window.__INITIAL_STATE__=\s*(.*?)\;"#
+            let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
+            let matchs = regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
+            if matchs.count == 0 {
+                throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "服务器返回信息：\(dataReq)")
+            }else {
+                for match in matchs {
+                    let matchRange = Range(match.range, in: dataReq)!
+                    let matchedSubstring = String(dataReq[matchRange])
+                    var tempStr = matchedSubstring.replacingOccurrences(of: "<script>window.__INITIAL_STATE__=", with: "")
+                    tempStr = tempStr.replacingOccurrences(of: ";", with: "")
+                    tempStr = tempStr.replacingOccurrences(of: ":undefined", with: ":\"\"")
+                    tempStr = String.convertUnicodeEscapes(in: tempStr as String)
+                    try JSONDecoder().decode(KSLiveRoot.self, from: tempStr.data(using: .utf8)!)
+                }
             }
+        }catch {
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-        throw NSError(domain: "获取快手房间信息失败", code: -10000, userInfo: ["desc": "获取快手房间信息失败"])
+        return KSLiveRoot(liveroom: .init(activeIndex: 0, websocketUrls: [], token: "", noticeList: [], playList: [], loading: false))
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
-        return LiveState(rawValue: try await getLiveLastestInfo(roomId: roomId, userId: userId).liveState ?? LiveState.unknow.rawValue)!
+        do {
+            return LiveState(rawValue: try await getLiveLastestInfo(roomId: roomId, userId: userId).liveState ?? LiveState.unknow.rawValue)!
+        }catch {
+            throw LiveParseError.liveStateParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        }
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
-        //https://live.kuaishou.com/u/ccyoutai
         var roomId = ""
         var realUrl = ""
         if shareCode.contains("live.kuaishou.com/u") { //长链接
@@ -436,10 +420,10 @@ public struct KuaiShou: LiveParse {
                     let id = nsString.substring(with: match.range(at: 1))
                     return try await KuaiShou.getLiveLastestInfo(roomId: id, userId: nil)
                 } else {
-                    throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+                    throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "获取房间号失败，请检查分享码/分享链接是否正确")
                 }
-            } catch let error {
-                throw error
+            } catch {
+                LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "获取房间号失败，请检查分享码/分享链接是否正确")
             }
         }else if shareCode.contains("v.kuaishou.com") { //10.21 新增解析
             let pattern = "https://v\\.kuaishou\\.com/[a-zA-Z0-9]+"
@@ -461,23 +445,28 @@ public struct KuaiShou: LiveParse {
                                 let result = String(finalURL.absoluteString[liveIndex..<questionMarkIndex])
                                 return try await KuaiShou.getLiveLastestInfo(roomId: result, userId: nil)
                             } else {
-                                throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+                                throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "获取房间号失败，请检查分享码/分享链接是否正确")
                             }
                         }
                     }
                 } else {
-                    throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+                    throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "获取房间号失败，请检查分享码/分享链接是否正确")
                 }
             } catch {
-                throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+                throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "获取房间号失败，请检查分享码/分享链接是否正确")
             }
         }else {
             roomId = shareCode
         }
         if roomId == "" {
-            throw NSError(domain: "解析房间号失败，请检查分享码/分享链接是否正确", code: -10000, userInfo: ["desc": "解析房间号失败，请检查分享码/分享链接是否正确"])
+            throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "获取房间号失败，请检查分享码/分享链接是否正确")
         }
-        return try await KuaiShou.getLiveLastestInfo(roomId: roomId, userId: nil)
+        do {
+            return try await KuaiShou.getLiveLastestInfo(roomId: roomId, userId: nil)
+        }catch {
+            throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "获取房间号失败，请检查分享码/分享链接是否正确")
+        }
+        
     }
     
     static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {

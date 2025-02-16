@@ -164,22 +164,27 @@ struct DouyuSearchRelateShow: Codable {
 public struct Douyu: LiveParse {
     
     public static func getCategoryList() async throws -> [LiveMainListModel] {
-        let url = "https://m.douyu.com/api/cate/list"
-        let dataReq = try await AF.request(url, method: .get).serializingDecodable(DouyuCateV2Model.self).value
-        if dataReq.code == 0 {
-            var finalList: [LiveMainListModel] = []
-            for cate1 in dataReq.data.cate1Info {
-                var categoryArray: [LiveCategoryModel] = []
-                for cate2 in dataReq.data.cate2Info {
-                    if cate2.cate1Id == cate1.cate1Id {
-                        categoryArray.append(LiveCategoryModel(id: "\(cate2.cate2Id)", parentId: "\(cate2.cate1Id)", title: cate2.cate2Name, icon: cate2.icon))
+        do {
+            let url = "https://m.douyu.com/api/cate/list"
+            let dataReq = try await AF.request(url, method: .get).serializingDecodable(DouyuCateV2Model.self).value
+            if dataReq.code == 0 {
+                var finalList: [LiveMainListModel] = []
+                for cate1 in dataReq.data.cate1Info {
+                    var categoryArray: [LiveCategoryModel] = []
+                    for cate2 in dataReq.data.cate2Info {
+                        if cate2.cate1Id == cate1.cate1Id {
+                            categoryArray.append(LiveCategoryModel(id: "\(cate2.cate2Id)", parentId: "\(cate2.cate1Id)", title: cate2.cate2Name, icon: cate2.icon))
+                        }
                     }
+                    var listModel = LiveMainListModel(id: "\(cate1.cate1Id)", title: cate1.cate1Name, icon: "", biz: nil, subList: categoryArray)
+                    finalList.append(listModel)
                 }
-                var listModel = LiveMainListModel(id: "\(cate1.cate1Id)", title: cate1.cate1Name, icon: "", biz: nil, subList: categoryArray)
-                finalList.append(listModel)
+                return finalList
+            }else {
+                let dataReq = try await AF.request(url, method: .get).serializingString().value
+                throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "服务器返回信息：\(dataReq)")
             }
-            return finalList
-        }else {
+        }catch {
             throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
@@ -270,7 +275,7 @@ public struct Douyu: LiveParse {
             ).serializingDecodable(DouyuSearchResult.self).value
             var finalArray: Array<LiveModel> = []
             for item in dataReq.data.relateShow {
-                tempArray.append(LiveModel(userName: item.nickName, roomTitle: item.roomName, roomCover: item.roomSrc, userHeadImg: item.avatar, liveType: .douyu, liveState: item.roomType == 0 ? "1" :"0", userId: "\(item.rid)", roomId: "\(item.rid)", liveWatchedCount: item.hot))
+                finalArray.append(LiveModel(userName: item.nickName, roomTitle: item.roomName, roomCover: item.roomSrc, userHeadImg: item.avatar, liveType: .douyu, liveState: item.roomType == 0 ? "1" :"0", userId: "\(item.rid)", roomId: "\(item.rid)", liveWatchedCount: item.hot))
             }
             return finalArray
         }catch {
@@ -402,7 +407,7 @@ public struct Douyu: LiveParse {
                     let finalData = (playData as String).data(using: .utf8) ?? Data()
                     let jsEncJson = try JSONSerialization.jsonObject(with: finalData, options: .mutableContainers)
                     var jsEncDict = jsEncJson as! Dictionary<String, Any>
-
+                    
                     jsEncDict.updateValue(rate, forKey: "rate")
                     if cdn != nil {
                         jsEncDict.updateValue(cdn!, forKey: "cdn")
@@ -445,11 +450,21 @@ public struct Douyu: LiveParse {
                     }
                     return cdnsArray
                 }
+            } else {
+                let dataReq = try await AF.request(
+                    "https://www.douyu.com/swf_api/homeH5Enc?rids=\(roomId)",
+                    method: .get,
+                    headers: HTTPHeaders([
+                        HTTPHeader.init(name: "referer", value: "https://www.douyu.com/\(roomId)"),
+                        HTTPHeader.init(name: "user-agent", value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"),
+                    ])
+                ).serializingString().value
+                throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "服务器返回信息：\(dataReq)")
             }
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("获取斗鱼直播地址失败")")
+        }catch {
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-    }catch {
-        throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        return []
     }
     
     static func jsonToData(jsonDic:Dictionary<String, Any>) -> Data? {
