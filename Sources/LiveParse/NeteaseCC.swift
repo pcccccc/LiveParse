@@ -164,7 +164,7 @@ public struct NeteaseCC: LiveParse {
             guard let item = dataReq.data.first else {
                 throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("解析直播数据失败")")
             }
-            return LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: item.cuteid == nil "0" : "1", userId: "\(item.channel_id ?? userId ?? "")", roomId: "\(item.cuteid ?? roomId)", liveWatchedCount: "\(item.visitor ?? 0)")
+            return LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: item.cuteid == nil ? "0" : "1", userId: "\(item.channel_id == nil ? userId : "\(item.channel_id ?? 0)")", roomId: "\(item.cuteid == nil ? roomId : "\(item.cuteid ?? 0)")", liveWatchedCount: "\(item.visitor ?? 0)")
         }catch {
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
