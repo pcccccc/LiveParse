@@ -284,6 +284,9 @@ public struct Huya: LiveParse {
                                 var url = ""
                                 let bitRateInfo = bitRateInfoArray[index]
                                 if streamInfo.iMobilePriorityRate > 15 { //15帧以下，KSPlayer可能会产生抽动问题。如果使用IINA则可以正常播放
+                                    if bitRateInfo.sDisplayName.contains("HDR") == true {
+                                        continue
+                                    }
                                     if bitRateInfo.iBitRate > 0 && bitRateInfo.sDisplayName.contains("HDR") == false { //如果HDR视频包含ratio参数会直接报错
                                         url = try await Huya.getPlayURL(url: streamInfo.sFlvUrl, cdnType: streamInfo.sCdnType, streamName: streamInfo.sStreamName, iBitRate: bitRateInfo.iBitRate)
                                     }else {
