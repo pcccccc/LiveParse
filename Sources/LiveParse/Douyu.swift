@@ -398,58 +398,60 @@ public struct Douyu: LiveParse {
                 ]
                 request.httpBody = try JSONSerialization.data(withJSONObject: parameter)
                 let dataReq = try await AF.request(request).serializingData().value
-                let json = try JSONSerialization.jsonObject(with: dataReq, options: .mutableContainers)
-                let jsonDict = json as! Dictionary<String, Any>
-                if jsonDict["code"] as? Int ?? -1 == 0 {
-                    var playData = NSString(string: "{\"\(jsonDict["data"] as? String ?? "")\"}")
-                    playData = playData.replacingOccurrences(of: "&", with: "\",\"") as NSString
-                    playData = playData.replacingOccurrences(of: "=", with: "\":\"") as NSString
-                    let finalData = (playData as String).data(using: .utf8) ?? Data()
-                    let jsEncJson = try JSONSerialization.jsonObject(with: finalData, options: .mutableContainers)
-                    var jsEncDict = jsEncJson as! Dictionary<String, Any>
-                    
-                    jsEncDict.updateValue(rate, forKey: "rate")
-                    if cdn != nil {
-                        jsEncDict.updateValue(cdn!, forKey: "cdn")
-                    }
-                    let dataReq = try await AF.request(
-                        "https://www.douyu.com/lapi/live/getH5Play/\(roomId)",
-                        method: .post,
-                        parameters: jsEncDict,
-                        headers: HTTPHeaders([
-                            HTTPHeader.init(name: "referer", value: "https://www.douyu.com/\(roomId)"),
-                            HTTPHeader.init(name: "user-agent", value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"),
-                        ])
-                    ).serializingString().value
-                    guard let resData = dataReq.data(using: .utf8) else { return [] }
-                    let resJson = try JSONSerialization.jsonObject(with: resData, options: .mutableContainers)
-                    let resDict = resJson as! Dictionary<String, Any>
-                    let dataDict = resDict["data"] as! Dictionary<String, Any>
-                    var playQualitys: Array<DouyuPlayQuality> = []
-                    if let multirates = dataDict["multirates"] as? Array<Dictionary<String, Any>> {
-                        for item in multirates {
-                            let playQualityData = jsonToData(jsonDic: item)
-                            let playQuality = try JSONDecoder().decode(DouyuPlayQuality.self, from: playQualityData ?? Data())
-                            playQualitys.append(playQuality)
+                 let json = try JSONSerialization.jsonObject(with: dataReq, options: .mutableContainers)
+                if let jsonDict = json as? Dictionary<String, Any> {
+                    if jsonDict["code"] as? Int ?? -1 == 0 {
+                        var playData = NSString(string: "{\"\(jsonDict["data"] as? String ?? "")\"}")
+                        playData = playData.replacingOccurrences(of: "&", with: "\",\"") as NSString
+                        playData = playData.replacingOccurrences(of: "=", with: "\":\"") as NSString
+                        let finalData = (playData as String).data(using: .utf8) ?? Data()
+                        let jsEncJson = try JSONSerialization.jsonObject(with: finalData, options: .mutableContainers)
+                        var jsEncDict = jsEncJson as! Dictionary<String, Any>
+                        
+                        jsEncDict.updateValue(rate, forKey: "rate")
+                        if cdn != nil {
+                            jsEncDict.updateValue(cdn!, forKey: "cdn")
                         }
-                    }
-                    
-                    var cdnsArray: [LiveQualityModel] = []
-                    if let cdns = dataDict["cdnsWithName"] as? Array<Dictionary<String, Any>> {
-                        for item in cdns {
-                            var tempArray: [LiveQualityDetail] = []
-                            for i in 0..<playQualitys.count {
-                                let playQuality = playQualitys[i]
-                                tempArray.append(.init(roomId: roomId, title: playQuality.name, qn: playQuality.rate, url: "\(dataDict["rtmp_url"] as? String ?? "")/\(dataDict["rtmp_live"] as? String ?? "")", liveCodeType: .flv, liveType: .douyu))
-                            }
-                            let serverCdn = item["cdn"] as? String ?? ""
-                            if serverCdn == cdn || cdn == nil {
-                                cdnsArray.append(.init(cdn: item["name"] as? String ?? "", douyuCdnName: serverCdn, qualitys: tempArray))
+                        let dataReq = try await AF.request(
+                            "https://www.douyu.com/lapi/live/getH5Play/\(roomId)",
+                            method: .post,
+                            parameters: jsEncDict,
+                            headers: HTTPHeaders([
+                                HTTPHeader.init(name: "referer", value: "https://www.douyu.com/\(roomId)"),
+                                HTTPHeader.init(name: "user-agent", value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"),
+                            ])
+                        ).serializingString().value
+                        guard let resData = dataReq.data(using: .utf8) else { return [] }
+                        let resJson = try JSONSerialization.jsonObject(with: resData, options: .mutableContainers)
+                        let resDict = resJson as! Dictionary<String, Any>
+                        let dataDict = resDict["data"] as! Dictionary<String, Any>
+                        var playQualitys: Array<DouyuPlayQuality> = []
+                        if let multirates = dataDict["multirates"] as? Array<Dictionary<String, Any>> {
+                            for item in multirates {
+                                let playQualityData = jsonToData(jsonDic: item)
+                                let playQuality = try JSONDecoder().decode(DouyuPlayQuality.self, from: playQualityData ?? Data())
+                                playQualitys.append(playQuality)
                             }
                         }
+                        
+                        var cdnsArray: [LiveQualityModel] = []
+                        if let cdns = dataDict["cdnsWithName"] as? Array<Dictionary<String, Any>> {
+                            for item in cdns {
+                                var tempArray: [LiveQualityDetail] = []
+                                for i in 0..<playQualitys.count {
+                                    let playQuality = playQualitys[i]
+                                    tempArray.append(.init(roomId: roomId, title: playQuality.name, qn: playQuality.rate, url: "\(dataDict["rtmp_url"] as? String ?? "")/\(dataDict["rtmp_live"] as? String ?? "")", liveCodeType: .flv, liveType: .douyu))
+                                }
+                                let serverCdn = item["cdn"] as? String ?? ""
+                                if serverCdn == cdn || cdn == nil {
+                                    cdnsArray.append(.init(cdn: item["name"] as? String ?? "", douyuCdnName: serverCdn, qualitys: tempArray))
+                                }
+                            }
+                        }
+                        return cdnsArray
                     }
-                    return cdnsArray
                 }
+                
             } else {
                 let dataReq = try await AF.request(
                     "https://www.douyu.com/swf_api/homeH5Enc?rids=\(roomId)",
