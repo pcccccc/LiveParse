@@ -388,7 +388,8 @@ public struct KuaiShou: LiveParse {
                     tempStr = tempStr.replacingOccurrences(of: ";", with: "")
                     tempStr = tempStr.replacingOccurrences(of: ":undefined", with: ":\"\"")
                     tempStr = String.convertUnicodeEscapes(in: tempStr as String)
-                    try JSONDecoder().decode(KSLiveRoot.self, from: tempStr.data(using: .utf8)!)
+                    let resp = try JSONDecoder().decode(KSLiveRoot.self, from: tempStr.data(using: .utf8)!)
+                    return resp
                 }
             }
         }catch {
