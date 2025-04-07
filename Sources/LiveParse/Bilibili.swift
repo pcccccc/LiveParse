@@ -314,8 +314,7 @@ public struct Bilibili: LiveParse {
 //    ?platform=web&parent_area_id=2&area_id=0&sort_type=sort_type_124&page=3&web_location=444.43&w_rid=d83b3b7a86f542d77171a87b69ea93e6&wts=1743988984
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         do {
-            let query = try await Bilibili.biliWbiSign(param: "area_id=0&page=1&parent_area_id=2&platform=web&sort_type=&vajra_business_key=&web_location=444.43") ?? ""
-            print("https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\("platform=web&parent_area_id=2&area_id=0&sort_type=sort_type_124&page=2&")&\(query)")
+            let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43") ?? ""
             let dataReq = try await AF.request(
                 "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
                 method: .get,
