@@ -7,6 +7,9 @@
 
 import Foundation
 import Alamofire
+import Foundation
+import CommonCrypto
+import SwiftyJSON
 
 public struct BiliBiliCookie {
     public static var cookie = UserDefaults.standard.value(forKey: "LiveParse.Bilibili.Cookie") as? String ?? "" {
@@ -308,20 +311,18 @@ public struct Bilibili: LiveParse {
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
-    
+//    ?platform=web&parent_area_id=2&area_id=0&sort_type=sort_type_124&page=3&web_location=444.43&w_rid=d83b3b7a86f542d77171a87b69ea93e6&wts=1743988984
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         do {
+            let query = try await Bilibili.biliWbiSign(param: "area_id=0&page=1&parent_area_id=2&platform=web&sort_type=&vajra_business_key=&web_location=444.43") ?? ""
+            print("https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\("platform=web&parent_area_id=2&area_id=0&sort_type=sort_type_124&page=2&")&\(query)")
             let dataReq = try await AF.request(
-                "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList",
+                "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
                 method: .get,
-                parameters: [
-                    "platform": "web",
-                    "parent_area_id": parentId ?? "",
-                    "area_id": id,
-                    "sort_type": "",
-                    "page": page
-                ],
                 headers: [
+                    "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+//                    "cookie": BiliBiliCookie.cookie,
+                    "referer": "https://live.bilibili.com/"
                 ]
             ).serializingDecodable(BilibiliMainData<BiliBiliCategoryRoomMainModel>.self).value
             if let listModelArray = dataReq.data.list {
@@ -331,6 +332,7 @@ public struct Bilibili: LiveParse {
                 }
                 return tempArray
             }else {
+                
                 throw
                 LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("请求B站直播间列表失败,返回的列表为空")")
             }
@@ -681,5 +683,74 @@ public struct Bilibili: LiveParse {
         default:
             return .unknow
         }
+    }
+
+    public static func biliWbiSign(param: String) async throws -> String? {
+        func getMixinKey(orig: String) -> String {
+            return String(mixinKeyEncTab.map { orig[orig.index(orig.startIndex, offsetBy: $0)] }.prefix(32))
+        }
+        
+        func encWbi(params: [String: Any], imgKey: String, subKey: String) -> [String: Any] {
+            var params = params
+            let mixinKey = getMixinKey(orig: imgKey + subKey)
+            let currTime = Int(round((Date().timeIntervalSince1970 * 1000))) ?? 0
+//            let currTime = 1744010953
+            params["wts"] = currTime
+            params = params.sorted { $0.key < $1.key }.reduce(into: [:]) { $0[$1.key] = $1.value }
+            params = params.mapValues { String(describing: $0).filter { !"!'()*".contains($0) } }
+            let sortdKeys = params.keys.sorted()
+            let query = sortdKeys.map { "\($0)=\(params[$0] ?? "")" }.joined(separator: "&")
+            let wbiSign = calculateMD5(string: query + mixinKey)
+            params["w_rid"] = wbiSign
+            return params
+        }
+        
+        func getWbiKeys() async throws -> (String, String) {
+           let headers: HTTPHeaders = [
+               "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+               "Referer": "https://www.bilibili.com/"
+           ]
+           
+            let dataReq = try await AF.request("https://api.bilibili.com/x/web-interface/nav", headers: headers).serializingData().value
+            let json = JSON(dataReq)
+            let imgURL = json["data"]["wbi_img"]["img_url"].string ?? ""
+            let subURL = json["data"]["wbi_img"]["sub_url"].string ?? ""
+            let imgKey = imgURL.components(separatedBy: "/").last?.components(separatedBy: ".").first ?? ""
+            let subKey = subURL.components(separatedBy: "/").last?.components(separatedBy: ".").first ?? ""
+            return (imgKey, subKey)
+//            return ("7cd084941338484aae1ad9425b84077c", "4932caff0ff746eab6f01bf08b70ac45")
+       }
+        
+
+        
+        func calculateMD5(string: String) -> String {
+            let data = Data(string.utf8)
+            var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
+            _ = data.withUnsafeBytes {
+                CC_MD5($0.baseAddress, CC_LONG(data.count), &digest)
+            }
+            return digest.map { String(format: "%02hhx", $0) }.joined()
+        }
+        
+        let mixinKeyEncTab = [
+            46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
+            33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40,
+            61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11,
+            36, 20, 34, 44, 52
+        ]
+        
+        let keys = try await getWbiKeys()
+        let spdParam = param.components(separatedBy: "&")
+        var spdDicParam = [String: String]()
+        spdParam.forEach { pair in
+            let components = pair.components(separatedBy: "=")
+            if components.count == 2 {
+                spdDicParam[components[0]] = components[1]
+            }
+        }
+        
+        let signedParams = encWbi(params: spdDicParam, imgKey: keys.0, subKey: keys.1)
+        let query = signedParams.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
+        return query
     }
 }
