@@ -693,7 +693,6 @@ public struct Bilibili: LiveParse {
             var params = params
             let mixinKey = getMixinKey(orig: imgKey + subKey)
             let currTime = Int(round((Date().timeIntervalSince1970 * 1000))) ?? 0
-//            let currTime = 1744010953
             params["wts"] = currTime
             params = params.sorted { $0.key < $1.key }.reduce(into: [:]) { $0[$1.key] = $1.value }
             params = params.mapValues { String(describing: $0).filter { !"!'()*".contains($0) } }
@@ -717,7 +716,6 @@ public struct Bilibili: LiveParse {
             let imgKey = imgURL.components(separatedBy: "/").last?.components(separatedBy: ".").first ?? ""
             let subKey = subURL.components(separatedBy: "/").last?.components(separatedBy: ".").first ?? ""
             return (imgKey, subKey)
-//            return ("7cd084941338484aae1ad9425b84077c", "4932caff0ff746eab6f01bf08b70ac45")
        }
         
 
