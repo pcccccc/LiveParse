@@ -314,13 +314,15 @@ public struct Bilibili: LiveParse {
 //    ?platform=web&parent_area_id=2&area_id=0&sort_type=sort_type_124&page=3&web_location=444.43&w_rid=d83b3b7a86f542d77171a87b69ea93e6&wts=1743988984
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         do {
+            let cookie = "buvid3=\(try await getBuvid());"
             let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43") ?? ""
+            print("https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)")
             let dataReq = try await AF.request(
                 "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
                 method: .get,
                 headers: [
-                    "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
-//                    "cookie": BiliBiliCookie.cookie,
+                    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+                    "cookie": cookie,
                     "referer": "https://live.bilibili.com/"
                 ]
             ).serializingDecodable(BilibiliMainData<BiliBiliCategoryRoomMainModel>.self).value
