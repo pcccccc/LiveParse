@@ -11,6 +11,9 @@ import Foundation
 import CommonCrypto
 import SwiftyJSON
 
+let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
+let referer = "https://live.bilibili.com/"
+
 public struct BiliBiliCookie {
     public static var cookie = UserDefaults.standard.value(forKey: "LiveParse.Bilibili.Cookie") as? String ?? "" {
         didSet {
@@ -314,17 +317,13 @@ public struct Bilibili: LiveParse {
 //    ?platform=web&parent_area_id=2&area_id=0&sort_type=sort_type_124&page=3&web_location=444.43&w_rid=d83b3b7a86f542d77171a87b69ea93e6&wts=1743988984
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         do {
-            let cookie = "buvid3=\(try await getBuvid());"
+            let headers = try await getHeaders()
             let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43") ?? ""
             print("https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)")
             let dataReq = try await AF.request(
                 "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
                 method: .get,
-                headers: [
-                    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
-                    "cookie": cookie,
-                    "referer": "https://live.bilibili.com/"
-                ]
+                headers: headers
             ).serializingDecodable(BilibiliMainData<BiliBiliCategoryRoomMainModel>.self).value
             if let listModelArray = dataReq.data.list {
                 var tempArray: Array<LiveModel> = []
@@ -344,6 +343,7 @@ public struct Bilibili: LiveParse {
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
         do {
+            let headers = try await getHeaders()
             let dataReq = try await AF.request(
                 "https://api.live.bilibili.com/room/v1/Room/playUrl",
                 method: .get,
@@ -352,9 +352,7 @@ public struct Bilibili: LiveParse {
                     "cid": roomId,
                     "qn": ""
                 ],
-                headers: BiliBiliCookie.cookie == "" ? nil : [
-                    "cookie": BiliBiliCookie.cookie,
-                ]
+                headers: headers
             ).serializingDecodable(BilibiliMainData<BiliBiliQualityModel>.self).value
             var liveQualitys: [LiveQualityDetail] = []
             var hostArray: [String] = []
@@ -372,9 +370,7 @@ public struct Bilibili: LiveParse {
                             "codec": "0",
                             "mask": "0"
                         ],
-                        headers: BiliBiliCookie.cookie == "" ? nil : [
-                            "cookie": BiliBiliCookie.cookie
-                        ]
+                        headers: headers
                     ).serializingDecodable(BilibiliMainData<BiliBiliPlayURLInfoMain>.self).value
                     for streamInfo in dataReq.data.playurl_info.playurl.stream {
                         if streamInfo.protocol_name == "http_hls" || streamInfo.protocol_name == "http_stream" {
@@ -411,9 +407,7 @@ public struct Bilibili: LiveParse {
                         "codec": "0,1",
                         "mask": "0"
                     ],
-                    headers: BiliBiliCookie.cookie == "" ? nil : [
-                        "cookie": BiliBiliCookie.cookie
-                    ]
+                    headers: headers
                 ).serializingDecodable(BilibiliMainData<BiliBiliPlayURLInfoMain>.self).value
                 for streamInfo in dataReq.data.playurl_info.playurl.stream {
                     if streamInfo.protocol_name == "http_hls" || streamInfo.protocol_name == "http_stream" {
@@ -445,11 +439,13 @@ public struct Bilibili: LiveParse {
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         do {
+            let headers = try await getHeaders()
             let dataReq = try await AF.request(
                 "https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom",
                 parameters: [
                     "room_id": roomId
-                ]
+                ],
+                headers: headers
             ).serializingDecodable(BilibiliMainData<BilibiliRoomInfoData>.self).value
             var liveStatus = LiveState.unknow.rawValue
             switch dataReq.data.room_info.live_status {
@@ -474,6 +470,7 @@ public struct Bilibili: LiveParse {
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
         do {
+            let headers = try await getHeaders()
             let dataReq = try await AF.request(
                 "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live&cover_type=user_cover",
                 method: .get,
@@ -487,9 +484,7 @@ public struct Bilibili: LiveParse {
                     "single_column": 0,
                     "page": page
                 ],
-                headers: BiliBiliCookie.cookie == "" ?
-                ["cookie": "buvid3=infoc"] :
-                    ["cookie": BiliBiliCookie.cookie]
+                headers: headers
             ).serializingDecodable(BilibiliSearchMainData.self).value
             
             var tempArray: Array<LiveModel> = []
@@ -515,20 +510,19 @@ public struct Bilibili: LiveParse {
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
         do {
+            let headers = try await getHeaders()
             let dataReq = try await AF.request(
                 "https://api.live.bilibili.com/room/v1/Room/get_info",
                 method: .get,
                 parameters: [
                     "room_id": roomId
                 ],
-                headers: BiliBiliCookie.cookie == "" ? nil : [
-                    "cookie": BiliBiliCookie.cookie
-                ]
+                headers: headers
             ).serializingData().value
             let json = try JSONSerialization.jsonObject(with: dataReq, options: .mutableContainers)
             let jsonDict = json as! Dictionary<String, Any>
-            let dataDict = jsonDict["data"] as! Dictionary<String, Any>
-            let liveStatus = dataDict["live_status"] as? Int ?? -1
+            let dataDict = jsonDict["data"] as? Dictionary<String, Any>
+            let liveStatus = dataDict?["live_status"] as? Int ?? -1
             switch liveStatus {
             case 0:
                 return .close
@@ -660,6 +654,30 @@ public struct Bilibili: LiveParse {
             return ""
         }
         return ""
+    }
+    
+    static func getBuvid3And4() async throws -> (String, String) {
+        
+        let dataReq = try await AF.request(
+            "https://api.bilibili.com/x/frontend/finger/spi",
+            method: .get
+        ).serializingDecodable(BilibiliMainData<BilibiliBuvidModel>.self).value
+        return (dataReq.data.b_3, dataReq.data.b_4)
+    }
+    
+    static func getHeaders() async throws -> HTTPHeaders {
+        let buvids = try await getBuvid3And4()
+        var cookie: [String: String] = [:]
+        if BiliBiliCookie.cookie == "" {
+            cookie["cookie"] = "buvid3=\(buvids.0); buvid4=\(buvids.1);"
+            cookie["User-Agent"] = ua
+            cookie["Referer"] = referer
+        }else {
+            cookie["cookie"] = "\(BiliBiliCookie.cookie);buvid3=\(buvids.0); buvid4=\(buvids.1);"
+            cookie["User-Agent"] = ua
+            cookie["Referer"] = referer
+        }
+        return HTTPHeaders(cookie)
     }
     
     static func getRoomDanmuDetail(roomId: String) async throws -> BilibiliDanmuModel {
