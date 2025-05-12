@@ -40,8 +40,13 @@ public class HuyaSocketDataParser: WebSocketDataParser {
                     try messageNotice.readFrom(TarsInputStream(wSPushMessage.msg))
                     var uname = messageNotice.userInfo.nickName
                     var content = messageNotice.content
-                    var color = messageNotice.bulletFormat.fontColor
-                    connection.delegate?.webSocketDidReceiveMessage(text: content, color: UInt32(color))
+                    var color: UInt32 = 0
+                    if color == 255 {
+                        color = 0xFFFFFF
+                    }else {
+                        color = UInt32(messageNotice.bulletFormat.fontColor)
+                    }
+                    connection.delegate?.webSocketDidReceiveMessage(text: content, color: color)
                 }else if type == 8006 {
                     var online = 0
                     var s = TarsInputStream(wSPushMessage.msg)
