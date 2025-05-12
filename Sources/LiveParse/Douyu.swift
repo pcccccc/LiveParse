@@ -424,9 +424,9 @@ public struct Douyu: LiveParse {
                         guard let resData = dataReq.data(using: .utf8) else { return [] }
                         let resJson = try JSONSerialization.jsonObject(with: resData, options: .mutableContainers)
                         let resDict = resJson as! Dictionary<String, Any>
-                        let dataDict = resDict["data"] as! Dictionary<String, Any>
+                        let dataDict = resDict["data"] as? Dictionary<String, Any>
                         var playQualitys: Array<DouyuPlayQuality> = []
-                        if let multirates = dataDict["multirates"] as? Array<Dictionary<String, Any>> {
+                        if let multirates = dataDict?["multirates"] as? Array<Dictionary<String, Any>> {
                             for item in multirates {
                                 let playQualityData = jsonToData(jsonDic: item)
                                 let playQuality = try JSONDecoder().decode(DouyuPlayQuality.self, from: playQualityData ?? Data())
@@ -435,12 +435,12 @@ public struct Douyu: LiveParse {
                         }
                         
                         var cdnsArray: [LiveQualityModel] = []
-                        if let cdns = dataDict["cdnsWithName"] as? Array<Dictionary<String, Any>> {
+                        if let cdns = dataDict?["cdnsWithName"] as? Array<Dictionary<String, Any>> {
                             for item in cdns {
                                 var tempArray: [LiveQualityDetail] = []
                                 for i in 0..<playQualitys.count {
                                     let playQuality = playQualitys[i]
-                                    tempArray.append(.init(roomId: roomId, title: playQuality.name, qn: playQuality.rate, url: "\(dataDict["rtmp_url"] as? String ?? "")/\(dataDict["rtmp_live"] as? String ?? "")", liveCodeType: .flv, liveType: .douyu))
+                                    tempArray.append(.init(roomId: roomId, title: playQuality.name, qn: playQuality.rate, url: "\(dataDict?["rtmp_url"] as? String ?? "")/\(dataDict?["rtmp_live"] as? String ?? "")", liveCodeType: .flv, liveType: .douyu))
                                 }
                                 let serverCdn = item["cdn"] as? String ?? ""
                                 if serverCdn == cdn || cdn == nil {

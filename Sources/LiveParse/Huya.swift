@@ -502,7 +502,7 @@ public struct Huya: LiveParse {
                     nil
                 )
             }
-            throw LiveParseError.danmuArgsParseError("错误位置\(#file)-\(#function)", "错误信息：\("获取斗鱼弹幕信息失败，服务器返回信息为：\(dataReq)")")
+            throw LiveParseError.danmuArgsParseError("错误位置\(#file)-\(#function)", "错误信息：\("获取虎牙弹幕信息失败，服务器返回信息为：\(dataReq)")")
         }catch {
             throw LiveParseError.danmuArgsParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }

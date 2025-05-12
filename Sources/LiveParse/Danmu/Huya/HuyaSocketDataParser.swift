@@ -6,37 +6,19 @@
 //
 
 import Foundation
-import JavaScriptCore
+import SwiftyJSON
+import TarsKit
 
 public class HuyaSocketDataParser: WebSocketDataParser {
     
-    let huyaJSContext: JSContext = {
-        let huyaJSContext = JSContext()
-        if let huyaFilePath = Bundle.module.path(forResource: "huya", ofType: "js") {
-            huyaJSContext?.evaluateScript(try? String(contentsOfFile: huyaFilePath))
-        }
-        return huyaJSContext!
-    }()
     
     func performHandshake(connection: WebSocketConnection) {
-        if let huyaFilePath = Bundle.module.path(forResource: "huya", ofType: "js") {
-            huyaJSContext.evaluateScript(try? String(contentsOfFile: huyaFilePath))
-            huyaJSContext.evaluateScript("""
-                            var wsUserInfo = new HUYA.WSUserInfo;
-                            wsUserInfo.lUid = "\(connection.parameters?["lYyid"] ?? "")";
-                            wsUserInfo.lTid = "\(connection.parameters?["lChannelId"] ?? "")";
-                            wsUserInfo.lSid = "\(connection.parameters?["lSubChannelId"] ?? "")";
-                            """)
-            let result = huyaJSContext.evaluateScript("""
-                new Uint8Array(sendRegister(wsUserInfo));
-            """)
-            let data = Data(result?.toArray() as? [UInt8] ?? [])
-            connection.socket?.write(data: data) //加入房间
-            connection.heartbeatTimer = Timer(timeInterval: TimeInterval(60), repeats: true) {_ in //心跳
-                connection.socket?.write(data: "ABQdAAwsNgBM".data(using: .utf8)!)
-            }
-            RunLoop.current.add(connection.heartbeatTimer!, forMode: .common)
+        let data = HuyaSocketDataParser.getJoinData(ayyuid: Int(connection.parameters?["lYyid"] ?? "0") ?? 0, tid: Int(connection.parameters?["lChannelId"] ?? "0") ?? 0, sid: Int(connection.parameters?["lSubChannelId"] ?? "0") ?? 0)
+        connection.socket?.write(data: Data(bytes: data, count: data.count))
+        connection.heartbeatTimer = Timer(timeInterval: TimeInterval(60), repeats: true) {_ in
+            connection.socket?.write(data: "ABQdAAwsNgBM".data(using: .utf8)!)
         }
+        RunLoop.current.add(connection.heartbeatTimer!, forMode: .common)
     }
     
     func parse(data: Data, connection: WebSocketConnection) {
@@ -45,22 +27,30 @@ public class HuyaSocketDataParser: WebSocketDataParser {
     
     private func deCodeData(data: Data, connection: WebSocketConnection) {
         let bytes = [UInt8](data)
-        if let re = huyaJSContext.evaluateScript("test(\(bytes));"), let json = try? JSONSerialization.jsonObject(with: Data((re.toString() ?? "").utf8), options: []) as? [String: Any] {
-            guard let str = json["sContent"] as? String else {
-                return
+        var stream = TarsInputStream(bytes)
+        var type = 0
+        do {
+            type = try stream.read(&type, tag: 0, required: false)
+            if type == 7 {
+                stream = TarsInputStream(try stream.readBytes(1, required: false))
+                let wSPushMessage = HYPushMessage()
+                try wSPushMessage.readFrom(stream)
+                if wSPushMessage.uri == 1400 {
+                    var messageNotice = HYMessage()
+                    try messageNotice.readFrom(TarsInputStream(wSPushMessage.msg))
+                    var uname = messageNotice.userInfo.nickName
+                    var content = messageNotice.content
+                    var color = messageNotice.bulletFormat.fontColor
+                    connection.delegate?.webSocketDidReceiveMessage(text: content, color: UInt32(color))
+                }else if type == 8006 {
+                    var online = 0
+                    var s = TarsInputStream(wSPushMessage.msg)
+                    online = try s.read(&online, tag: 0, required: false)
+                    print(online)
+                }
             }
-            let tFormat = json["tFormat"] as? [String: Any]
-            let col = tFormat?["iFontColor"] as? Int ?? -1
-            guard str != "HUYA.EWebSocketCommandType.EWSCmd_RegisterRsp" else {
-                print("huya websocket inited EWSCmd_RegisterRsp")
-                return
-            }
-            guard str != "HUYA.EWebSocketCommandType.Default" else {
-                print("huya websocket WebSocketCommandType.Default \(data)")
-                return
-            }
-            guard !str.contains("分享了直播间，房间号"), !str.contains("录制并分享了小视频"), !str.contains("进入直播间"), !str.contains("刚刚在打赏君活动中") else { return }
-            connection.delegate?.webSocketDidReceiveMessage(text: str, color: UInt32(getHuyaLiveColor(col: col)))
+        }catch {
+            print("Error reading type: \(error)")
         }
     }
     
@@ -81,5 +71,29 @@ public class HuyaSocketDataParser: WebSocketDataParser {
         default:
             return 0xFFFFFF
         }
+    }
+    
+    // 将Dart的getJoinData函数转换为Swift
+    static func getJoinData(ayyuid: Int, tid: Int, sid: Int) -> [UInt8] {
+       do {
+           let oos = TarsOutputStream()
+           try oos.write(ayyuid, tag: 0)
+           try oos.write(true, tag: 1)
+           try oos.write("", tag: 2)
+           try oos.write("", tag: 3)
+           try oos.write(tid, tag: 4)
+           try oos.write(sid, tag: 5)
+           try oos.write(0, tag: 6)
+           try oos.write(0, tag: 7)
+           let q = oos.writer.buffer as [UInt8]
+           let wscmd = TarsOutputStream()
+           try wscmd.write(1, tag: 0)
+           try wscmd.write(q, tag: 1)
+           
+           return wscmd.toUint8List()
+       } catch {
+           print("Error in getJoinData: \(error)")
+           return []
+       }
     }
 }

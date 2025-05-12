@@ -20,7 +20,7 @@ let package = Package(
         .package(url: "https://github.com/tsolomko/SWCompression", .upToNextMajor(from: "4.8.6")),
         .package(url: "https://github.com/apple/swift-protobuf.git", .upToNextMajor(from: "1.25.1")),
         .package(url: "https://github.com/pcccccc/YouTubeKit", .upToNextMajor(from: "0.0.3")),
-        .package(url: "https://github.com/pcccccc/TarsKit", .upToNextMajor(from: "1.1.0"))
+        .package(url: "https://github.com/pcccccc/TarsKit", .upToNextMajor(from: "1.2.0"))
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
