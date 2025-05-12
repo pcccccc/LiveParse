@@ -41,7 +41,7 @@ public class HuyaSocketDataParser: WebSocketDataParser {
                     var uname = messageNotice.userInfo.nickName
                     var content = messageNotice.content
                     var color: UInt32 = 0
-                    if color == 255 {
+                    if messageNotice.bulletFormat.fontColor == 255 {
                         color = 0xFFFFFF
                     }else {
                         color = UInt32(messageNotice.bulletFormat.fontColor)
