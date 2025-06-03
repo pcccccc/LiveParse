@@ -314,12 +314,12 @@ public struct Bilibili: LiveParse {
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
-//    ?platform=web&parent_area_id=2&area_id=0&sort_type=sort_type_124&page=3&web_location=444.43&w_rid=d83b3b7a86f542d77171a87b69ea93e6&wts=1743988984
+
+    
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         do {
             let headers = try await getHeaders()
             let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43") ?? ""
-            print("https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)")
             let dataReq = try await AF.request(
                 "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
                 method: .get,
@@ -624,8 +624,26 @@ public struct Bilibili: LiveParse {
     
     public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
         do {
-            let buvid = try await getBuvid()
-            let resp = try await getRoomDanmuDetail(roomId: roomId)
+            var buvid = ""
+            let headers = try await getHeaders()
+            let cookie = headers["cookie"] ?? ""
+            if cookie.contains("buvid3") == false {
+                buvid = try await getBuvid()
+                BiliBiliCookie.cookie = cookie + "buvid3=\(buvid);"
+            }else {
+                let regex = try NSRegularExpression(pattern: "buvid3=(.*?);", options: [])
+                let matchs =  regex.matches(in: cookie, range: NSRange(location: 0, length: cookie.count))
+                for match in matchs {
+                    let matchRange = Range(match.range, in: cookie)!
+                    let matchedSubstring = cookie[matchRange]
+                    buvid = "\(matchedSubstring)"
+                    buvid = buvid.replacingOccurrences(of: "buvid3=", with: "")
+                    buvid = buvid.replacingOccurrences(of: ";", with: "")
+                    break
+                }
+            }
+            let roomInfo = try await getLiveLastestInfo(roomId: roomId, userId: userId)
+            let resp = try await getRoomDanmuDetail(roomId: roomInfo.roomId)
             return (["roomId": roomId, "buvid": buvid, "token": resp.token, "ws_url": "wss://\(resp.host_list.first?.host ?? "broadcastlv.chat.bilibili.com")/sub"], nil)
         }catch {
             throw LiveParseError.danmuArgsParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
@@ -681,12 +699,12 @@ public struct Bilibili: LiveParse {
     }
     
     static func getRoomDanmuDetail(roomId: String) async throws -> BilibiliDanmuModel {
+        let headers = try await getHeaders()
+        let query = try await Bilibili.biliWbiSign(param: "id=\(roomId)&type=0&sort_type=&vajra_business_key=&web_location=444.43") ?? ""
         let dataReq = try await AF.request(
-            "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo",
+            "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo?\(query)",
             method: .get,
-            parameters: [
-                "id":roomId
-            ]
+            headers: headers
         ).serializingDecodable(BilibiliMainData<BilibiliDanmuModel>.self).value
         return dataReq.data
     }
