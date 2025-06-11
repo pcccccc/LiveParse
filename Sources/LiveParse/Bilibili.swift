@@ -318,8 +318,9 @@ public struct Bilibili: LiveParse {
     
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         do {
+            print(try await getAccessId())
             let headers = try await getHeaders()
-            let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43") ?? ""
+            let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43&w_webid=\(try await getAccessId())") ?? ""
             let dataReq = try await AF.request(
                 "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
                 method: .get,
@@ -787,5 +788,24 @@ public struct Bilibili: LiveParse {
         let signedParams = encWbi(params: spdDicParam, imgKey: keys.0, subKey: keys.1)
         let query = signedParams.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
         return query
+    }
+    
+    static func getAccessId() async throws -> String {
+        var accessId = ""
+        // 获取 access_id
+        let resp = try await AF.request("https://live.bilibili.com/lol", headers: Bilibili.getHeaders()).serializingString().value
+        
+        // 使用正则表达式匹配
+        let pattern = "\"access_id\":\"(.*?)\""
+        let regex = try NSRegularExpression(pattern: pattern, options: [])
+        let range = NSRange(resp.startIndex..., in: resp)
+        
+        if let match = regex.firstMatch(in: resp, options: [], range: range),
+           let rangeMatch = Range(match.range(at: 1), in: resp) {
+            let id = String(resp[rangeMatch]).replacingOccurrences(of: "\\", with: "")
+            accessId = id
+            return id
+        }
+        return accessId
     }
 }
