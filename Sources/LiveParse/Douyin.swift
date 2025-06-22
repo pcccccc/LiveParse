@@ -222,13 +222,17 @@ var headers = HTTPHeaders.init([
     "Authority": "live.douyin.com",
     "Referer": "https://live.douyin.com",
     "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
 ])
 
 public struct Douyin: LiveParse {
     
     public static func getCategoryList() async throws -> [LiveMainListModel] {
         do {
+            if headers["cookie"] == nil || headers["cookie"] == "" {
+                let cookie = try await Douyin.getCookie(roomId: "117908807")
+                headers["cookie"] = cookie
+            }
             let dataReq = try await AF.request("https://live.douyin.com", method: .get, headers: headers).serializingString().value
             let regex = try NSRegularExpression(pattern: "\\{\\\\\"pathname\\\\\":\\\\\"/\\\\\",\\\\\"categoryData.*?\\]\\)", options: [])
             let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
