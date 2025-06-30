@@ -318,8 +318,7 @@ public struct Bilibili: LiveParse {
     
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         do {
-            print(try await getAccessId())
-            let headers = try await getHeaders()
+            var headers = try await getHeaders()
             let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43&w_webid=\(try await getAccessId())") ?? ""
             let dataReq = try await AF.request(
                 "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
@@ -688,11 +687,11 @@ public struct Bilibili: LiveParse {
         let buvids = try await getBuvid3And4()
         var cookie: [String: String] = [:]
         if BiliBiliCookie.cookie == "" {
-            cookie["cookie"] = "buvid3=\(buvids.0); buvid4=\(buvids.1);"
+            cookie["cookie"] = "buvid3=\(buvids.0); buvid4=\(buvids.1);DedeUserID=\(arc4random() % 100000)"
             cookie["User-Agent"] = ua
             cookie["Referer"] = referer
         }else {
-            cookie["cookie"] = "\(BiliBiliCookie.cookie);buvid3=\(buvids.0); buvid4=\(buvids.1);"
+            cookie["cookie"] = "\(BiliBiliCookie.cookie);buvid3=\(buvids.0); buvid4=\(buvids.1);DedeUserID=\(BiliBiliCookie.uid)"
             cookie["User-Agent"] = ua
             cookie["Referer"] = referer
         }
