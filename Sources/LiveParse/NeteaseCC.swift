@@ -8,7 +8,7 @@
 import Alamofire
 import Foundation
 
-fileprivate let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Safari/605.1.15"
+fileprivate let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
 
 struct CCMainData<T: Codable>: Codable {
     var code: Int
@@ -154,8 +154,12 @@ public struct NeteaseCC: LiveParse {
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
         do {
+            var id = userId ?? roomId
+            if id.contains("Optional") {
+                id = NeteaseCC.formatId(input: id)
+            }
             let dataReq = try await AF.request(
-                "https://cc.163.com/live/channel/?channelids=\(userId ?? roomId)",
+                "https://cc.163.com/live/channel/?channelids=\(id)",
                 method: .get,
                 headers: [
                     "User-Agent": userAgent
@@ -172,8 +176,12 @@ public struct NeteaseCC: LiveParse {
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
         do {
+            var id = userId ?? roomId
+            if id.contains("Optional") {
+                id = NeteaseCC.formatId(input: id)
+            }
             let dataReq = try await AF.request(
-                "https://cc.163.com/live/channel/?channelids=\(userId ?? roomId)",
+                "https://cc.163.com/live/channel/?channelids=\(id)",
                 method: .get,
                 headers: [
                     "User-Agent": userAgent
@@ -442,6 +450,21 @@ public struct NeteaseCC: LiveParse {
             return (["cid":"\(channelId)", "gametype": "\(gametype)", "roomId": "\(roomId)"],[:])
         }catch {
             throw LiveParseError.danmuArgsParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        }
+    }
+    
+    static func formatId(input: String) -> String {
+        do {
+            let pattern = "\\d+"
+            let regex = try NSRegularExpression(pattern: pattern)
+            let nsString = input as NSString
+            let results = regex.matches(in: input, options: [], range: NSMakeRange(0, nsString.length))
+            for result in results {
+                return nsString.substring(with: result.range(at: 0))
+            }
+            return input
+        }catch {
+            return input
         }
     }
 }
