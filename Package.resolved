@@ -55,6 +55,15 @@
       }
     },
     {
+      "identity" : "tarskit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pcccccc/TarsKit",
+      "state" : {
+        "revision" : "259f97b90a4f2778146ea5964cc7b3eb881e31f3",
+        "version" : "1.2.0"
+      }
+    },
+    {
       "identity" : "youtubekit",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pcccccc/YouTubeKit",

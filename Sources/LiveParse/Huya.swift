@@ -168,7 +168,12 @@ struct HuyaSearchDocs: Codable {
 public struct Huya: LiveParse {
     
     static let tupClient = TarsHttp(baseUrl: "http://wup.huya.com", servantName: "liveui")
-
+    
+    // MARK: - 正则表达式常量
+    private static let roomIdPattern = "(?:huya\\.com/)(\\d+)"
+    private static let htmlRoomIdPattern = "\"lProfileRoom\":(\\d+),"
+    private static let urlPattern = "[a-zA-z]+://[^\\s]*"
+    
     public static func getCategoryList() async throws -> [LiveMainListModel] {
         return [
             LiveMainListModel(id: "1", title: "网游", icon: "", subList: try await getCategorySubList(id: "1")),
@@ -245,7 +250,7 @@ public struct Huya: LiveParse {
                             }
                         }
                     }
-                   
+                    
                     playQualitiesInfo.updateValue("1", forKey: "ver")
                     playQualitiesInfo.updateValue("202411221719", forKey: "sv")
                     let uid = Huya.getUid(t: 13, e: 10)
@@ -298,7 +303,7 @@ public struct Huya: LiveParse {
                             }
                             if liveQualtys.isEmpty == false {
                                 tempArray.append(.init(cdn: "线路 \(streamInfo.sCdnType)", qualitys: liveQualtys))
-                               
+                                
                             }
                         }
                         
@@ -366,8 +371,8 @@ public struct Huya: LiveParse {
                         case 3:
                             liveStatus = LiveState.video.rawValue
                             liveInfo = data.roomInfo.tReplayInfo!
-                    default:
-                        liveStatus = LiveState.close.rawValue
+                        default:
+                            liveStatus = LiveState.close.rawValue
                             liveInfo = data.roomInfo.tRecentLive
                     }
                     return LiveModel(userName: liveInfo.sNick, roomTitle: liveInfo.sIntroduction, roomCover: liveInfo.sScreenshot, userHeadImg: liveInfo.sAvatar180, liveType: .huya, liveState: liveStatus, userId: "\(liveInfo.lYyid)", roomId: roomId, liveWatchedCount: "\(liveInfo.lTotalCount)")
@@ -416,59 +421,105 @@ public struct Huya: LiveParse {
         }
     }
     
+    // MARK: - 辅助方法
+    
+    /// 从 URL 中提取房间号
+    private static func extractRoomId(from url: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: roomIdPattern) else { return nil }
+        let nsString = url as NSString
+        let results = regex.matches(in: url, range: NSRange(location: 0, length: nsString.length))
+        
+        guard let match = results.first else { return nil }
+        let range = match.range(at: 1)
+        return nsString.substring(with: range)
+    }
+    
+    /// 从 HTML 内容中提取房间号
+    private static func extractRoomIdFromHtml(_ html: String) async throws -> String? {
+        guard let regex = try? NSRegularExpression(pattern: htmlRoomIdPattern) else { return nil }
+        let nsString = html as NSString
+        let results = regex.matches(in: html, range: NSRange(location: 0, length: nsString.length))
+        
+        guard let match = results.first else { return nil }
+        let range = match.range(at: 1)
+        return nsString.substring(with: range)
+    }
+    
+    /// 解析短链接获取真实 URL
+    private static func resolveShortUrl(_ shortUrl: String) async -> String? {
+        let response = await AF.request(shortUrl).serializingData().response
+        return response.response?.url?.absoluteString
+    }
+    
+    /// 从分享码中提取 URL
+    private static func extractUrl(from shareCode: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: urlPattern) else { return nil }
+        let nsString = shareCode as NSString
+        let results = regex.matches(in: shareCode, range: NSRange(location: 0, length: nsString.length))
+        
+        guard let match = results.first else { return nil }
+        let range = match.range(at: 0)
+        return nsString.substring(with: range)
+    }
+    
+    /// 验证房间号是否有效
+    private static func isValidRoomId(_ roomId: String?) -> Bool {
+        guard let roomId = roomId, !roomId.isEmpty else { return false }
+        return (Int(roomId) ?? -1) > 0
+    }
+    
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
         do {
-            var roomId = ""
-            var realUrl = ""
-            if shareCode.contains("huya.com") { //长链接
-                realUrl = shareCode
-            }else { //默认为房间号处理
+            var roomId: String?
+            
+            // 1. 首先尝试直接作为房间号处理
+            if isValidRoomId(shareCode) {
                 roomId = shareCode
             }
-            if roomId == "" { //如果不是房间号，就解析链接中的房间号
-                let pattern = "(?:huya\\.com/)(\\d+)"
-                do {
-                    let regex = try NSRegularExpression(pattern: pattern)
-                    let nsString = realUrl as NSString
-                    let results = regex.matches(in: realUrl, range: NSRange(location: 0, length: nsString.length))
-                    if let match = results.first {
-                        let range = match.range(at: 1) // 第1个捕获组
-                        let numberString = nsString.substring(with: range)
-                        roomId = numberString
-                    } else {
-                        roomId = ""
-                    }
-                } catch {
-                    roomId = ""
+            // 2. 处理虎牙长链接
+            else if shareCode.contains("huya.com") {
+                roomId = extractRoomId(from: shareCode)
+            }
+            // 3. 处理虎牙短链接
+            else if shareCode.contains("hy.fan") {
+                if let shortUrl = extractUrl(from: shareCode),
+                   let redirectUrl = await resolveShortUrl(shortUrl) {
+                    roomId = extractRoomId(from: redirectUrl)
                 }
             }
-            if roomId == "" || Int(roomId) ?? -1 < 0 { //最后尝试是不是平台的短链接，从html里面把房间号找到
-                let dataReq = try await AF.request(shareCode, headers: [
-                    HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
-                ]).serializingString().value
-                let pattern = "\"lProfileRoom\":(\\d+),"
-                do {
-                    let regex = try NSRegularExpression(pattern: pattern)
-                    let nsString = dataReq as NSString
-                    let results = regex.matches(in: dataReq, range: NSRange(location: 0, length: nsString.length))
-                    if let match = results.first {
-                        let range = match.range(at: 1) // 第1个捕获组
-                        let numberString = nsString.substring(with: range)
-                        roomId = numberString
-                    } else {
-                        roomId = ""
-                    }
-                } catch {
-                    roomId = ""
-                }
+            // 4. 尝试从分享码中提取 URL 并解析
+            else if let url = extractUrl(from: shareCode) {
+                roomId = extractRoomId(from: url)
             }
             
-            if roomId == "" || Int(roomId) ?? -1 < 0 {
-                throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\("解析房间号失败，请检查分享码/分享链接是否正确")")
+            // 5. 如果以上方法都失败，尝试从网页内容中提取房间号
+            if !isValidRoomId(roomId) {
+                let html = try await AF.request(shareCode, headers: [
+                    HTTPHeader(name: "user-agent", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69")
+                ]).serializingString().value
+                
+                roomId = try await extractRoomIdFromHtml(html)
             }
-            return try await Huya.getLiveLastestInfo(roomId: roomId, userId: nil)
-        }catch {
-            throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+            
+            // 6. 验证最终的房间号
+            guard isValidRoomId(roomId) else {
+                throw LiveParseError.shareCodeParseError(
+                    "错误位置\(#file)-\(#function)",
+                    "错误信息：解析房间号失败，请检查分享码/分享链接是否正确"
+                )
+            }
+            
+            return try await Huya.getLiveLastestInfo(roomId: roomId!, userId: nil)
+            
+        } catch {
+            if error is LiveParseError {
+                throw error
+            } else {
+                throw LiveParseError.shareCodeParseError(
+                    "错误位置\(#file)-\(#function)",
+                    "错误信息：\(error.localizedDescription)"
+                )
+            }
         }
     }
     
@@ -541,7 +592,7 @@ public struct Huya: LiveParse {
     static func getUid(t: Int? = nil, e: Int? = nil) -> String {
         let n = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
         var o = Array(repeating: "", count: 36)
-
+        
         if let t = t {
             for i in 0..<t {
                 let randomIndex = Int(arc4random_uniform(UInt32(e ?? n.count)))
@@ -553,7 +604,7 @@ public struct Huya: LiveParse {
             o[18] = "-"
             o[23] = "-"
             o[14] = "4"
-
+            
             for i in 0..<36 {
                 if o[i].isEmpty {
                     let r = Int(arc4random_uniform(16))
@@ -576,4 +627,3 @@ public struct Huya: LiveParse {
     }
     
 }
-
