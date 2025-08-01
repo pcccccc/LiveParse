@@ -12,13 +12,12 @@ import JavaScriptCore
 import CryptoKit
 
 struct DouyinMainModel: Codable {
-    let pathname: String
     let categoryData: Array<DouyinCategoryData>
 }
 
 struct DouyinCategoryData: Codable {
     let partition: DouyinPartitionData
-    let sub_partition: Array<DouyinCategoryData>
+    let sub_partition: Array<DouyinCategoryData>?
 }
 
 struct DouyinPartitionData: Codable {
@@ -222,7 +221,7 @@ var headers = HTTPHeaders.init([
     "Authority": "live.douyin.com",
     "Referer": "https://live.douyin.com",
     "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
 ])
 
 public struct Douyin: LiveParse {
@@ -234,36 +233,59 @@ public struct Douyin: LiveParse {
                 headers["cookie"] = cookie
             }
             let dataReq = try await AF.request("https://live.douyin.com", method: .get, headers: headers).serializingString().value
-            let regex = try NSRegularExpression(pattern: "\\{\\\\\"pathname\\\\\":\\\\\"/\\\\\",\\\\\"categoryData.*?\\]\\)", options: [])
+            let regex = try NSRegularExpression(pattern: "categoryData.*?\\]\\)", options: [])
             let matchs =  regex.matches(in: dataReq, range: NSRange(location: 0, length:  dataReq.count))
             for match in matchs {
                 let matchRange = Range(match.range, in: dataReq)!
                 let matchedSubstring = dataReq[matchRange]
-                let nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 6))")
+                var nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 6))")
+                nsstr = ("{\"" + (nsstr as String)) as NSString
                 let data = try JSONDecoder().decode(DouyinMainModel.self, from: nsstr.replacingOccurrences(of: "\\", with: "").data(using: .utf8)!)
                 var tempArray: [LiveMainListModel] = []
                 for item in data.categoryData {
-                    var subList: [LiveCategoryModel] = []
-                    for subItem in item.sub_partition {
-                        subList.append(.init(id: subItem.partition.id_str, parentId: "\(subItem.partition.type)", title: subItem.partition.title, icon: ""))
-                    }
-                    tempArray.append(.init(id: item.partition.id_str, title: item.partition.title, icon: "", subList: subList))
-                }
-                if tempArray.first?.subList.count == 0 {
-                    let roomList = """
-                    {\"pathname\":\"/\",\"categoryData\":[{\"partition\":{\"id_str\":\"1\",\"type\":1,\"title\":\"射击游戏\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010026\",\"type\":1,\"title\":\"绝地求生\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010037\",\"type\":1,\"title\":\"穿越火线\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1011124\",\"type\":1,\"title\":\"暗区突围：无限\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010003\",\"type\":1,\"title\":\"CSGO\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010339\",\"type\":1,\"title\":\"守望先锋\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010017\",\"type\":1,\"title\":\"无畏契约\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1011032\",\"type\":1,\"title\":\"三角洲行动\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010032\",\"type\":1,\"title\":\"和平精英\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"2\",\"type\":1,\"title\":\"竞技游戏\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010023\",\"type\":1,\"title\":\"英雄联盟手游\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010045\",\"type\":1,\"title\":\"王者荣耀\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010055\",\"type\":1,\"title\":\"金铲铲之战\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010016\",\"type\":1,\"title\":\"永劫无间\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010014\",\"type\":1,\"title\":\"英雄联盟\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010350\",\"type\":1,\"title\":\"魔兽争霸3\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010041\",\"type\":1,\"title\":\"第五人格\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010005\",\"type\":1,\"title\":\"云顶之弈\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"3\",\"type\":1,\"title\":\"单机游戏\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010324\",\"type\":1,\"title\":\"植物大战僵尸\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010358\",\"type\":1,\"title\":\"黑神话：悟空\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1011048\",\"type\":1,\"title\":\"俄罗斯钓鱼4\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010100\",\"type\":1,\"title\":\"方舟\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010335\",\"type\":1,\"title\":\"饥荒\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010791\",\"type\":1,\"title\":\"星露谷物语\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010326\",\"type\":1,\"title\":\"人渣\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010087\",\"type\":1,\"title\":\"艾尔登法环\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"4\",\"type\":1,\"title\":\"棋牌游戏\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010004\",\"type\":1,\"title\":\"JJ斗地主\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010094\",\"type\":1,\"title\":\"JJ麻将\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010063\",\"type\":1,\"title\":\"JJ象棋\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010012\",\"type\":1,\"title\":\"途游斗地主\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010040\",\"type\":1,\"title\":\"指尖四川麻将\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010062\",\"type\":1,\"title\":\"欢乐斗地主\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010060\",\"type\":1,\"title\":\"天天象棋\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010714\",\"type\":1,\"title\":\"微乐斗地主\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"5\",\"type\":1,\"title\":\"休闲益智\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010022\",\"type\":1,\"title\":\"我的世界\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010011\",\"type\":1,\"title\":\"蛋仔派对\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010263\",\"type\":1,\"title\":\"元梦之星\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010010\",\"type\":1,\"title\":\"球球大作战\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010046\",\"type\":1,\"title\":\"迷你世界\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010056\",\"type\":1,\"title\":\"贪吃蛇大作战\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010520\",\"type\":1,\"title\":\"开心消消乐\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010129\",\"type\":1,\"title\":\"忍者必须死3\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"6\",\"type\":1,\"title\":\"角色扮演\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010092\",\"type\":1,\"title\":\"地下城与勇士\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010271\",\"type\":1,\"title\":\"燕云十六声\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010150\",\"type\":1,\"title\":\"魔兽世界\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010051\",\"type\":1,\"title\":\"梦幻西游手游\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010039\",\"type\":1,\"title\":\"原神\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010159\",\"type\":1,\"title\":\"鸣潮\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010042\",\"type\":1,\"title\":\"火影忍者手游\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010053\",\"type\":1,\"title\":\"梦幻西游\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"7\",\"type\":1,\"title\":\"策略卡牌\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010324\",\"type\":1,\"title\":\"植物大战僵尸\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010043\",\"type\":1,\"title\":\"崩坏：星穹铁道\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010009\",\"type\":1,\"title\":\"三国志·战略版\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010025\",\"type\":1,\"title\":\"阴阳师\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010021\",\"type\":1,\"title\":\"率土之滨\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010521\",\"type\":1,\"title\":\"赛尔号\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010365\",\"type\":1,\"title\":\"斗罗大陆：魂师对决\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010013\",\"type\":1,\"title\":\"明日方舟\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"10000\",\"type\":3,\"title\":\"娱乐天地\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"2823\",\"type\":2,\"title\":\"时尚\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2786\",\"type\":2,\"title\":\"美食\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2751\",\"type\":2,\"title\":\"旅行\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2726\",\"type\":2,\"title\":\"舞蹈\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2742\",\"type\":2,\"title\":\"户外\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2791\",\"type\":2,\"title\":\"运动\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2707\",\"type\":2,\"title\":\"音乐\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2836\",\"type\":2,\"title\":\"情感\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"10001\",\"type\":3,\"title\":\"科技文化\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"2800\",\"type\":2,\"title\":\"教育\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2756\",\"type\":2,\"title\":\"人文艺术\"},\"sub_partition\":[]}]}]}
-                    """
-                   
-                    let data = try JSONDecoder().decode(DouyinMainModel.self, from: roomList.data(using: .utf8)!)
-                    tempArray.removeAll()
-                    for item in data.categoryData {
+                    if item.sub_partition?.isEmpty ?? false == true {
                         var subList: [LiveCategoryModel] = []
-                        for subItem in item.sub_partition {
-                            subList.append(.init(id: subItem.partition.id_str, parentId: "\(subItem.partition.type)", title: subItem.partition.title, icon: ""))
-                        }
+                        subList.append(.init(id: item.partition.id_str, parentId: item.partition.id_str, title: item.partition.title, icon: ""))
                         tempArray.append(.init(id: item.partition.id_str, title: item.partition.title, icon: "", subList: subList))
+                    }else {
+                        var subList: [LiveCategoryModel] = []
+                        if let sub_partition = item.sub_partition {
+                            if sub_partition.isEmpty {
+                                subList.append(.init(id: item.partition.id_str, parentId: item.partition.id_str, title: item.partition.title, icon: ""))
+                            }else {
+                                for subItem in sub_partition {
+                                    if let thirdSubPartition = subItem.sub_partition {
+                                        if thirdSubPartition.isEmpty == false {
+                                            var thirdList: [LiveCategoryModel] = []
+                                            for thirdItem in thirdSubPartition {
+                                                thirdList.append(.init(id: thirdItem.partition.id_str, parentId: "\(thirdItem.partition.type)", title: thirdItem.partition.title, icon: ""))
+                                            }
+                                            tempArray.append(.init(id: subItem.partition.id_str, title: subItem.partition.title, icon: "", subList: thirdList))
+                                        }
+                                    }else {
+                                        subList.append(.init(id: subItem.partition.id_str, parentId: "\(subItem.partition.type)", title: subItem.partition.title, icon: ""))
+                                    }
+                                    
+                                }
+                            }
+                        }
                     }
                 }
+//                if tempArray.first?.subList.count == 0 {
+//                    let roomList = """
+//                    {\"categoryData\":[{\"partition\":{\"id_str\":\"1\",\"type\":1,\"title\":\"射击游戏\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010026\",\"type\":1,\"title\":\"绝地求生\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010037\",\"type\":1,\"title\":\"穿越火线\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1011124\",\"type\":1,\"title\":\"暗区突围：无限\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010003\",\"type\":1,\"title\":\"CSGO\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010339\",\"type\":1,\"title\":\"守望先锋\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010017\",\"type\":1,\"title\":\"无畏契约\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1011032\",\"type\":1,\"title\":\"三角洲行动\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010032\",\"type\":1,\"title\":\"和平精英\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"2\",\"type\":1,\"title\":\"竞技游戏\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010023\",\"type\":1,\"title\":\"英雄联盟手游\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010045\",\"type\":1,\"title\":\"王者荣耀\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010055\",\"type\":1,\"title\":\"金铲铲之战\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010016\",\"type\":1,\"title\":\"永劫无间\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010014\",\"type\":1,\"title\":\"英雄联盟\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010350\",\"type\":1,\"title\":\"魔兽争霸3\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010041\",\"type\":1,\"title\":\"第五人格\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010005\",\"type\":1,\"title\":\"云顶之弈\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"3\",\"type\":1,\"title\":\"单机游戏\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010324\",\"type\":1,\"title\":\"植物大战僵尸\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010358\",\"type\":1,\"title\":\"黑神话：悟空\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1011048\",\"type\":1,\"title\":\"俄罗斯钓鱼4\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010100\",\"type\":1,\"title\":\"方舟\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010335\",\"type\":1,\"title\":\"饥荒\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010791\",\"type\":1,\"title\":\"星露谷物语\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010326\",\"type\":1,\"title\":\"人渣\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010087\",\"type\":1,\"title\":\"艾尔登法环\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"4\",\"type\":1,\"title\":\"棋牌游戏\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010004\",\"type\":1,\"title\":\"JJ斗地主\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010094\",\"type\":1,\"title\":\"JJ麻将\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010063\",\"type\":1,\"title\":\"JJ象棋\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010012\",\"type\":1,\"title\":\"途游斗地主\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010040\",\"type\":1,\"title\":\"指尖四川麻将\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010062\",\"type\":1,\"title\":\"欢乐斗地主\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010060\",\"type\":1,\"title\":\"天天象棋\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010714\",\"type\":1,\"title\":\"微乐斗地主\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"5\",\"type\":1,\"title\":\"休闲益智\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010022\",\"type\":1,\"title\":\"我的世界\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010011\",\"type\":1,\"title\":\"蛋仔派对\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010263\",\"type\":1,\"title\":\"元梦之星\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010010\",\"type\":1,\"title\":\"球球大作战\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010046\",\"type\":1,\"title\":\"迷你世界\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010056\",\"type\":1,\"title\":\"贪吃蛇大作战\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010520\",\"type\":1,\"title\":\"开心消消乐\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010129\",\"type\":1,\"title\":\"忍者必须死3\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"6\",\"type\":1,\"title\":\"角色扮演\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010092\",\"type\":1,\"title\":\"地下城与勇士\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010271\",\"type\":1,\"title\":\"燕云十六声\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010150\",\"type\":1,\"title\":\"魔兽世界\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010051\",\"type\":1,\"title\":\"梦幻西游手游\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010039\",\"type\":1,\"title\":\"原神\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010159\",\"type\":1,\"title\":\"鸣潮\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010042\",\"type\":1,\"title\":\"火影忍者手游\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010053\",\"type\":1,\"title\":\"梦幻西游\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"7\",\"type\":1,\"title\":\"策略卡牌\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"1010324\",\"type\":1,\"title\":\"植物大战僵尸\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010043\",\"type\":1,\"title\":\"崩坏：星穹铁道\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010009\",\"type\":1,\"title\":\"三国志·战略版\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010025\",\"type\":1,\"title\":\"阴阳师\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010021\",\"type\":1,\"title\":\"率土之滨\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010521\",\"type\":1,\"title\":\"赛尔号\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010365\",\"type\":1,\"title\":\"斗罗大陆：魂师对决\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"1010013\",\"type\":1,\"title\":\"明日方舟\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"10000\",\"type\":3,\"title\":\"娱乐天地\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"2823\",\"type\":2,\"title\":\"时尚\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2786\",\"type\":2,\"title\":\"美食\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2751\",\"type\":2,\"title\":\"旅行\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2726\",\"type\":2,\"title\":\"舞蹈\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2742\",\"type\":2,\"title\":\"户外\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2791\",\"type\":2,\"title\":\"运动\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2707\",\"type\":2,\"title\":\"音乐\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2836\",\"type\":2,\"title\":\"情感\"},\"sub_partition\":[]}]},{\"partition\":{\"id_str\":\"10001\",\"type\":3,\"title\":\"科技文化\"},\"sub_partition\":[{\"partition\":{\"id_str\":\"2800\",\"type\":2,\"title\":\"教育\"},\"sub_partition\":[]},{\"partition\":{\"id_str\":\"2756\",\"type\":2,\"title\":\"人文艺术\"},\"sub_partition\":[]}]}]}
+//                    """
+//                   
+//                    let data = try JSONDecoder().decode(DouyinMainModel.self, from: roomList.data(using: .utf8)!)
+//                    tempArray.removeAll()
+//                    for item in data.categoryData {
+//                        var subList: [LiveCategoryModel] = []
+//                        for subItem in item.sub_partition {
+//                            subList.append(.init(id: subItem.partition.id_str, parentId: "\(subItem.partition.type)", title: subItem.partition.title, icon: ""))
+//                        }
+//                        tempArray.append(.init(id: item.partition.id_str, title: item.partition.title, icon: "", subList: subList))
+//                    }
+//                }
                 return tempArray
             }
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("请求抖音直播间列表失败,返回的列表为空")")
@@ -533,58 +555,48 @@ public struct Douyin: LiveParse {
     }
     
     static func getDouyinRoomDetail(roomId: String, userId: String) async throws -> DouyinRoomPlayInfoMainData {
-        do {
-            let parameter: Dictionary<String, Any> = [
-                "aid": 6383,
-                "app_name": "douyin_web",
-                "live_id": 1,
-                "device_platform": "web",
-                "enter_from": "web_live",
-                "web_rid": roomId,
-                "room_id_str": userId,
-                "enter_source": "",
-                "Room-Enter-User-Login-Ab": 0,
-                "is_need_double_stream": false,
-                "cookie_enabled": true,
-                "screen_width": 1980,
-                "screen_height": 1080,
-                "browser_language": "zh-CN",
-                "browser_platform": "Win32",
-                "browser_name": "Edge",
-                "browser_version": "125.0.0.0"
-            ]
-            let cookie = try await Douyin.getCookie(roomId: roomId)
-            var headers = headers
-            headers.add(name: "cookie", value: cookie)
-            let res = try await AF.request("https://live.douyin.com/webcast/room/web/enter/", method: .get, parameters: parameter, headers: headers).serializingDecodable(DouyinRoomPlayInfoMainData.self).value
-            return res
-        }catch {
-            let parameter: Dictionary<String, Any> = [
-                "aid": 6383,
-                "app_name": "douyin_web",
-                "live_id": 1,
-                "device_platform": "web",
-                "enter_from": "web_live",
-                "web_rid": roomId,
-                "room_id_str": userId,
-                "enter_source": "",
-                "Room-Enter-User-Login-Ab": 0,
-                "is_need_double_stream": false,
-                "cookie_enabled": true,
-                "screen_width": 1980,
-                "screen_height": 1080,
-                "browser_language": "zh-CN",
-                "browser_platform": "Win32",
-                "browser_name": "Edge",
-                "browser_version": "125.0.0.0"
-            ]
-            let cookie = try await Douyin.getCookie(roomId: roomId)
-            var headers = headers
-            headers.add(name: "cookie", value: cookie)
-            let res = try await AF.request("https://live.douyin.com/webcast/room/web/enter/", method: .get, parameters: parameter, headers: headers).serializingString().value
-            print(res)
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        var errorTime = 0
+        while errorTime < 3 {
+            do {
+                let parameter: Dictionary<String, Any> = [
+                    "aid": 6383,
+                    "app_name": "douyin_web",
+                    "live_id": 1,
+                    "device_platform": "web",
+                    "enter_from": "web_live",
+                    "web_rid": roomId,
+                    "room_id_str": userId,
+                    "enter_source": "",
+                    "Room-Enter-User-Login-Ab": 0,
+                    "is_need_double_stream": false,
+                    "cookie_enabled": true,
+                    "screen_width": 1980,
+                    "screen_height": 1080,
+                    "browser_language": "zh-CN",
+                    "browser_platform": "Win32",
+                    "browser_name": "Edge",
+                    "browser_version": "138.0.0.0",
+                ]
+                let cookie = try await Douyin.getCookie(roomId: roomId)
+                var headers = headers
+                headers.add(name: "cookie", value: cookie)
+                headers.add(name: "accept", value: "application/json, text/plain, */*")
+                let resString = try await AF.request("https://live.douyin.com/webcast/room/web/enter/", method: .get, parameters: parameter, headers: headers).serializingString().value
+                let data = resString.data(using: .utf8) ?? Data()
+                let jsonDecoder = JSONDecoder()
+                let resp = try jsonDecoder.decode(DouyinRoomPlayInfoMainData.self, from: data)
+                return resp
+            }catch {
+                errorTime += 1
+                if errorTime == 3 {
+                    throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+                }else {
+                    print("获取抖音直播间详情失败，正在重试...(\(errorTime))")
+                    
+                }
+            }
         }
+        throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：请求抖音直播间详情失败")
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
