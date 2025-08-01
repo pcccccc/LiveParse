@@ -31,8 +31,8 @@ struct DouyinRoomMainResponse: Codable {
 }
 
 struct DouyinRoomListData: Codable {
-    let count: Int
-    let offset: Int
+    let count: Int?
+    let offset: Int?
     let data: Array<DouyinStreamerData>
 }
 
@@ -281,6 +281,7 @@ public struct Douyin: LiveParse {
     
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         do {
+
             let parameter: Dictionary<String, Any> = [
                 "aid": 6383,
                 "app_name": "douyin_web",
@@ -292,8 +293,14 @@ public struct Douyin: LiveParse {
                 "partition_type": parentId ?? "",
                 "req_from": 2
             ]
-            
-            let dataReq = try await AF.request("https://live.douyin.com/webcast/web/partition/detail/room/", method: .get, parameters: parameter, headers: headers).serializingDecodable(DouyinRoomMainResponse.self).value
+            let reqHeaders = HTTPHeaders.init([
+                "Accept":"application/json, text/plain, */*",
+                "Authority": "live.douyin.com",
+                "User-Agent":
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+                "Cookie": headers["cookie"] ?? "" + "__ac_nonce=\(String.generateRandomString(length: 21))"
+            ])
+            let dataReq = try await AF.request("https://live.douyin.com/webcast/web/partition/detail/room/v2/", method: .get, parameters: parameter, headers: reqHeaders).serializingDecodable(DouyinRoomMainResponse.self).value
             let listModelArray = dataReq.data.data
             var tempArray: Array<LiveModel> = []
             for item in listModelArray {
@@ -301,6 +308,7 @@ public struct Douyin: LiveParse {
             }
             return tempArray
         }catch {
+            
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
