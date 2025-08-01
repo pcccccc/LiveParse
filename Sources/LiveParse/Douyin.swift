@@ -304,7 +304,7 @@ public struct Douyin: LiveParse {
             let listModelArray = dataReq.data.data
             var tempArray: Array<LiveModel> = []
             for item in listModelArray {
-                tempArray.append(LiveModel(userName: item.room.owner.nickname, roomTitle: item.room.title, roomCover: item.room.cover.url_list.first ?? "", userHeadImg: item.room.owner.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: "", userId: item.room.id_str, roomId: item.web_rid ?? "", liveWatchedCount: item.room.user_count_str ?? ""))
+                tempArray.append(LiveModel(userName: item.room.owner.nickname, roomTitle: item.room.title, roomCover: item.room.cover.url_list.first ?? "", userHeadImg: item.room.owner.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: "", userId: item.room.id_str, roomId: item.web_rid ?? "", liveWatchedCount: item.room.stats.user_count_str ?? ""))
             }
             return tempArray
         }catch {
