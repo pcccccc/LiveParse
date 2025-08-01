@@ -136,7 +136,7 @@ struct DouyinRoomPlayInfoMainData: Codable {
 
 struct DouyinRoomPlayInfoData: Codable {
     let data: Array<DouyinPlayQualitiesInfo>?
-    let user: DouyinLiveUserInfo
+    let user: DouyinLiveUserInfo?
 }
 
 struct DouyinLiveSimlarRooms: Codable {
@@ -149,11 +149,11 @@ struct DouyinLiveSimlarRoomsInfo: Codable {
 }
 
 struct DouyinPlayQualitiesInfo: Codable {
-    let status: Int
+    let status: Int?
     let stream_url: DouyinPlayQualities?
-    let id_str: String
-    let title: String
-    let user_count_str: String
+    let id_str: String?
+    let title: String?
+    let user_count_str: String?
     let cover: DouyinLiveUserAvatarInfo?
     let owner: DouyinRoomOwnerData?
 }
@@ -168,13 +168,13 @@ struct DouyinLivePullData: Codable {
 }
 
 struct DouyinLiveUserInfo: Codable {
-    let id_str: String
-    let nickname: String
-    let avatar_thumb: DouyinLiveUserAvatarInfo
+    let id_str: String?
+    let nickname: String?
+    let avatar_thumb: DouyinLiveUserAvatarInfo?
 }
 
 struct DouyinLiveUserAvatarInfo: Codable {
-    let url_list: Array<String>
+    let url_list: Array<String>?
 }
 
 
@@ -218,7 +218,7 @@ struct DouyinSearchLives: Codable {
 }
 
 var headers = HTTPHeaders.init([
-    "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7; application/json",
     "Authority": "live.douyin.com",
     "Referer": "https://live.douyin.com",
     "User-Agent":
@@ -510,7 +510,7 @@ public struct Douyin: LiveParse {
             default:
                 liveState = LiveState.unknow.rawValue
             }
-            return LiveModel(userName: dataReq.data?.user.nickname ?? "", roomTitle: dataReq.data?.data?.first?.title ?? "", roomCover: dataReq.data?.data?.first?.cover?.url_list.first ?? "", userHeadImg: dataReq.data?.user.avatar_thumb.url_list.first ?? "", liveType: .douyin, liveState: liveState, userId: userId ?? (dataReq.data?.data?.first?.id_str ?? ""), roomId: roomId, liveWatchedCount: dataReq.data?.data?.first?.user_count_str ?? "")
+            return LiveModel(userName: dataReq.data?.user?.nickname ?? "", roomTitle: dataReq.data?.data?.first?.title ?? "", roomCover: dataReq.data?.data?.first?.cover?.url_list?.first ?? "", userHeadImg: dataReq.data?.user?.avatar_thumb?.url_list?.first ?? "", liveType: .douyin, liveState: liveState, userId: userId ?? (dataReq.data?.data?.first?.id_str ?? ""), roomId: roomId, liveWatchedCount: dataReq.data?.data?.first?.user_count_str ?? "")
         }catch {
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
@@ -559,6 +559,30 @@ public struct Douyin: LiveParse {
             let res = try await AF.request("https://live.douyin.com/webcast/room/web/enter/", method: .get, parameters: parameter, headers: headers).serializingDecodable(DouyinRoomPlayInfoMainData.self).value
             return res
         }catch {
+            let parameter: Dictionary<String, Any> = [
+                "aid": 6383,
+                "app_name": "douyin_web",
+                "live_id": 1,
+                "device_platform": "web",
+                "enter_from": "web_live",
+                "web_rid": roomId,
+                "room_id_str": userId,
+                "enter_source": "",
+                "Room-Enter-User-Login-Ab": 0,
+                "is_need_double_stream": false,
+                "cookie_enabled": true,
+                "screen_width": 1980,
+                "screen_height": 1080,
+                "browser_language": "zh-CN",
+                "browser_platform": "Win32",
+                "browser_name": "Edge",
+                "browser_version": "125.0.0.0"
+            ]
+            let cookie = try await Douyin.getCookie(roomId: roomId)
+            var headers = headers
+            headers.add(name: "cookie", value: cookie)
+            let res = try await AF.request("https://live.douyin.com/webcast/room/web/enter/", method: .get, parameters: parameter, headers: headers).serializingString().value
+            print(res)
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
