@@ -569,6 +569,7 @@ public struct Douyin: LiveParse {
                     "browser_platform": "Win32",
                     "browser_name": "Edge",
                     "browser_version": "138.0.0.0",
+                    "a_bogus": 0,
                 ]
                 let cookie = try await Douyin.getCookie(roomId: roomId)
                 var headers = headers
