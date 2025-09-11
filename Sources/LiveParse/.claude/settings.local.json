@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/pangchong/Desktop/Git_Mini/LiveParse/**)",
+      "Bash(swift build)",
+      "Bash(swift build:*)",
+      "Bash(swift:*)",
+      "Read(//Users/pangchong/Downloads/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
