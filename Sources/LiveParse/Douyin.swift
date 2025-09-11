@@ -281,25 +281,43 @@ public struct Douyin: LiveParse {
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         do {
 
-            let parameter: Dictionary<String, Any> = [
-                "aid": 6383,
+            let parameter: Dictionary<String, String> = [
+                "aid": "6383",
                 "app_name": "douyin_web",
-                "live_id": 1,
+                "live_id": "1",
                 "device_platform": "web",
-                "count": 15,
-                "offset": (page - 1) * 15,
+                "language": "zh-CN",
+                "enter_from": "link_share",
+                "cookie_enabled": "true",
+                "screen_width": "1980",
+                "screen_height": "1080",
+                "browser_language": "zh-CN",
+                "browser_platform": "Win32",
+                "browser_name": "Edge",
+                "browser_version": "139.0.0.0",
+                "browser_online": "true",
+                "count": "15",
+                "offset": "\((page - 1) * 15)",
                 "partition": id,
                 "partition_type": parentId ?? "",
-                "req_from": 2
+                "req_from": "2"
             ]
+            
+            // Convert parameter dictionary to URL query string
+            let urlParams = parameter.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)" }.joined(separator: "&")
+            let cookie = try await Douyin.getCookie(roomId: "117908807")
+            headers["cookie"] = cookie
             let reqHeaders = HTTPHeaders.init([
                 "Accept":"application/json, text/plain, */*",
                 "Authority": "live.douyin.com",
                 "User-Agent":
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-                "Cookie": headers["cookie"] ?? "" + "__ac_nonce=\(String.generateRandomString(length: 21))"
+                    dyua,
+                "Cookie": headers["cookie"] ?? ""
             ])
-            let dataReq = try await AF.request("https://live.douyin.com/webcast/web/partition/detail/room/v2/", method: .get, parameters: parameter, headers: reqHeaders).serializingDecodable(DouyinRoomMainResponse.self).value
+            
+            let fullURL = "https://live.douyin.com/webcast/web/partition/detail/room/v2/?\(urlParams)"
+            let finalUrl = try await Douyin.signURL(fullURL).url
+            let dataReq = try await AF.request(finalUrl, method: .get, headers: reqHeaders).serializingDecodable(DouyinRoomMainResponse.self).value
             let listModelArray = dataReq.data.data
             var tempArray: Array<LiveModel> = []
             for item in listModelArray {
@@ -932,11 +950,9 @@ public struct Douyin: LiveParse {
         
         let roomId = room["id_str"] as? String ?? ""
         let userUniqueId = odin["user_unique_id"] as? String ?? ""
-        
-        guard let owner = room["owner"] as? [String: Any],
-              let anchor = roomInfo["anchor"] as? [String: Any] else {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "房主信息缺失")
-        }
+
+        let owner = room["owner"] as? [String: Any]
+        let anchor = roomInfo["anchor"] as? [String: Any]
         
         let roomStatus = (room["status"] as? Int ?? 0) == 2
         
@@ -945,11 +961,11 @@ public struct Douyin: LiveParse {
         // 构建DouyinLiveUserInfo
         let userInfo = DouyinLiveUserInfo(
             id_str: roomId,
-            nickname: roomStatus ? (owner["nickname"] as? String) : (anchor["nickname"] as? String),
+            nickname: roomStatus ? (owner?["nickname"] as? String) : (anchor?["nickname"] as? String),
             avatar_thumb: DouyinLiveUserAvatarInfo(
                 url_list: roomStatus ? 
-                    ((owner["avatar_thumb"] as? [String: Any])?["url_list"] as? [String]) :
-                    ((anchor["avatar_thumb"] as? [String: Any])?["url_list"] as? [String])
+                    ((owner?["avatar_thumb"] as? [String: Any])?["url_list"] as? [String]) :
+                    ((anchor?["avatar_thumb"] as? [String: Any])?["url_list"] as? [String])
             )
         )
         
@@ -970,12 +986,12 @@ public struct Douyin: LiveParse {
                 url_list: ((room["cover"] as? [String: Any])?["url_list"] as? [String])
             ),
             owner: DouyinRoomOwnerData(
-                id_str: (owner["id_str"] as? String) ?? "",
-                sec_uid: (owner["sec_uid"] as? String) ?? "",
-                nickname: (owner["nickname"] as? String) ?? "",
-                web_rid: (owner["web_rid"] as? String),
+                id_str: (owner?["id_str"] as? String) ?? "",
+                sec_uid: (owner?["sec_uid"] as? String) ?? "",
+                nickname: (owner?["nickname"] as? String) ?? "",
+                web_rid: (owner?["web_rid"] as? String),
                 avatar_thumb: DouyinRoomOwnerAvatarThumbData(
-                    url_list: ((owner["avatar_thumb"] as? [String: Any])?["url_list"] as? [String]) ?? []
+                    url_list: ((owner?["avatar_thumb"] as? [String: Any])?["url_list"] as? [String]) ?? []
                 )
             ))
         // 构建DouyinRoomPlayInfoData
