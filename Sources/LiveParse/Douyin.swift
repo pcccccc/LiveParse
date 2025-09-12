@@ -131,6 +131,7 @@ struct DouyinRoomViewStatsData: Codable {
 
 struct DouyinRoomPlayInfoMainData: Codable {
     let data: DouyinRoomPlayInfoData?
+    let htmlStreamData: DouyinStreamDataResponse?
 }
 
 struct DouyinRoomPlayInfoData: Codable {
@@ -211,6 +212,110 @@ struct DouyinSearchList: Codable {
 
 struct DouyinSearchLives: Codable {
     let rawdata: String
+}
+
+struct DouyinStreamDataResponse: Codable {
+    let H265_streamData: DouyinStreamData?
+    let H264_streamData: DouyinStreamData?
+    let UGC_streamData: DouyinStreamData?
+}
+
+struct DouyinStreamData: Codable {
+    let common: DouyinStreamCommon?
+    let options: DouyinStreamOptions?
+    let stream: DouyinStreamStreams?
+}
+
+struct DouyinStreamCommon: Codable {
+    let app_id: String?
+    let backup_push_id: Int?
+    let common_sdk_params: DouyinCommonSDKParams?
+    let common_trace: String?
+    let lines: DouyinLines?
+    let main_push_id: Int?
+    let major_anchor_level: String?
+    let mode: String?
+    let p2p_params: DouyinP2PParams?
+    let rule_ids: String?
+    let session_id: String?
+    let stream: String?
+    let stream_data_content_encoding: String?
+    let stream_name: String?
+    let ts: String?
+    let version: Int?
+}
+
+struct DouyinCommonSDKParams: Codable {
+    let main: String?
+}
+
+struct DouyinLines: Codable {
+    let main: String?
+}
+
+struct DouyinP2PParams: Codable {
+    let PcdnIsolationConfig: DouyinPcdnIsolationConfig?
+}
+
+struct DouyinPcdnIsolationConfig: Codable {
+    let FsV4Domain: String?
+    let FsV6Domain: String?
+    let HoleV4Domain: String?
+    let HoleV6Domain: String?
+    let IsolationName: String?
+    let StunV4Domain: String?
+    let StunV6Domain: String?
+}
+
+struct DouyinStreamOptions: Codable {
+    let default_quality: DouyinQuality?
+    let qualities: [DouyinQuality]?
+}
+
+struct DouyinQuality: Codable {
+    let additional_content: String?
+    let disable: Int?
+    let fps: Int?
+    let level: Int?
+    let name: String?
+    let resolution: String?
+    let sdk_key: String?
+    let v_bit_rate: Int?
+    let v_codec: String?
+}
+
+struct DouyinStreamStreams: Codable {
+    let ao: DouyinStreamQuality?
+    let hd: DouyinStreamQuality?
+    let ld: DouyinStreamQuality?
+    let md: DouyinStreamQuality?
+    let origin: DouyinStreamQuality?
+    let sd: DouyinStreamQuality?
+}
+
+struct DouyinStreamQuality: Codable {
+    let main: DouyinStreamMain?
+}
+
+struct DouyinStreamMain: Codable {
+    let cmaf: String?
+    let dash: String?
+    let enableEncryption: Bool?
+    let flv: String?
+    let hls: String?
+    let http_ts: String?
+    let ll_hls: String?
+    let lls: String?
+    let sdk_params: String?
+    let templateRealTimeInfo: DouyinTemplateRealTimeInfo?
+    let tile: String?
+    let tsl: String?
+}
+
+struct DouyinTemplateRealTimeInfo: Codable {
+    let bitrateKbps: Double?
+    let name: String?
+    let updatedTime: Int64?
 }
 
 private var dyua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
@@ -410,6 +515,43 @@ public struct Douyin: LiveParse {
                         }
                     }
                 }
+                
+                // 尝试从htmlStreamData解析流媒体URL
+                if tempArray.isEmpty, let htmlStreamData = liveData.htmlStreamData {
+                    // H265流数据解析
+                    if let h265StreamData = htmlStreamData.H265_streamData?.stream {
+                        tempArray.append(contentsOf: extractStreamUrls(from: h265StreamData, roomId: roomId, codec: "H265"))
+                    }
+                    
+                    // H264流数据解析
+                    if let h264StreamData = htmlStreamData.H264_streamData?.stream {
+                        tempArray.append(contentsOf: extractStreamUrls(from: h264StreamData, roomId: roomId, codec: "H264"))
+                    }
+                    
+                    if !tempArray.isEmpty {
+                        var qualityHls = LiveQualityModel(cdn: "线路 HLS", qualitys: [])
+                        var qualityFlv = LiveQualityModel(cdn: "线路 FLV", qualitys: [])
+                        var qualityLls = LiveQualityModel(cdn: "线路 LLS", qualitys: [])
+                        
+                        for model in tempArray {
+                            switch model.liveCodeType {
+                            case .hls:
+                                qualityHls.qualitys.append(model)
+                            case .flv:
+                                qualityFlv.qualitys.append(model)
+                            default:
+                                qualityFlv.qualitys.append(model)
+                            }
+                        }
+                        
+                        var result: [LiveQualityModel] = []
+//                        if !qualityFlv.qualitys.isEmpty { result.append(qualityFlv) }
+                        if !qualityHls.qualitys.isEmpty { result.append(qualityHls) }
+//                        if !qualityLls.qualitys.isEmpty { result.append(qualityLls) }
+                        return result
+                    }
+                }
+                
                 if tempArray.isEmpty { //尝试原始方法
                     let FULL_HD1 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.FULL_HD1 ?? ""
                     let HD1 = liveData.data?.data?.first?.stream_url?.hls_pull_url_map.HD1 ?? ""
@@ -832,6 +974,70 @@ public struct Douyin: LiveParse {
         return String(randomId)
     }
     
+    // 从流数据中提取URL的辅助函数
+    private static func extractStreamUrls(from streams: DouyinStreamStreams, roomId: String, codec: String) -> [LiveQualityDetail] {
+        var tempArray: [LiveQualityDetail] = []
+        
+        // 原画质量
+        if let originMain = streams.origin?.main {
+            if let flvUrl = originMain.flv, !flvUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "原画_\(codec)_FLV", qn: 0, url: flvUrl, liveCodeType: .flv, liveType: .douyin))
+            }
+            if let hlsUrl = originMain.hls, !hlsUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "原画_\(codec)_HLS", qn: 0, url: hlsUrl, liveCodeType: .hls, liveType: .douyin))
+            }
+        }
+        
+        // 超清质量
+        if let hdMain = streams.hd?.main {
+            if let flvUrl = hdMain.flv, !flvUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "超清_\(codec)_FLV", qn: 0, url: flvUrl, liveCodeType: .flv, liveType: .douyin))
+            }
+            if let hlsUrl = hdMain.hls, !hlsUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "超清_\(codec)_HLS", qn: 0, url: hlsUrl, liveCodeType: .hls, liveType: .douyin))
+            }
+        }
+        
+        // 高清质量
+        if let sdMain = streams.sd?.main {
+            if let flvUrl = sdMain.flv, !flvUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "高清_\(codec)_FLV", qn: 0, url: flvUrl, liveCodeType: .flv, liveType: .douyin))
+            }
+            if let hlsUrl = sdMain.hls, !hlsUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "高清_\(codec)_HLS", qn: 0, url: hlsUrl, liveCodeType: .hls, liveType: .douyin))
+            }
+        }
+        
+        // 标清质量
+        if let ldMain = streams.ld?.main {
+            if let flvUrl = ldMain.flv, !flvUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "标清_\(codec)_FLV", qn: 0, url: flvUrl, liveCodeType: .flv, liveType: .douyin))
+            }
+            if let hlsUrl = ldMain.hls, !hlsUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "标清_\(codec)_HLS", qn: 0, url: hlsUrl, liveCodeType: .hls, liveType: .douyin))
+            }
+        }
+        
+        // 标清2质量
+        if let mdMain = streams.md?.main {
+            if let flvUrl = mdMain.flv, !flvUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "标清2_\(codec)_FLV", qn: 0, url: flvUrl, liveCodeType: .flv, liveType: .douyin))
+            }
+            if let hlsUrl = mdMain.hls, !hlsUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "标清2_\(codec)_HLS", qn: 0, url: hlsUrl, liveCodeType: .hls, liveType: .douyin))
+            }
+        }
+        
+        // 音频
+        if let aoMain = streams.ao?.main {
+            if let flvUrl = aoMain.flv, !flvUrl.isEmpty {
+                tempArray.append(.init(roomId: roomId, title: "音频_\(codec)_FLV", qn: 0, url: flvUrl, liveCodeType: .flv, liveType: .douyin))
+            }
+        }
+        
+        return tempArray
+    }
+    
     private static func generateRandomNumber(digits: Int) -> String {
         var result = ""
         for _ in 0..<digits {
@@ -941,6 +1147,7 @@ public struct Douyin: LiveParse {
         
         guard let state = roomData["state"] as? [String: Any],
               let roomStore = state["roomStore"] as? [String: Any],
+              let streamStore = state["streamStore"] as? [String: Any],
               let roomInfo = roomStore["roomInfo"] as? [String: Any],
               let room = roomInfo["room"] as? [String: Any],
               let userStore = state["userStore"] as? [String: Any],
@@ -969,6 +1176,17 @@ public struct Douyin: LiveParse {
             )
         )
         
+        // 转换streamData字典到DouyinStreamDataResponse模型
+        var htmlStreamData: DouyinStreamDataResponse?
+        if let streamDataDict = streamStore["streamData"] as? [String: Any] {
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: streamDataDict, options: [])
+                htmlStreamData = try JSONDecoder().decode(DouyinStreamDataResponse.self, from: jsonData)
+            } catch {
+                print("解析streamData失败: \(error)")
+            }
+        }
+        
         // 构建DouyinPlayQualitiesInfo
         let playQualitiesInfo = DouyinPlayQualitiesInfo(
             status: room["status"] as? Int,
@@ -978,7 +1196,7 @@ public struct Douyin: LiveParse {
                     HD1: ((room["stream_url"] as? [String: Any])?["hls_pull_url_map"] as? [String: Any])?["HD1"] as? String,
                     SD1: ((room["stream_url"] as? [String: Any])?["hls_pull_url_map"] as? [String: Any])?["SD1"] as? String,
                     SD2: ((room["stream_url"] as? [String: Any])?["hls_pull_url_map"] as? [String: Any])?["SD2"] as? String
-                ), live_core_sdk_data: nil
+                ), live_core_sdk_data: DouyinLiveCoreSDKData(pull_data: DouyinLivePullData(stream_data: (((room["stream_url"] as? [String: Any])?["live_core_sdk_data"] as? [String: Any])?["pull_data"] as? [String: Any])?["stream_data"] as? String ?? ""))
             ),
             id_str: roomId,
             title: room["title"] as? String,
@@ -1000,7 +1218,7 @@ public struct Douyin: LiveParse {
             user: userInfo
         )
         
-        return DouyinRoomPlayInfoMainData(data: playInfoData)
+        return DouyinRoomPlayInfoMainData(data: playInfoData, htmlStreamData: htmlStreamData)
     }
 }
 

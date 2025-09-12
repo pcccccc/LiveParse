@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/pangchong/Desktop/Git_Mini/LiveParse/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
