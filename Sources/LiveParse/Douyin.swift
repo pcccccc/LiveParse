@@ -421,8 +421,8 @@ public struct Douyin: LiveParse {
             ])
             
             let fullURL = "https://live.douyin.com/webcast/web/partition/detail/room/v2/?\(urlParams)"
-            let finalUrl = try await Douyin.signURL(fullURL).url
-            let dataReq = try await AF.request(finalUrl, method: .get, headers: reqHeaders).serializingDecodable(DouyinRoomMainResponse.self).value
+//            let finalUrl = try await Douyin.signURL(fullURL).url
+            let dataReq = try await AF.request(fullURL, method: .get, headers: reqHeaders).serializingDecodable(DouyinRoomMainResponse.self).value
             let listModelArray = dataReq.data.data
             var tempArray: Array<LiveModel> = []
             for item in listModelArray {
@@ -943,20 +943,9 @@ public struct Douyin: LiveParse {
         return dyCookie
     }
     
-    public static func signURL(_ url: String) async throws -> DouyinTKData {
-        
-        var request = URLRequest(url: URL(string: "https://dy.nsapps.cn/abogus")!)
-        request.httpMethod = "post"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let parameter = [
-            "url": url,
-            "userAgent": ua
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: parameter)
-        let dataReq2 = try await AF.request(request).serializingString().value
-        let dataReq = try await AF.request(request).serializingDecodable(DouyinTKMainData.self).value
-        return dataReq.data
-    }
+//    public static func signURL(_ url: String) async throws -> DouyinTKData {
+// 
+//    }
     
     static func getXMsStub(params: [String: String]) -> String {
 //        let sigParams = params.map { "\($0)=\($1)" }.joined(separator: ",")
@@ -1046,24 +1035,24 @@ public struct Douyin: LiveParse {
         return result
     }
     
-    private static func _getRoomDataByApi(_ webRid: String) async throws -> [String: Any] {
-        let finalUrl = DouyinUtils.buildRequestUrl(withUrl: "https://live.douyin.com/webcast/room/web/enter/", roomId: webRid, userId: webRid)
-        let resp = try await Douyin.signURL(finalUrl)
-        let cookie = try await Douyin.getCookie(roomId: webRid)
-        
-        var requestHeaders = headers
-        requestHeaders.add(name: "cookie", value: cookie)
-        requestHeaders.add(name: "accept", value: "application/json, text/plain, */*")
-        
-        let response = try await AF.request(resp.url, method: .get, headers: requestHeaders).serializingString().value
-        let data = response.data(using: .utf8) ?? Data()
-        
-        guard let jsonObject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "JSON解析失败")
-        }
-        
-        return jsonObject
-    }
+//    private static func _getRoomDataByApi(_ webRid: String) async throws -> [String: Any] {
+//        let finalUrl = DouyinUtils.buildRequestUrl(withUrl: "https://live.douyin.com/webcast/room/web/enter/", roomId: webRid, userId: webRid)
+////        let resp = try await Douyin.signURL(finalUrl)
+//        let cookie = try await Douyin.getCookie(roomId: webRid)
+//        
+//        var requestHeaders = headers
+//        requestHeaders.add(name: "cookie", value: cookie)
+//        requestHeaders.add(name: "accept", value: "application/json, text/plain, */*")
+//        
+//        let response = try await AF.request(resp.url, method: .get, headers: requestHeaders).serializingString().value
+//        let data = response.data(using: .utf8) ?? Data()
+//        
+//        guard let jsonObject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
+//            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "JSON解析失败")
+//        }
+//        
+//        return jsonObject
+//    }
     
     private static func _getRoomDataByHtml(_ webRid: String) async throws -> [String: Any] {
         let cookie = try await Douyin.getCookie(roomId: webRid)
@@ -1096,51 +1085,51 @@ public struct Douyin: LiveParse {
         return jsonObject
     }
     
-    static func _getRoomDetailByWebRidApi(_ webRid: String) async throws -> [String: Any] {
-        let data = try await _getRoomDataByApi(webRid)
-        
-        guard let dataArray = data["data"] as? [[String: Any]],
-              let roomData = dataArray.first,
-              let userData = data["user"] as? [String: Any] else {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "数据格式错误")
-        }
-        
-        let roomId = roomData["id_str"] as? String ?? ""
-        let userUniqueId = generateRandomNumber(digits: 12)
-        
-        guard let owner = roomData["owner"] as? [String: Any] else {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "房主信息缺失")
-        }
-        
-        let roomStatus = (roomData["status"] as? Int ?? 0) == 2
-        
-        let cookie = try await getCookie(roomId: webRid)
-        
-        var result: [String: Any] = [
-            "roomId": webRid,
-            "title": roomData["title"] as? String ?? "",
-            "cover": roomStatus ? ((roomData["cover"] as? [String: Any])?["url_list"] as? [String])?.first ?? "" : "",
-            "userName": roomStatus ? (owner["nickname"] as? String ?? "") : (userData["nickname"] as? String ?? ""),
-            "userAvatar": roomStatus ? 
-                (((owner["avatar_thumb"] as? [String: Any])?["url_list"] as? [String])?.first ?? "") :
-                (((userData["avatar_thumb"] as? [String: Any])?["url_list"] as? [String])?.first ?? ""),
-            "online": roomStatus ? 
-                ((roomData["room_view_stats"] as? [String: Any])?["display_value"] as? Int ?? 0) : 0,
-            "status": roomStatus,
-            "url": "https://live.douyin.com/\(webRid)",
-            "introduction": (owner["signature"] as? String) ?? "",
-            "notice": "",
-            "danmakuData": [
-                "webRid": webRid,
-                "roomId": roomId,
-                "userId": userUniqueId,
-                "cookie": cookie
-            ],
-            "data": roomStatus ? (roomData["stream_url"] ?? [:]) : [:]
-        ]
-        
-        return result
-    }
+//    static func _getRoomDetailByWebRidApi(_ webRid: String) async throws -> [String: Any] {
+//        let data = try await _getRoomDataByApi(webRid)
+//        
+//        guard let dataArray = data["data"] as? [[String: Any]],
+//              let roomData = dataArray.first,
+//              let userData = data["user"] as? [String: Any] else {
+//            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "数据格式错误")
+//        }
+//        
+//        let roomId = roomData["id_str"] as? String ?? ""
+//        let userUniqueId = generateRandomNumber(digits: 12)
+//        
+//        guard let owner = roomData["owner"] as? [String: Any] else {
+//            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "房主信息缺失")
+//        }
+//        
+//        let roomStatus = (roomData["status"] as? Int ?? 0) == 2
+//        
+//        let cookie = try await getCookie(roomId: webRid)
+//        
+//        var result: [String: Any] = [
+//            "roomId": webRid,
+//            "title": roomData["title"] as? String ?? "",
+//            "cover": roomStatus ? ((roomData["cover"] as? [String: Any])?["url_list"] as? [String])?.first ?? "" : "",
+//            "userName": roomStatus ? (owner["nickname"] as? String ?? "") : (userData["nickname"] as? String ?? ""),
+//            "userAvatar": roomStatus ? 
+//                (((owner["avatar_thumb"] as? [String: Any])?["url_list"] as? [String])?.first ?? "") :
+//                (((userData["avatar_thumb"] as? [String: Any])?["url_list"] as? [String])?.first ?? ""),
+//            "online": roomStatus ? 
+//                ((roomData["room_view_stats"] as? [String: Any])?["display_value"] as? Int ?? 0) : 0,
+//            "status": roomStatus,
+//            "url": "https://live.douyin.com/\(webRid)",
+//            "introduction": (owner["signature"] as? String) ?? "",
+//            "notice": "",
+//            "danmakuData": [
+//                "webRid": webRid,
+//                "roomId": roomId,
+//                "userId": userUniqueId,
+//                "cookie": cookie
+//            ],
+//            "data": roomStatus ? (roomData["stream_url"] ?? [:]) : [:]
+//        ]
+//        
+//        return result
+//    }
     
     static func _getRoomDetailByWebRidHtml(_ webRid: String) async throws -> DouyinRoomPlayInfoMainData {
         let roomData = try await _getRoomDataByHtml(webRid)
