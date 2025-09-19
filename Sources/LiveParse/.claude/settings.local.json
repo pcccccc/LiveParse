@@ -5,7 +5,11 @@
       "Bash(swift build)",
       "Bash(swift build:*)",
       "Bash(swift:*)",
-      "Read(//Users/pangchong/Downloads/**)"
+      "Read(//Users/pangchong/Downloads/**)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(find:*)",
+      "Read(//Users/pangchong/Library/Python/3.9/lib/python/site-packages/gmssl/**)"
     ],
     "deny": [],
     "ask": []

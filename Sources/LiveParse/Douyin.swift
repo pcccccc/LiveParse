@@ -318,7 +318,7 @@ struct DouyinTemplateRealTimeInfo: Codable {
     let updatedTime: Int64?
 }
 
-private var dyua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+private var dyua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
 
 
 var headers = HTTPHeaders.init([
@@ -412,16 +412,30 @@ public struct Douyin: LiveParse {
             let urlParams = parameter.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)" }.joined(separator: "&")
             let cookie = try await Douyin.getCookie(roomId: "117908807")
             headers["cookie"] = cookie
+            
+            let xmsStub = urlParams
+            let jsDom = """
+                    document = {};
+                    window = {};
+                    navigator = {
+                    'userAgent': '\(dyua)'
+                    };
+                    """
+            let jsContext = JSContext()
+            if let jsPath = Bundle.module.path(forResource: "webmssdk", ofType: "js") {
+                jsContext?.evaluateScript(try? jsDom + String(contentsOfFile: jsPath))
+            }
+            let signature = jsContext?.evaluateScript("get_sign('\(xmsStub)')").toString()
             let reqHeaders = HTTPHeaders.init([
                 "Accept":"application/json, text/plain, */*",
                 "Authority": "live.douyin.com",
+                "Referer": "https://live.douyin.com/",
                 "User-Agent":
                     dyua,
-                "Cookie": headers["cookie"] ?? ""
+                "Cookie": headers["cookie"] ?? "" + "__ac_nonce=\(String.generateRandomString(length: 21))"
             ])
             
-            let fullURL = "https://live.douyin.com/webcast/web/partition/detail/room/v2/?\(urlParams)"
-//            let finalUrl = try await Douyin.signURL(fullURL).url
+            let fullURL = "https://live.douyin.com/webcast/web/partition/detail/room/v2/?\(urlParams)&a_bogus=\(signature))"
             let dataReq = try await AF.request(fullURL, method: .get, headers: reqHeaders).serializingDecodable(DouyinRoomMainResponse.self).value
             let listModelArray = dataReq.data.data
             var tempArray: Array<LiveModel> = []
@@ -707,23 +721,30 @@ public struct Douyin: LiveParse {
     }
     
     static func getDouyinRoomDetail(roomId: String, userId: String) async throws -> DouyinRoomPlayInfoMainData {
-        var errorTime = 0
-        while errorTime < 3 {
+        var apiErrorCount = 0
+
+        // 先尝试API方法3次
+        while apiErrorCount < 3 {
             do {
-                return try await Douyin._getRoomDetailByWebRidHtml(roomId)
-            }catch {
-                errorTime += 1
-                if errorTime == 3 {
-                    print(error)
-                    throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
-                    
-                }else {
-                    print("获取抖音直播间详情失败，正在重试...(\(errorTime))")
-                    
+                return try await Douyin._getRoomDetailByWebRidApi(roomId, userId: userId)
+            } catch {
+                apiErrorCount += 1
+                print("获取抖音直播间详情失败 (API方法)，正在重试...(\(apiErrorCount)/3)")
+                if apiErrorCount < 3 {
+                    // 短暂延迟后重试
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5秒
                 }
             }
         }
-        throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：请求抖音直播间详情失败")
+
+        // API方法失败3次后，尝试HTML方法
+        do {
+            print("API方法失败3次，尝试HTML方法...")
+            return try await Douyin._getRoomDetailByWebRidHtml(roomId)
+        } catch {
+            print("HTML方法也失败: \(error)")
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：所有方法都失败 - \(error.localizedDescription)")
+        }
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
@@ -1035,24 +1056,25 @@ public struct Douyin: LiveParse {
         return result
     }
     
-//    private static func _getRoomDataByApi(_ webRid: String) async throws -> [String: Any] {
-//        let finalUrl = DouyinUtils.buildRequestUrl(withUrl: "https://live.douyin.com/webcast/room/web/enter/", roomId: webRid, userId: webRid)
-////        let resp = try await Douyin.signURL(finalUrl)
-//        let cookie = try await Douyin.getCookie(roomId: webRid)
-//        
-//        var requestHeaders = headers
-//        requestHeaders.add(name: "cookie", value: cookie)
-//        requestHeaders.add(name: "accept", value: "application/json, text/plain, */*")
-//        
-//        let response = try await AF.request(resp.url, method: .get, headers: requestHeaders).serializingString().value
-//        let data = response.data(using: .utf8) ?? Data()
-//        
-//        guard let jsonObject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
-//            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "JSON解析失败")
-//        }
-//        
-//        return jsonObject
-//    }
+    private static func _getRoomDataByApi(_ webRid: String, userId: String) async throws -> DouyinRoomPlayInfoMainData {
+        let url = "https://live.douyin.com/webcast/room/web/enter/"
+        let urlParams = DouyinUtils.buildRequestUrl(roomId: webRid, userId: userId)
+        let customFP = BrowserFingerprintGenerator.generateFingerprint(browserType: "edge")
+        let abogus = ABogus(fp: customFP, userAgent: dyua)
+        let signature = abogus.generateAbogus(params: urlParams).1
+        let cookie = try await Douyin.getCookie(roomId: webRid)
+        
+        var requestHeaders = headers
+        requestHeaders.add(name: "cookie", value: cookie)
+        requestHeaders.add(name: "accept", value: "application/json, text/plain, */*")
+        print(url + "?\(urlParams)&a_bogus=\(signature)")
+        let resString = try await AF.request(url + "?\(urlParams)&a_bogus=\(signature)", method: .get, headers: requestHeaders).serializingString().value
+        let data = resString.data(using: .utf8) ?? Data()
+        let jsonDecoder = JSONDecoder()
+        let resp = try jsonDecoder.decode(DouyinRoomPlayInfoMainData.self, from: data)
+        return resp
+
+    }
     
     private static func _getRoomDataByHtml(_ webRid: String) async throws -> [String: Any] {
         let cookie = try await Douyin.getCookie(roomId: webRid)
@@ -1085,51 +1107,9 @@ public struct Douyin: LiveParse {
         return jsonObject
     }
     
-//    static func _getRoomDetailByWebRidApi(_ webRid: String) async throws -> [String: Any] {
-//        let data = try await _getRoomDataByApi(webRid)
-//        
-//        guard let dataArray = data["data"] as? [[String: Any]],
-//              let roomData = dataArray.first,
-//              let userData = data["user"] as? [String: Any] else {
-//            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "数据格式错误")
-//        }
-//        
-//        let roomId = roomData["id_str"] as? String ?? ""
-//        let userUniqueId = generateRandomNumber(digits: 12)
-//        
-//        guard let owner = roomData["owner"] as? [String: Any] else {
-//            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "房主信息缺失")
-//        }
-//        
-//        let roomStatus = (roomData["status"] as? Int ?? 0) == 2
-//        
-//        let cookie = try await getCookie(roomId: webRid)
-//        
-//        var result: [String: Any] = [
-//            "roomId": webRid,
-//            "title": roomData["title"] as? String ?? "",
-//            "cover": roomStatus ? ((roomData["cover"] as? [String: Any])?["url_list"] as? [String])?.first ?? "" : "",
-//            "userName": roomStatus ? (owner["nickname"] as? String ?? "") : (userData["nickname"] as? String ?? ""),
-//            "userAvatar": roomStatus ? 
-//                (((owner["avatar_thumb"] as? [String: Any])?["url_list"] as? [String])?.first ?? "") :
-//                (((userData["avatar_thumb"] as? [String: Any])?["url_list"] as? [String])?.first ?? ""),
-//            "online": roomStatus ? 
-//                ((roomData["room_view_stats"] as? [String: Any])?["display_value"] as? Int ?? 0) : 0,
-//            "status": roomStatus,
-//            "url": "https://live.douyin.com/\(webRid)",
-//            "introduction": (owner["signature"] as? String) ?? "",
-//            "notice": "",
-//            "danmakuData": [
-//                "webRid": webRid,
-//                "roomId": roomId,
-//                "userId": userUniqueId,
-//                "cookie": cookie
-//            ],
-//            "data": roomStatus ? (roomData["stream_url"] ?? [:]) : [:]
-//        ]
-//        
-//        return result
-//    }
+    static func _getRoomDetailByWebRidApi(_ roomId: String, userId: String) async throws -> DouyinRoomPlayInfoMainData {
+        return try await _getRoomDataByApi(roomId, userId: userId)
+    }
     
     static func _getRoomDetailByWebRidHtml(_ webRid: String) async throws -> DouyinRoomPlayInfoMainData {
         let roomData = try await _getRoomDataByHtml(webRid)
@@ -1239,8 +1219,7 @@ public struct DouyinUtils {
         })
     }
     
-    public static func buildRequestUrl(withUrl url: String, roomId: String, userId: String) -> String {
-        return "\(url)?\( "aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_live&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Chrome&browser_version=139.0.0.0&web_rid=\(roomId)&room_id_str=\(userId)&enter_source=&is_need_double_stream=false&insert_task_id=&live_reason=")"
+    public static func buildRequestUrl(roomId: String, userId: String) -> String {
+        return "\( "aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_live&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Chrome&browser_version=140.0.0.0&web_rid=\(roomId)&room_id_str=\(userId)&enter_source=&is_need_double_stream=false&insert_task_id=&live_reason=")"
     }
 }
-//

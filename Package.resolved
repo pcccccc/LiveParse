@@ -19,6 +19,15 @@
       }
     },
     {
+      "identity" : "gmobjc",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pcccccc/GMObjC",
+      "state" : {
+        "branch" : "master",
+        "revision" : "329f9d2f7ce0a08144e63fa29708fe62e33a6e48"
+      }
+    },
+    {
       "identity" : "starscream",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/daltoniam/Starscream",
