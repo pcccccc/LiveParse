@@ -444,7 +444,6 @@ public struct Douyin: LiveParse {
             }
             return tempArray
         }catch {
-            
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
@@ -743,6 +742,7 @@ public struct Douyin: LiveParse {
             return try await Douyin._getRoomDetailByWebRidHtml(roomId)
         } catch {
             print("HTML方法也失败: \(error)")
+            print(error)
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：所有方法都失败 - \(error.localizedDescription)")
         }
     }
@@ -936,7 +936,6 @@ public struct Douyin: LiveParse {
     public static func getCookie(roomId: String) async throws -> String {
         var httpHeaders = headers
 
-        
         let response = await AF.request("https://live.douyin.com/\(roomId)", method: .get, headers: headers).serializingString().response
         
         var dyCookie = ""
@@ -959,6 +958,8 @@ public struct Douyin: LiveParse {
                     dyCookie += "\(DouyinUtils.generateMsToken())"
                 }
             }
+        }else {
+            dyCookie = try await Douyin.getCookie(roomId: "117908807")
         }
         
         return dyCookie
@@ -1098,7 +1099,6 @@ public struct Douyin: LiveParse {
             .replacingOccurrences(of: "\\\"", with: "\"")
             .replacingOccurrences(of: "\\\\", with: "\\")
             .replacingOccurrences(of: "]\\n", with: "")
-        
         guard let jsonData = jsonString.data(using: .utf8),
               let jsonObject = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] else {
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "JSON解析失败")
