@@ -318,7 +318,9 @@ struct DouyinTemplateRealTimeInfo: Codable {
     let updatedTime: Int64?
 }
 
-private var dyua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+private var dyua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+private var browserVer = "139.0.0.0"
+private var browserType = "Win32"
 
 
 var headers = HTTPHeaders.init([
@@ -1060,7 +1062,7 @@ public struct Douyin: LiveParse {
     private static func _getRoomDataByApi(_ webRid: String, userId: String) async throws -> DouyinRoomPlayInfoMainData {
         let url = "https://live.douyin.com/webcast/room/web/enter/"
         let urlParams = DouyinUtils.buildRequestUrl(roomId: webRid, userId: userId)
-        let customFP = BrowserFingerprintGenerator.generateFingerprint(browserType: "edge")
+        let customFP = BrowserFingerprintGenerator.generateFingerprint(browserType: browserType)
         let abogus = ABogus(fp: customFP, userAgent: dyua)
         let signature = abogus.generateAbogus(params: urlParams).1
         let cookie = try await Douyin.getCookie(roomId: webRid)
@@ -1220,6 +1222,6 @@ public struct DouyinUtils {
     }
     
     public static func buildRequestUrl(roomId: String, userId: String) -> String {
-        return "\( "aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_live&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Chrome&browser_version=140.0.0.0&web_rid=\(roomId)&room_id_str=\(userId)&enter_source=&is_need_double_stream=false&insert_task_id=&live_reason=")"
+        return "\("aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_live&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=\(browserType == "edge" ? "MacIntel" : "Win32")&browser_name=Chrome&browser_version=\(browserVer)&web_rid=\(roomId)&room_id_str=\(userId)&enter_source=&is_need_double_stream=false&insert_task_id=&live_reason=")"
     }
 }
