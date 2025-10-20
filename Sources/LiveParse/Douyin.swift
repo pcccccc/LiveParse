@@ -321,6 +321,7 @@ struct DouyinTemplateRealTimeInfo: Codable {
 private var dyua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
 private var browserVer = "139.0.0.0"
 private var browserType = "Win32"
+private var fakeRoomId = "870887192950"
 
 
 var headers = HTTPHeaders.init([
@@ -335,7 +336,7 @@ public struct Douyin: LiveParse {
     public static func getCategoryList() async throws -> [LiveMainListModel] {
         do {
             if headers["cookie"] == nil || headers["cookie"] == "" {
-                let cookie = try await Douyin.getCookie(roomId: "117908807")
+                let cookie = try await Douyin.getCookie(roomId: fakeRoomId)
                 headers["cookie"] = cookie
             }
             let dataReq = try await AF.request("https://live.douyin.com", method: .get, headers: headers).serializingString().value
@@ -412,7 +413,7 @@ public struct Douyin: LiveParse {
             
             // Convert parameter dictionary to URL query string
             let urlParams = parameter.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)" }.joined(separator: "&")
-            let cookie = try await Douyin.getCookie(roomId: "117908807")
+            let cookie = try await Douyin.getCookie(roomId: fakeRoomId)
             headers["cookie"] = cookie
             
             let xmsStub = urlParams
@@ -961,7 +962,7 @@ public struct Douyin: LiveParse {
                 }
             }
         }else {
-            dyCookie = try await Douyin.getCookie(roomId: "117908807")
+            dyCookie = try await Douyin.getCookie(roomId: fakeRoomId)
         }
         
         return dyCookie
