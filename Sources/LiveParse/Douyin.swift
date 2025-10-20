@@ -318,9 +318,9 @@ struct DouyinTemplateRealTimeInfo: Codable {
     let updatedTime: Int64?
 }
 
-private var dyua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
-private var browserVer = "139.0.0.0"
-private var browserType = "Win32"
+private var dyua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+private var browserVer = "141.0.0.0"
+private var browserType = "edge"
 private var fakeRoomId = "870887192950"
 
 
@@ -938,7 +938,6 @@ public struct Douyin: LiveParse {
     
     public static func getCookie(roomId: String) async throws -> String {
         var httpHeaders = headers
-
         let response = await AF.request("https://live.douyin.com/\(roomId)", method: .get, headers: headers).serializingString().response
         
         var dyCookie = ""
@@ -949,6 +948,8 @@ public struct Douyin: LiveParse {
                 let cookie = cookieString.components(separatedBy: ";")[0].trimmingCharacters(in: .whitespaces)
                 if cookie.contains("ttwid") {
                     dyCookie += "\(cookie);"
+                }else {
+                    dyCookie += "ttwid=\(try await DouyinUtils.getTtwid());"
                 }
                 if cookie.contains("__ac_nonce") {
                     dyCookie += "\(cookie);"
@@ -962,7 +963,7 @@ public struct Douyin: LiveParse {
                 }
             }
         }else {
-            dyCookie = try await Douyin.getCookie(roomId: fakeRoomId)
+            dyCookie = "ttwid=\(try await DouyinUtils.getTtwid());__ac_nonce=\(String.generateRandomString(length: 21));\(DouyinUtils.generateMsToken())"
         }
         
         return dyCookie
@@ -1224,5 +1225,61 @@ public struct DouyinUtils {
     
     public static func buildRequestUrl(roomId: String, userId: String) -> String {
         return "\("aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_live&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=\(browserType == "edge" ? "MacIntel" : "Win32")&browser_name=Chrome&browser_version=\(browserVer)&web_rid=\(roomId)&room_id_str=\(userId)&enter_source=&is_need_double_stream=false&insert_task_id=&live_reason=")"
+    }
+    
+    public static func getTtwid() async -> String {
+        do {
+            // 创建 URL
+            guard let url = URL(string:"https://ttwid.bytedance.com/ttwid/union/register/") else {
+                return ""
+            }
+            // 创建请求
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            // 创建请求体数据
+            let requestData: [String: Any] = [
+                "region": "cn",
+                "aid": 1768,
+                "needFid": false,
+                "service": "www.ixigua.com",
+                "migrate_info": [
+                    "ticket": "",
+                    "source": "node"
+                ],
+                "cbUrlProtocol": "https",
+                "union": true
+            ]
+            
+            // 将数据转换为 JSON
+            request.httpBody = try JSONSerialization.data(withJSONObject:
+                                                            requestData)
+            
+            // 发送请求
+            let (_, response) = try await URLSession.shared.data(for: request)
+            
+            // 获取 Set-Cookie header
+            guard let httpResponse = response as? HTTPURLResponse,
+                  let setCookieHeaders =
+                    httpResponse.allHeaderFields["Set-Cookie"] as? String else {
+                return ""
+            }
+            
+            // 使用正则表达式提取 ttwid
+            let pattern = "ttwid=([^;]+)"
+            if let regex = try? NSRegularExpression(pattern: pattern),
+               let match = regex.firstMatch(in: setCookieHeaders, range:
+                                                NSRange(setCookieHeaders.startIndex..., in: setCookieHeaders)),
+               match.numberOfRanges > 1,
+               let range = Range(match.range(at: 1), in: setCookieHeaders) {
+                return String(setCookieHeaders[range])
+            }
+            
+            return ""
+            
+        } catch {
+            print("Error: \(error)")
+            return ""
+        }
     }
 }
