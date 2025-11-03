@@ -3,7 +3,14 @@
     "allow": [
       "Bash(find:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(tree:*)",
+      "Bash(swift test:*)",
+      "Bash(swift build:*)",
+      "Bash(xcodebuild -list:*)",
+      "Bash(xcodebuild test:*)",
+      "Bash(xcodebuild -version:*)",
+      "Bash(xcodebuild:*)"
     ],
     "deny": [],
     "ask": []

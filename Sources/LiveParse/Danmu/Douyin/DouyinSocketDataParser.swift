@@ -73,9 +73,11 @@ public class DouyinSocketDataParser: WebSocketDataParser {
     private func dyUnPackWebcastChatMessage(_ payload: Data, _ connection: WebSocketConnection) {
         do {
             let chatMessage = try Douyin_ChatMessage(serializedData: payload)
-            connection.delegate?.webSocketDidReceiveMessage(text: chatMessage.content, color: 0xFFFFFF)
+            print("昵称：\(chatMessage.user.nickName)")
+            print("弹幕：\(chatMessage.content)")
+            connection.delegate?.webSocketDidReceiveMessage(text: chatMessage.content, nickname: chatMessage.user.nickName, color: 0xFFFFFF)
         }catch {
-            
+
         }
     }
     

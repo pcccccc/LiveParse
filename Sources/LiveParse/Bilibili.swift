@@ -296,299 +296,392 @@ struct BilibiliRoomAnchorBaseInfo: Codable {
 public struct Bilibili: LiveParse {
 
     public static func getCategoryList() async throws -> [LiveMainListModel] {
-        do {
-            let dataReq = try await AF.request("https://api.live.bilibili.com/room/v1/Area/getList", method: .get).serializingDecodable(BilibiliMainData<[BilibiliMainListModel]>.self).value
-            var tempArray: [LiveMainListModel] = []
-            for item in dataReq.data {
-                var subList: [LiveCategoryModel] = []
-                guard let subCategoryList = item.list else {
-                    continue
-                }
-                for subItem in subCategoryList {
-                    subList.append(.init(id: subItem.id, parentId: subItem.parent_id, title: subItem.name, icon: subItem.pic))
-                }
-                tempArray.append(.init(id: "\(item.id)", title: item.name, icon: "", subList: subList))
+        logDebug("开始获取B站分类列表")
+
+        let dataReq: BilibiliMainData<[BilibiliMainListModel]> = try await LiveParseRequest.get(
+            "https://api.live.bilibili.com/room/v1/Area/getList"
+        )
+
+        var tempArray: [LiveMainListModel] = []
+        for item in dataReq.data {
+            var subList: [LiveCategoryModel] = []
+            guard let subCategoryList = item.list else {
+                continue
             }
-            return tempArray
-        }catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+            for subItem in subCategoryList {
+                subList.append(.init(id: subItem.id, parentId: subItem.parent_id, title: subItem.name, icon: subItem.pic))
+            }
+            tempArray.append(.init(id: "\(item.id)", title: item.name, icon: "", subList: subList))
         }
+
+        logInfo("成功获取B站分类列表，共 \(tempArray.count) 个分类")
+        return tempArray
     }
 
-    
+
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
-        do {
-            var headers = try await getHeaders()
-            let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43&w_webid=\(try await getAccessId())") ?? ""
-            let dataReq = try await AF.request(
-                "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
-                method: .get,
-                headers: headers
-            ).serializingDecodable(BilibiliMainData<BiliBiliCategoryRoomMainModel>.self).value
-            if let listModelArray = dataReq.data.list {
-                var tempArray: Array<LiveModel> = []
-                for item in listModelArray {
-                    tempArray.append(LiveModel(userName: item.uname, roomTitle: item.title ?? "", roomCover: item.cover ?? "", userHeadImg: item.face ?? "", liveType: .bilibili, liveState: "", userId: "\(item.uid)", roomId: "\(item.roomid)", liveWatchedCount: item.watched_show?.text_small ?? ""))
-                }
-                return tempArray
-            }else {
-                
-                throw
-                LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("请求B站直播间列表失败,返回的列表为空")")
-            }
-        }catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        logDebug("开始获取B站直播间列表，分类ID: \(id), 页码: \(page)")
+
+        let headers = try await getHeaders()
+        let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43&w_webid=\(try await getAccessId())") ?? ""
+
+        let dataReq: BilibiliMainData<BiliBiliCategoryRoomMainModel> = try await LiveParseRequest.get(
+            "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
+            headers: headers
+        )
+
+        guard let listModelArray = dataReq.data.list else {
+            logWarning("B站直播间列表为空")
+            throw LiveParseError.business(.emptyResult(
+                location: "\(#file):\(#line)",
+                request: NetworkRequestDetail(
+                    url: "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
+                    method: "GET"
+                )
+            ))
         }
+
+        var tempArray: Array<LiveModel> = []
+        for item in listModelArray {
+            tempArray.append(LiveModel(
+                userName: item.uname,
+                roomTitle: item.title ?? "",
+                roomCover: item.cover ?? "",
+                userHeadImg: item.face ?? "",
+                liveType: .bilibili,
+                liveState: "",
+                userId: "\(item.uid)",
+                roomId: "\(item.roomid)",
+                liveWatchedCount: item.watched_show?.text_small ?? ""
+            ))
+        }
+
+        logInfo("成功获取B站直播间列表，共 \(tempArray.count) 个房间")
+        return tempArray
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
-        do {
-            let headers = try await getHeaders()
-            let dataReq = try await AF.request(
-                "https://api.live.bilibili.com/room/v1/Room/playUrl",
-                method: .get,
-                parameters: [
-                    "platform": "web",
-                    "cid": roomId,
-                    "qn": ""
-                ],
-                headers: headers
-            ).serializingDecodable(BilibiliMainData<BiliBiliQualityModel>.self).value
-            var liveQualitys: [LiveQualityDetail] = []
-            var hostArray: [String] = []
-            if let qualityDescription = dataReq.data.quality_description {
-                for item in qualityDescription {
-                    let dataReq = try await AF.request(
-                        "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
-                        method: .get,
-                        parameters: [
-                            "platform": "h5",
-                            "room_id": roomId,
-                            "qn": item.qn,
-                            "protocol": "0,1",
-                            "format": "0,1,2",
-                            "codec": "0",
-                            "mask": "0"
-                        ],
-                        headers: headers
-                    ).serializingDecodable(BilibiliMainData<BiliBiliPlayURLInfoMain>.self).value
-                    for streamInfo in dataReq.data.playurl_info.playurl.stream {
-                        if streamInfo.protocol_name == "http_hls" || streamInfo.protocol_name == "http_stream" {
-                            if hostArray.contains((streamInfo.format.last?.codec.last?.url_info.last?.host ?? "")) == false {
-                                hostArray.append((streamInfo.format.last?.codec.last?.url_info.last?.host ?? ""))
-                            }
-                            let url = (streamInfo.format.last?.codec.last?.url_info.last?.host ?? "") + (streamInfo.format.last?.codec.last?.base_url ?? "") + (streamInfo.format.last?.codec.last?.url_info.last?.extra ?? "")
-                            liveQualitys.append(.init(roomId: roomId, title: item.desc, qn: item.qn, url: url, liveCodeType: streamInfo.protocol_name == "http_hls" ? .hls : .flv, liveType: .bilibili))
-                        }
-                    }
-                }
-                var tempArray: [LiveQualityModel] = []
-                for i in 0..<hostArray.count {
-                    let host = hostArray[i]
-                    var qualitys: [LiveQualityDetail] = []
-                    for item in liveQualitys {
-                        if item.url.contains(host) == true {
-                            qualitys.append(item)
-                        }
-                    }
-                    tempArray.append(LiveQualityModel(cdn: "线路 \(i + 1)", qualitys: qualitys))
-                }
-                return tempArray
-            }else {
-                let dataReq = try await AF.request(
+        logDebug("开始获取B站直播流地址，房间ID: \(roomId)")
+
+        let headers = try await getHeaders()
+
+        // 第一步：获取可用的清晰度列表
+        let dataReq: BilibiliMainData<BiliBiliQualityModel> = try await LiveParseRequest.get(
+            "https://api.live.bilibili.com/room/v1/Room/playUrl",
+            parameters: [
+                "platform": "web",
+                "cid": roomId,
+                "qn": ""
+            ],
+            headers: headers
+        )
+
+        var liveQualitys: [LiveQualityDetail] = []
+        var hostArray: [String] = []
+
+        if let qualityDescription = dataReq.data.quality_description {
+            logDebug("找到 \(qualityDescription.count) 个清晰度选项")
+
+            // 第二步：为每个清晰度获取播放地址
+            for item in qualityDescription {
+                let playInfoReq: BilibiliMainData<BiliBiliPlayURLInfoMain> = try await LiveParseRequest.get(
                     "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
-                    method: .get,
                     parameters: [
                         "platform": "h5",
                         "room_id": roomId,
-                        "qn": "1500",
+                        "qn": item.qn,
                         "protocol": "0,1",
-                        "format": "0,2",
-                        "codec": "0,1",
+                        "format": "0,1,2",
+                        "codec": "0",
                         "mask": "0"
                     ],
                     headers: headers
-                ).serializingDecodable(BilibiliMainData<BiliBiliPlayURLInfoMain>.self).value
-                for streamInfo in dataReq.data.playurl_info.playurl.stream {
+                )
+
+                for streamInfo in playInfoReq.data.playurl_info.playurl.stream {
                     if streamInfo.protocol_name == "http_hls" || streamInfo.protocol_name == "http_stream" {
                         if hostArray.contains((streamInfo.format.last?.codec.last?.url_info.last?.host ?? "")) == false {
                             hostArray.append((streamInfo.format.last?.codec.last?.url_info.last?.host ?? ""))
                         }
                         let url = (streamInfo.format.last?.codec.last?.url_info.last?.host ?? "") + (streamInfo.format.last?.codec.last?.base_url ?? "") + (streamInfo.format.last?.codec.last?.url_info.last?.extra ?? "")
-                        liveQualitys.append(.init(roomId: roomId, title: "默认", qn: 1500, url: url, liveCodeType: streamInfo.protocol_name == "http_hls" ? .hls : .flv, liveType: .bilibili))
+                        liveQualitys.append(.init(roomId: roomId, title: item.desc, qn: item.qn, url: url, liveCodeType: streamInfo.protocol_name == "http_hls" ? .hls : .flv, liveType: .bilibili))
                     }
                 }
-                var tempArray: [LiveQualityModel] = []
-                for i in 0..<hostArray.count {
-                    let host = hostArray[i]
-                    var qualitys: [LiveQualityDetail] = []
-                    for item in liveQualitys {
-                        if item.url.contains(host) == true {
-                            qualitys.append(item)
-                        }
-                    }
-                    tempArray.append(LiveQualityModel(cdn: "线路 \(i + 1)", qualitys: qualitys))
-                }
-                return tempArray
             }
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("B站直播流解析失败，解析后的数据为空")")
-        } catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+
+            var tempArray: [LiveQualityModel] = []
+            for i in 0..<hostArray.count {
+                let host = hostArray[i]
+                var qualitys: [LiveQualityDetail] = []
+                for item in liveQualitys {
+                    if item.url.contains(host) == true {
+                        qualitys.append(item)
+                    }
+                }
+                tempArray.append(LiveQualityModel(cdn: "线路 \(i + 1)", qualitys: qualitys))
+            }
+
+            logInfo("成功获取B站播放地址，共 \(tempArray.count) 条线路")
+            return tempArray
+        } else {
+            // 没有清晰度描述，使用默认清晰度
+            logDebug("未找到清晰度描述，使用默认清晰度 1500")
+
+            let playInfoReq: BilibiliMainData<BiliBiliPlayURLInfoMain> = try await LiveParseRequest.get(
+                "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
+                parameters: [
+                    "platform": "h5",
+                    "room_id": roomId,
+                    "qn": "1500",
+                    "protocol": "0,1",
+                    "format": "0,2",
+                    "codec": "0,1",
+                    "mask": "0"
+                ],
+                headers: headers
+            )
+
+            for streamInfo in playInfoReq.data.playurl_info.playurl.stream {
+                if streamInfo.protocol_name == "http_hls" || streamInfo.protocol_name == "http_stream" {
+                    if hostArray.contains((streamInfo.format.last?.codec.last?.url_info.last?.host ?? "")) == false {
+                        hostArray.append((streamInfo.format.last?.codec.last?.url_info.last?.host ?? ""))
+                    }
+                    let url = (streamInfo.format.last?.codec.last?.url_info.last?.host ?? "") + (streamInfo.format.last?.codec.last?.base_url ?? "") + (streamInfo.format.last?.codec.last?.url_info.last?.extra ?? "")
+                    liveQualitys.append(.init(roomId: roomId, title: "默认", qn: 1500, url: url, liveCodeType: streamInfo.protocol_name == "http_hls" ? .hls : .flv, liveType: .bilibili))
+                }
+            }
+
+            var tempArray: [LiveQualityModel] = []
+            for i in 0..<hostArray.count {
+                let host = hostArray[i]
+                var qualitys: [LiveQualityDetail] = []
+                for item in liveQualitys {
+                    if item.url.contains(host) == true {
+                        qualitys.append(item)
+                    }
+                }
+                tempArray.append(LiveQualityModel(cdn: "线路 \(i + 1)", qualitys: qualitys))
+            }
+
+            logInfo("成功获取B站播放地址（默认质量），共 \(tempArray.count) 条线路")
+            return tempArray
         }
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
-        do {
-            let headers = try await getHeaders()
-            let dataReq = try await AF.request(
-                "https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom",
-                parameters: [
-                    "room_id": roomId
-                ],
-                headers: headers
-            ).serializingDecodable(BilibiliMainData<BilibiliRoomInfoData>.self).value
-            var liveStatus = LiveState.unknow.rawValue
-            switch dataReq.data.room_info.live_status {
-            case 0:
-                liveStatus = LiveState.close.rawValue
-            case 1:
-                liveStatus = LiveState.live.rawValue
-            case 2:
-                liveStatus = LiveState.close.rawValue
-            default:
-                liveStatus = LiveState.unknow.rawValue
-            }
-            var realRoomId = roomId
-            if roomId != "\(dataReq.data.room_info.room_id)" { //如果两个RoomId不想等，用服务器返回的真实ID
-                realRoomId = "\(dataReq.data.room_info.room_id)"
-            }
-            return LiveModel(userName: dataReq.data.anchor_info.base_info.uname, roomTitle: dataReq.data.room_info.title, roomCover: dataReq.data.room_info.cover, userHeadImg: dataReq.data.anchor_info.base_info.face, liveType: .bilibili, liveState: liveStatus, userId: "\(dataReq.data.room_info.uid)", roomId: realRoomId, liveWatchedCount: dataReq.data.watched_show?.text_small ?? "")
-        }catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        logDebug("开始获取B站房间信息，房间ID: \(roomId)")
+
+        let headers = try await getHeaders()
+        let dataReq: BilibiliMainData<BilibiliRoomInfoData> = try await LiveParseRequest.get(
+            "https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom",
+            parameters: [
+                "room_id": roomId
+            ],
+            headers: headers
+        )
+
+        var liveStatus = LiveState.unknow.rawValue
+        switch dataReq.data.room_info.live_status {
+        case 0:
+            liveStatus = LiveState.close.rawValue
+        case 1:
+            liveStatus = LiveState.live.rawValue
+        case 2:
+            liveStatus = LiveState.close.rawValue
+        default:
+            liveStatus = LiveState.unknow.rawValue
         }
+
+        var realRoomId = roomId
+        if roomId != "\(dataReq.data.room_info.room_id)" {
+            // 如果两个RoomId不相等，用服务器返回的真实ID
+            realRoomId = "\(dataReq.data.room_info.room_id)"
+            logDebug("房间ID不匹配，使用真实ID: \(realRoomId)")
+        }
+
+        logInfo("成功获取B站房间信息: \(dataReq.data.anchor_info.base_info.uname)")
+        return LiveModel(
+            userName: dataReq.data.anchor_info.base_info.uname,
+            roomTitle: dataReq.data.room_info.title,
+            roomCover: dataReq.data.room_info.cover,
+            userHeadImg: dataReq.data.anchor_info.base_info.face,
+            liveType: .bilibili,
+            liveState: liveStatus,
+            userId: "\(dataReq.data.room_info.uid)",
+            roomId: realRoomId,
+            liveWatchedCount: dataReq.data.watched_show?.text_small ?? ""
+        )
     }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
-        do {
-            let headers = try await getHeaders()
-            let dataReq = try await AF.request(
-                "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live&cover_type=user_cover",
-                method: .get,
-                parameters: [
-                    "order": "",
-                    "keyword": keyword,
-                    "category_id": "",
-                    "__refresh__": "",
-                    "_extra": "",
-                    "highlight": 0,
-                    "single_column": 0,
-                    "page": page
-                ],
-                headers: headers
-            ).serializingDecodable(BilibiliSearchMainData.self).value
-            
-            var tempArray: Array<LiveModel> = []
-            for item in dataReq.data?.result?.live_room ?? [] {
-                tempArray.append(LiveModel(userName: item.uname, roomTitle: item.title ?? "", roomCover: "https:\(item.cover ?? "")", userHeadImg: "https:\(item.uface ?? "")", liveType: .bilibili, liveState: Bilibili.getBilibiliLiveStateString(liveState: item.live_status ?? 0).rawValue, userId: "\(item.uid)", roomId: "\(item.roomid)", liveWatchedCount: item.watched_show?.text_small ?? ""))
-            }
-            for item in dataReq.data?.result?.live_user ?? [] {
-                let flowCount = item.attentions ?? 0
-                var flowFormatString = ""
-                if flowCount > 10000 {
-                    flowFormatString = String(format: "%.2f 万人关注直播间", Float(flowCount) / 10000.0)
-                }else {
-                    flowFormatString = "\(flowCount) 人关注直播间"
-                }
-                let userName = String.stripHTML(from: item.uname)
-                tempArray.append(LiveModel(userName: userName, roomTitle: item.title ?? "\(item.cate_name ?? "无分区") · \(flowFormatString)", roomCover: "https:\(item.uface ?? "")", userHeadImg: "https:\(item.uface ?? "")", liveType: .bilibili, liveState: Bilibili.getBilibiliLiveStateString(liveState: item.live_status ?? 0).rawValue, userId: "\(item.uid)", roomId: "\(item.roomid)", liveWatchedCount: flowFormatString))
-            }
-            return tempArray
-        }catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        logDebug("开始搜索B站直播间，关键词: \(keyword), 页码: \(page)")
+
+        let headers = try await getHeaders()
+        let dataReq: BilibiliSearchMainData = try await LiveParseRequest.get(
+            "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live&cover_type=user_cover",
+            parameters: [
+                "order": "",
+                "keyword": keyword,
+                "category_id": "",
+                "__refresh__": "",
+                "_extra": "",
+                "highlight": 0,
+                "single_column": 0,
+                "page": page
+            ],
+            headers: headers
+        )
+
+        var tempArray: Array<LiveModel> = []
+        for item in dataReq.data?.result?.live_room ?? [] {
+            tempArray.append(LiveModel(
+                userName: item.uname,
+                roomTitle: item.title ?? "",
+                roomCover: "https:\(item.cover ?? "")",
+                userHeadImg: "https:\(item.uface ?? "")",
+                liveType: .bilibili,
+                liveState: Bilibili.getBilibiliLiveStateString(liveState: item.live_status ?? 0).rawValue,
+                userId: "\(item.uid)",
+                roomId: "\(item.roomid)",
+                liveWatchedCount: item.watched_show?.text_small ?? ""
+            ))
         }
+
+        for item in dataReq.data?.result?.live_user ?? [] {
+            let flowCount = item.attentions ?? 0
+            var flowFormatString = ""
+            if flowCount > 10000 {
+                flowFormatString = String(format: "%.2f 万人关注直播间", Float(flowCount) / 10000.0)
+            }else {
+                flowFormatString = "\(flowCount) 人关注直播间"
+            }
+            let userName = String.stripHTML(from: item.uname)
+            tempArray.append(LiveModel(
+                userName: userName,
+                roomTitle: item.title ?? "\(item.cate_name ?? "无分区") · \(flowFormatString)",
+                roomCover: "https:\(item.uface ?? "")",
+                userHeadImg: "https:\(item.uface ?? "")",
+                liveType: .bilibili,
+                liveState: Bilibili.getBilibiliLiveStateString(liveState: item.live_status ?? 0).rawValue,
+                userId: "\(item.uid)",
+                roomId: "\(item.roomid)",
+                liveWatchedCount: flowFormatString
+            ))
+        }
+
+        logInfo("搜索完成，找到 \(tempArray.count) 个结果")
+        return tempArray
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
-        do {
-            let headers = try await getHeaders()
-            let dataReq = try await AF.request(
-                "https://api.live.bilibili.com/room/v1/Room/get_info",
-                method: .get,
-                parameters: [
-                    "room_id": roomId
-                ],
-                headers: headers
-            ).serializingData().value
-            let json = try JSONSerialization.jsonObject(with: dataReq, options: .mutableContainers)
-            let jsonDict = json as! Dictionary<String, Any>
-            let dataDict = jsonDict["data"] as? Dictionary<String, Any>
-            let liveStatus = dataDict?["live_status"] as? Int ?? -1
-            switch liveStatus {
-            case 0:
-                return .close
-            case 1:
-                return .live
-            case 2:
-                return .close
-            default:
-                return .unknow
-            }
-        }catch {
-            throw LiveParseError.liveStateParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        logDebug("获取B站直播状态，房间ID: \(roomId)")
+
+        let headers = try await getHeaders()
+        let dataReq = try await LiveParseRequest.requestData(
+            "https://api.live.bilibili.com/room/v1/Room/get_info",
+            parameters: [
+                "room_id": roomId
+            ],
+            headers: headers
+        )
+
+        let json = try JSONSerialization.jsonObject(with: dataReq, options: .mutableContainers)
+        let jsonDict = json as! Dictionary<String, Any>
+        let dataDict = jsonDict["data"] as? Dictionary<String, Any>
+        let liveStatus = dataDict?["live_status"] as? Int ?? -1
+
+        let state: LiveState
+        switch liveStatus {
+        case 0:
+            state = .close
+        case 1:
+            state = .live
+        case 2:
+            state = .close
+        default:
+            state = .unknow
         }
+
+        logInfo("B站直播状态: \(state)")
+        return state
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
-        do {
-            var roomId = ""
-            var realUrl = ""
-            if shareCode.contains("b23.tv") { //短链接
-                let url = shareCode.getUrlStringWithShareCode()
-                let dataReq = await AF.request(url, headers: BiliBiliCookie.cookie == "" ? nil : [
-                    "cookie": BiliBiliCookie.cookie
-                ]).serializingData().response
-                realUrl = dataReq.response?.url?.absoluteString ?? ""
-                
-            }else if shareCode.contains("live.bilibili.com") { //长链接
-                realUrl = shareCode
-            }else { //默认为房间号处理
-                roomId = shareCode
-            }
-            if roomId == "" { //如果不是房间号，就解析链接中的房间号
-                let pattern = "https://live\\.bilibili\\.com/(\\d+)"
-                do {
-                    let regex = try NSRegularExpression(pattern: pattern)
-                    let nsString = realUrl as NSString
-                    let results = regex.matches(in: realUrl, range: NSRange(location: 0, length: nsString.length))
-                    if let match = results.first {
-                        let range = match.range(at: 1) // 第1个捕获组
-                        let numberString = nsString.substring(with: range)
-                        roomId = numberString
-                    } else {
-                        roomId = ""
-                    }
-                } catch {
-                    roomId = ""
-                }
-            }
-            if roomId == "" || Int(roomId) ?? -1 < 0 {
-                throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\("解析房间号失败，请检查分享码/分享链接是否正确")")
-            }
-            return try await Bilibili.getLiveLastestInfo(roomId: roomId, userId: nil)
-        }catch {
-            throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        logDebug("开始解析B站分享码: \(shareCode)")
+
+        var roomId = ""
+        var realUrl = ""
+
+        if shareCode.contains("b23.tv") {
+            // 短链接
+            logDebug("识别为B站短链接")
+            let url = shareCode.getUrlStringWithShareCode()
+            let dataReq = await AF.request(url, headers: BiliBiliCookie.cookie == "" ? nil : [
+                "cookie": BiliBiliCookie.cookie
+            ]).serializingData().response
+            realUrl = dataReq.response?.url?.absoluteString ?? ""
+            logDebug("短链接跳转后: \(realUrl)")
+        } else if shareCode.contains("live.bilibili.com") {
+            // 长链接
+            logDebug("识别为B站长链接")
+            realUrl = shareCode
+        } else {
+            // 默认为房间号处理
+            logDebug("识别为房间号")
+            roomId = shareCode
         }
+
+        if roomId == "" {
+            // 如果不是房间号，就解析链接中的房间号
+            let pattern = "https://live\\.bilibili\\.com/(\\d+)"
+            guard let regex = try? NSRegularExpression(pattern: pattern) else {
+                throw LiveParseError.parse(.regexMatchFailed(
+                    pattern: pattern,
+                    location: "\(#file):\(#line)",
+                    rawData: realUrl
+                ))
+            }
+
+            let nsString = realUrl as NSString
+            let results = regex.matches(in: realUrl, range: NSRange(location: 0, length: nsString.length))
+
+            if let match = results.first {
+                let range = match.range(at: 1)
+                roomId = nsString.substring(with: range)
+                logDebug("从链接中解析出房间号: \(roomId)")
+            } else {
+                logError("无法从链接中提取房间号: \(realUrl)")
+                throw LiveParseError.parse(.regexMatchFailed(
+                    pattern: pattern,
+                    location: "\(#file):\(#line)",
+                    rawData: realUrl
+                ))
+            }
+        }
+
+        guard !roomId.isEmpty, let roomIdInt = Int(roomId), roomIdInt > 0 else {
+            logError("房间号无效: \(roomId)")
+            throw LiveParseError.business(.roomNotFound(roomId: roomId))
+        }
+
+        logInfo("成功解析房间号: \(roomId)")
+        return try await Bilibili.getLiveLastestInfo(roomId: roomId, userId: nil)
     }
     
     public static func getQRCodeUrl() async throws -> BilibiliQRMainModel {
-        let dataReq = try await AF.request(
-            "https://passport.bilibili.com/x/passport-login/web/qrcode/generate",
-            method: .get
-        ).serializingDecodable(BilibiliQRMainModel.self).value
+        logDebug("获取B站登录二维码")
+
+        let dataReq: BilibiliQRMainModel = try await LiveParseRequest.get(
+            "https://passport.bilibili.com/x/passport-login/web/qrcode/generate"
+        )
+
+        logInfo("成功获取B站二维码: \(dataReq.data.qrcode_key)")
         return dataReq
     }
     
     public static func getQRCodeState(qrcode_key: String) async throws -> (BilibiliQRMainModel, String) {
+        logDebug("检查B站二维码扫描状态")
+
         let resp = AF.request(
             "https://passport.bilibili.com/x/passport-login/web/qrcode/poll",
             method: .get,
@@ -596,90 +689,119 @@ public struct Bilibili: LiveParse {
                 "qrcode_key": qrcode_key
             ]
         )
-        
+
         let dataReq = try await resp.serializingDecodable(BilibiliQRMainModel.self).value
+
         if dataReq.data.code == 0 {
+            logInfo("二维码扫描成功，已登录")
             BiliBiliCookie.cookie = resp.response?.headers["Set-Cookie"] ?? ""
+
             if let respUrl = dataReq.data.url {
                 let pattern = "DedeUserID=(\\d+)"
-                    do {
-                        let regex = try NSRegularExpression(pattern: pattern, options: [])
-                        let nsString = respUrl as NSString
-                        let results = regex.matches(in: respUrl, options: [], range: NSRange(location: 0, length: nsString.length))
-                        
-                        // 检查是否有匹配结果，并返回第一个匹配的DedeUserID值
-                        if let match = results.first {
-                            let range = match.range(at: 1) // 获取第一个捕获组的范围
-                            BiliBiliCookie.uid = nsString.substring(with: range)
-                        }
-                    } catch let error {
-                        print("Invalid regex: \(error.localizedDescription)")
+                if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                    let nsString = respUrl as NSString
+                    let results = regex.matches(in: respUrl, options: [], range: NSRange(location: 0, length: nsString.length))
+
+                    if let match = results.first {
+                        let range = match.range(at: 1)
+                        BiliBiliCookie.uid = nsString.substring(with: range)
+                        logDebug("提取到用户ID: \(BiliBiliCookie.uid)")
                     }
-                
+                } else {
+                    logWarning("解析用户ID的正则表达式创建失败")
+                }
             }
             return (dataReq, resp.response?.headers["Set-Cookie"] ?? "")
         }
+
+        logDebug("二维码状态码: \(dataReq.data.code)")
         return (dataReq, "")
     }
     
     public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
-        do {
-            var buvid = ""
-            let headers = try await getHeaders()
-            let cookie = headers["cookie"] ?? ""
-            if cookie.contains("buvid3") == false {
-                buvid = try await getBuvid()
-                BiliBiliCookie.cookie = cookie + "buvid3=\(buvid);"
-            }else {
-                let regex = try NSRegularExpression(pattern: "buvid3=(.*?);", options: [])
-                let matchs =  regex.matches(in: cookie, range: NSRange(location: 0, length: cookie.count))
+        logDebug("获取B站弹幕参数，房间ID: \(roomId)")
+
+        var buvid = ""
+        let headers = try await getHeaders()
+        let cookie = headers["cookie"] ?? ""
+
+        if cookie.contains("buvid3") == false {
+            logDebug("Cookie中没有buvid3，需要获取")
+            buvid = try await getBuvid()
+            BiliBiliCookie.cookie = cookie + "buvid3=\(buvid);"
+        } else {
+            // 从cookie中提取buvid3
+            let pattern = "buvid3=(.*?);"
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                let matchs = regex.matches(in: cookie, range: NSRange(location: 0, length: cookie.count))
                 for match in matchs {
                     let matchRange = Range(match.range, in: cookie)!
                     let matchedSubstring = cookie[matchRange]
                     buvid = "\(matchedSubstring)"
                     buvid = buvid.replacingOccurrences(of: "buvid3=", with: "")
                     buvid = buvid.replacingOccurrences(of: ";", with: "")
+                    logDebug("从Cookie中提取buvid: \(buvid)")
                     break
                 }
+            } else {
+                logWarning("解析buvid3的正则表达式创建失败")
             }
-            let roomInfo = try await getLiveLastestInfo(roomId: roomId, userId: userId)
-            let resp = try await getRoomDanmuDetail(roomId: roomInfo.roomId)
-            return (["roomId": roomId, "buvid": buvid, "token": resp.token, "ws_url": "wss://\(resp.host_list.first?.host ?? "broadcastlv.chat.bilibili.com")/sub"], nil)
-        }catch {
-            throw LiveParseError.danmuArgsParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
+
+        let roomInfo = try await getLiveLastestInfo(roomId: roomId, userId: userId)
+        let resp = try await getRoomDanmuDetail(roomId: roomInfo.roomId)
+
+        let wsHost = resp.host_list.first?.host ?? "broadcastlv.chat.bilibili.com"
+        let result = [
+            "roomId": roomId,
+            "buvid": buvid,
+            "token": resp.token,
+            "ws_url": "wss://\(wsHost)/sub"
+        ]
+
+        logInfo("成功获取B站弹幕参数，WebSocket地址: wss://\(wsHost)/sub")
+        return (result, nil)
     }
     
     public static func getBuvid() async throws -> String {
-        do {
-            let cookie = BiliBiliCookie.cookie
-            if NSString(string: cookie).contains("buvid3") {
-                let regex = try NSRegularExpression(pattern: "buvid3=(.*?);", options: [])
-                let matchs =  regex.matches(in: cookie, range: NSRange(location: 0, length: cookie.count))
+        let cookie = BiliBiliCookie.cookie
+
+        if NSString(string: cookie).contains("buvid3") {
+            logDebug("从Cookie中提取buvid3")
+            let pattern = "buvid3=(.*?);"
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                let matchs = regex.matches(in: cookie, range: NSRange(location: 0, length: cookie.count))
                 for match in matchs {
                     let matchRange = Range(match.range, in: cookie)!
                     let matchedSubstring = cookie[matchRange]
+                    logDebug("成功提取buvid3: \(matchedSubstring)")
                     return "\(matchedSubstring)"
                 }
-            }else {
-                let dataReq = try await AF.request(
-                    "https://api.bilibili.com/x/frontend/finger/spi",
-                    method: .get
-                ).serializingDecodable(BilibiliMainData<BilibiliBuvidModel>.self).value
-                return dataReq.data.b_3
             }
-        }catch {
+        }
+
+        // Cookie中没有buvid3，从API获取
+        logDebug("从API获取buvid3")
+        do {
+            let dataReq: BilibiliMainData<BilibiliBuvidModel> = try await LiveParseRequest.get(
+                "https://api.bilibili.com/x/frontend/finger/spi"
+            )
+            logInfo("成功获取buvid3: \(dataReq.data.b_3)")
+            return dataReq.data.b_3
+        } catch {
+            logError("获取buvid3失败: \(error.localizedDescription)")
             return ""
         }
-        return ""
     }
     
     static func getBuvid3And4() async throws -> (String, String) {
-        
-        let dataReq = try await AF.request(
-            "https://api.bilibili.com/x/frontend/finger/spi",
-            method: .get
-        ).serializingDecodable(BilibiliMainData<BilibiliBuvidModel>.self).value
+        logDebug("获取buvid3和buvid4")
+
+        let dataReq: BilibiliMainData<BilibiliBuvidModel> = try await LiveParseRequest.get(
+            "https://api.bilibili.com/x/frontend/finger/spi"
+        )
+
+        logDebug("成功获取buvid3: \(dataReq.data.b_3), buvid4: \(dataReq.data.b_4)")
         return (dataReq.data.b_3, dataReq.data.b_4)
     }
     
@@ -699,13 +821,17 @@ public struct Bilibili: LiveParse {
     }
     
     static func getRoomDanmuDetail(roomId: String) async throws -> BilibiliDanmuModel {
+        logDebug("获取B站房间弹幕详情，房间ID: \(roomId)")
+
         let headers = try await getHeaders()
         let query = try await Bilibili.biliWbiSign(param: "id=\(roomId)&type=0&sort_type=&vajra_business_key=&web_location=444.43") ?? ""
-        let dataReq = try await AF.request(
+
+        let dataReq: BilibiliMainData<BilibiliDanmuModel> = try await LiveParseRequest.get(
             "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo?\(query)",
-            method: .get,
             headers: headers
-        ).serializingDecodable(BilibiliMainData<BilibiliDanmuModel>.self).value
+        )
+
+        logInfo("成功获取弹幕详情，token: \(dataReq.data.token.prefix(10))...")
         return dataReq.data
     }
     
@@ -746,13 +872,20 @@ public struct Bilibili: LiveParse {
                "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
                "Referer": "https://www.bilibili.com/"
            ]
-           
-            let dataReq = try await AF.request("https://api.bilibili.com/x/web-interface/nav", headers: headers).serializingData().value
+
+            logDebug("获取WBI密钥")
+            let dataReq = try await LiveParseRequest.requestData(
+                "https://api.bilibili.com/x/web-interface/nav",
+                headers: headers
+            )
+
             let json = JSON(dataReq)
             let imgURL = json["data"]["wbi_img"]["img_url"].string ?? ""
             let subURL = json["data"]["wbi_img"]["sub_url"].string ?? ""
             let imgKey = imgURL.components(separatedBy: "/").last?.components(separatedBy: ".").first ?? ""
             let subKey = subURL.components(separatedBy: "/").last?.components(separatedBy: ".").first ?? ""
+
+            logDebug("成功获取WBI密钥: imgKey=\(imgKey.prefix(10))..., subKey=\(subKey.prefix(10))...")
             return (imgKey, subKey)
        }
         
@@ -790,21 +923,39 @@ public struct Bilibili: LiveParse {
     }
     
     static func getAccessId() async throws -> String {
-        var accessId = ""
-        // 获取 access_id
-        let resp = try await AF.request("https://live.bilibili.com/lol", headers: Bilibili.getHeaders()).serializingString().value
-        
+        logDebug("获取B站access_id")
+
+        let headers = try await Bilibili.getHeaders()
+        let resp = try await LiveParseRequest.requestString(
+            "https://live.bilibili.com/lol",
+            headers: headers
+        )
+
         // 使用正则表达式匹配
         let pattern = "\"access_id\":\"(.*?)\""
-        let regex = try NSRegularExpression(pattern: pattern, options: [])
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            logError("创建access_id正则表达式失败")
+            throw LiveParseError.parse(.regexMatchFailed(
+                pattern: pattern,
+                location: "\(#file):\(#line)",
+                rawData: resp.prefix(500).description
+            ))
+        }
+
         let range = NSRange(resp.startIndex..., in: resp)
-        
+
         if let match = regex.firstMatch(in: resp, options: [], range: range),
            let rangeMatch = Range(match.range(at: 1), in: resp) {
             let id = String(resp[rangeMatch]).replacingOccurrences(of: "\\", with: "")
-            accessId = id
+            logInfo("成功获取access_id: \(id.prefix(20))...")
             return id
         }
-        return accessId
+
+        logError("未能从响应中提取access_id")
+        throw LiveParseError.parse(.regexMatchFailed(
+            pattern: pattern,
+            location: "\(#file):\(#line)",
+            rawData: resp.prefix(500).description
+        ))
     }
 }

@@ -21,7 +21,7 @@ public protocol WebSocketConnectionDelegate: AnyObject {
     /// 断开链接通知,参数 `isReconnecting` 表示是否处于等待重新连接状态。
     func webSocketDidDisconnect(error: Error?)
     /// 接收到消息后的回调(String)
-    func webSocketDidReceiveMessage(text: String, color: UInt32)
+    func webSocketDidReceiveMessage(text: String, nickname: String, color: UInt32)
 }
 
 public class WebSocketConnection {

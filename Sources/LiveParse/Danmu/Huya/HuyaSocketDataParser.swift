@@ -46,7 +46,9 @@ public class HuyaSocketDataParser: WebSocketDataParser {
                     }else {
                         color = UInt32(messageNotice.bulletFormat.fontColor)
                     }
-                    connection.delegate?.webSocketDidReceiveMessage(text: content, color: color)
+                    print("昵称：\(uname)")
+                    print("弹幕：\(content)")
+                    connection.delegate?.webSocketDidReceiveMessage(text: content, nickname: uname, color: color)
                 }else if type == 8006 {
                     var online = 0
                     var s = TarsInputStream(wSPushMessage.msg)

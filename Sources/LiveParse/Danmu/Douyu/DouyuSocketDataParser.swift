@@ -86,10 +86,13 @@ public class DouyuSocketDataParser: WebSocketDataParser {
         } while _loction < data.count
         
         if contents.count > 0 {
-            let str = contents.first!
-            if NSString(string: str).contains("chatmsg") == true {
-                let barrageDict = formatBarrageDict(msg: str)
-                connection.delegate?.webSocketDidReceiveMessage(text: barrageDict["content"] as? String ?? "", color: UInt32(getDouyinLiveColor(col: barrageDict["col"] as? Int ?? 0)))
+            if let str = contents.first {
+                if NSString(string: str).contains("chatmsg") == true {
+                    let barrageDict = formatBarrageDict(msg: str)
+                    print("昵称：\(barrageDict["nickname"] as? String ?? "")")
+                    print("弹幕：\(barrageDict["content"] as? String ?? "")")
+                    connection.delegate?.webSocketDidReceiveMessage(text: barrageDict["content"] as? String ?? "", nickname: barrageDict["nickname"] as? String ?? "", color: UInt32(getDouyinLiveColor(col: barrageDict["col"] as? Int ?? 0)))
+                }
             }
         }
     }

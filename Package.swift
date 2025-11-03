@@ -5,9 +5,9 @@ import PackageDescription
 
 let package = Package(
     name: "LiveParse",
-    platforms: [.macOS(.v10_15),
-                .iOS(.v14),
-                .tvOS(.v14)],
+    platforms: [.macOS(.v12),
+                .iOS(.v15),
+                .tvOS(.v15)],
     products: [
         .library(
             name: "LiveParse",
@@ -20,7 +20,7 @@ let package = Package(
         .package(url: "https://github.com/tsolomko/SWCompression", .upToNextMajor(from: "4.8.6")),
         .package(url: "https://github.com/apple/swift-protobuf.git", .upToNextMajor(from: "1.25.1")),
         .package(url: "https://github.com/pcccccc/YouTubeKit", .upToNextMajor(from: "0.0.3")),
-        .package(url: "https://github.com/pcccccc/TarsKit", .upToNextMajor(from: "1.2.0")),
+        .package(url: "https://github.com/pcccccc/TarsKit", .upToNextMajor(from: "1.3.0")),
         .package(url: "https://github.com/pcccccc/GMObjC", .upToNextMajor(from: "1.0.2"))
     ],
     targets: [

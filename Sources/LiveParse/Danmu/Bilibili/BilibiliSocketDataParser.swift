@@ -109,13 +109,18 @@ public class BilibiliSocketDataParser: WebSocketDataParser {
         switch json["cmd"].stringValue {
         case message.dm.rawValue:
             if json["info"].arrayValue[3].count <= 0 {
-                connectionDelegate?.webSocketDidReceiveMessage(text: json["info"].arrayValue[1].stringValue, color: json["info"].arrayValue[0].arrayValue[3].uInt32Value)
-
+                print("昵称：\(json["info"].arrayValue[2].arrayValue[1].stringValue)")
+                print("弹幕：\(json["info"].arrayValue[1].stringValue)")
+                connectionDelegate?.webSocketDidReceiveMessage(text: json["info"].arrayValue[1].stringValue, nickname: json["info"].arrayValue[2].arrayValue[1].stringValue, color: json["info"].arrayValue[0].arrayValue[3].uInt32Value)
             } else {
-                connectionDelegate?.webSocketDidReceiveMessage(text: json["info"].arrayValue[1].stringValue, color: json["info"].arrayValue[0].arrayValue[3].uInt32Value)
+                print("昵称：\(json["info"].arrayValue[2].arrayValue[1].stringValue)")
+                print("弹幕：\(json["info"].arrayValue[1].stringValue)")
+                connectionDelegate?.webSocketDidReceiveMessage(text: json["info"].arrayValue[1].stringValue, nickname: json["info"].arrayValue[2].arrayValue[1].stringValue, color: json["info"].arrayValue[0].arrayValue[3].uInt32Value)
             }
         case message.sc.rawValue:
-                connectionDelegate?.webSocketDidReceiveMessage(text: "醒目留言: \(json["data"]["message"].stringValue)", color: json["data"]["background_price_color"].uInt32Value)
+                print("昵称：\(json["data"]["uinfo"]["base"]["origin_info"]["name"].stringValue)")
+                print("醒目留言: \(json["data"]["message"].stringValue)")
+                connectionDelegate?.webSocketDidReceiveMessage(text: "醒目留言: \(json["data"]["message"].stringValue)", nickname: json["data"]["uinfo"]["base"]["origin_info"]["name"].stringValue, color: json["data"]["background_bottom_color"].uInt32Value)
         default:
             break
         }
