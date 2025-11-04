@@ -1,0 +1,30 @@
+import Foundation
+import Testing
+@testable import LiveParse
+
+/// 打印增强后的 LiveParseError 详情，便于调试测试失败。
+func printEnhancedError(_ error: LiveParseError, title: String = "错误详情") {
+    print("\n" + String(repeating: "═", count: 60))
+    print("   \(title)")
+    print(String(repeating: "═", count: 60))
+
+    print("\n📌 用户友好提示:")
+    print("   \(error.userFriendlyMessage)")
+
+    print("\n🔄 是否可重试:")
+    print("   \(error.isRetryable ? "✅ 是" : "❌ 否")")
+
+    if let suggestion = error.recoverySuggestion {
+        print("\n💡 恢复建议:")
+        suggestion.split(separator: "\n").forEach { line in
+            print("   \(line)")
+        }
+    }
+
+    print("\n📋 完整错误描述:")
+    error.description.split(separator: "\n").forEach { line in
+        print("   \(line)")
+    }
+
+    print("\n" + String(repeating: "═", count: 60))
+}
