@@ -293,7 +293,8 @@ extension LiveParseError {
     // 用户友好的错误提示
     public var userFriendlyMessage: String {
         switch self {
-        case .liveParseError(_, let detail):
+        case .liveParseError:
+            let detail = self.detail
             // 尝试提取简洁的错误信息
             if detail.contains("网络请求超时") {
                 return "网络请求超时，请检查网络连接"
@@ -322,7 +323,8 @@ extension LiveParseError {
     // 恢复建议
     public var recoverySuggestion: String? {
         switch self {
-        case .liveParseError(_, let detail):
+        case .liveParseError:
+            let detail = self.detail
             if detail.contains("网络请求超时") || detail.contains("无网络连接") {
                 return "1. 检查WiFi或移动网络是否正常\n2. 尝试切换网络\n3. 检查是否需要代理"
             } else if detail.contains("登录凭证已过期") {
@@ -345,7 +347,8 @@ extension LiveParseError {
     // 是否可以重试
     public var isRetryable: Bool {
         switch self {
-        case .liveParseError(_, let detail):
+        case .liveParseError:
+            let detail = self.detail
             return detail.contains("网络请求超时") ||
                    detail.contains("请求频率限制") ||
                    detail.contains("服务器错误") ||

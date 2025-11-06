@@ -319,6 +319,10 @@ func bilibiliErrorHandling_InvalidRoomId() async throws {
         print("✅ 正确捕获错误")
         printEnhancedError(error, title: "无效房间号错误")
         #expect(!error.userFriendlyMessage.isEmpty, "错误提示不应为空")
+        #expect(
+            error.detail.contains("https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom"),
+            "错误详情应包含请求的接口地址"
+        )
     }
 }
 

@@ -14,7 +14,7 @@ public struct StringProcessor {
         // 对应Python的 "".join([chr(i) for i in s])
         // 直接创建Unicode字符，支持任何值
         return s.map {
-            String(Character(UnicodeScalar($0) ?? UnicodeScalar(0)!))
+            String(Character(UnicodeScalar($0)))
         }.joined()
     }
 

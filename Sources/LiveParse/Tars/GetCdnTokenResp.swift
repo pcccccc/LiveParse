@@ -42,7 +42,7 @@ class GetCdnTokenResp: TarsStruct {
     }
     
     func deepCopy() -> Self {
-        var copy = self
+        let copy = self
         copy.url = url
         copy.cdnType = cdnType
         copy.streamName = streamName

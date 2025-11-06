@@ -647,9 +647,9 @@ extension Douyin {
             "screen_width": "1980",
             "screen_height": "1080",
             "browser_language": "zh-CN",
-            "browser_platform": "Win32",
+            "browser_platform": browserType == "edge" ? "MacIntel" : "Win32",
             "browser_name": "Edge",
-            "browser_version": "139.0.0.0",
+            "browser_version": browserVer,
             "browser_online": "true",
             "count": "15",
             "offset": "\((page - 1) * 15)",
@@ -720,7 +720,7 @@ extension Douyin {
         var tempArray: [LiveQualityDetail] = []
             if liveData.data?.data?.count ?? 0 > 0 {
                 if liveData.data?.data?.first?.stream_url?.live_core_sdk_data?.pull_data?.stream_data ?? "" != "" {
-                    var resJson = liveData.data?.data?.first?.stream_url?.live_core_sdk_data?.pull_data?.stream_data ?? ""
+                    let resJson = liveData.data?.data?.first?.stream_url?.live_core_sdk_data?.pull_data?.stream_data ?? ""
                     if let jsonData = resJson.data(using: .utf8) {
                         do {
                             let dictionary = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any]
@@ -811,15 +811,12 @@ extension Douyin {
                     if !tempArray.isEmpty {
                         var qualityHls = LiveQualityModel(cdn: "线路 HLS", qualitys: [])
                         var qualityFlv = LiveQualityModel(cdn: "线路 FLV", qualitys: [])
-                        var qualityLls = LiveQualityModel(cdn: "线路 LLS", qualitys: [])
                         
                         for model in tempArray {
                             switch model.liveCodeType {
                             case .hls:
                                 qualityHls.qualitys.append(model)
                             case .flv:
-                                qualityFlv.qualitys.append(model)
-                            default:
                                 qualityFlv.qualitys.append(model)
                             }
                         }
@@ -919,7 +916,7 @@ extension Douyin {
         let signatureStub = Douyin.getXMsStub(params: stubParams)
         let signature = try generateSignature(
             for: signatureStub,
-            userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+            userAgent: dyua
         )
 
         guard let baseURL = components.url else {
@@ -937,7 +934,7 @@ extension Douyin {
             "Accept": "application/json, text/plain, */*",
             "Authority": "live.douyin.com",
             "Referer": "https://www.douyin.com/search/\(refererKeyword)?source=switch_tab&type=live",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            "User-Agent": dyua,
             "Cookie": cookieHeader
         ])
 
@@ -1149,7 +1146,7 @@ extension Douyin {
             let response: DouyinSecUserIdRoomData = try await LiveParseRequest.get(
                 requestUrl,
                 headers: HTTPHeaders([
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                    "User-Agent": dyua,
                     "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2",
                     "Cookie": "s_v_web_id=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf"
                 ])
@@ -1234,7 +1231,7 @@ extension Douyin {
             let xmsStub = Douyin.getXMsStub(params: sigParams)
             let signature = try generateSignature(
                 for: xmsStub,
-                userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+                userAgent: dyua
             )
 
             let payload: [String: String] = [
@@ -1250,14 +1247,14 @@ extension Douyin {
                 "aid": "6383",
                 "device_platform": "web",
                 "browser_language": "zh-CN",
-                "browser_platform": "MacIntel",
+                "browser_platform": browserType == "edge" ? "MacIntel" : "Win32",
                 "browser_name": "Mozilla",
-                "browser_version": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+                "browser_version": dyua
             ]
 
             let headerPayload: [String: String] = [
                 "cookie": headers["cookie"] ?? "",
-                "User-Agnet": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+                "User-Agnet": dyua
             ]
 
             logInfo("生成抖音弹幕参数成功，房间ID: \(finalUserId)")
@@ -1349,7 +1346,7 @@ extension Douyin {
             }
 
             guard let setCookieHeaders = httpResponse.allHeaderFields["Set-Cookie"] as? String else {
-                let fallback = "ttwid=\(try await DouyinUtils.getTtwid());__ac_nonce=\(String.generateRandomString(length: 21));\(DouyinUtils.generateMsToken())"
+                let fallback = "ttwid=\(await DouyinUtils.getTtwid());__ac_nonce=\(String.generateRandomString(length: 21));\(DouyinUtils.generateMsToken())"
                 logWarning("未获取到 Set-Cookie 头，使用默认 Cookie")
                 return fallback
             }
@@ -1361,7 +1358,7 @@ extension Douyin {
                 if cookie.contains("ttwid") {
                     dyCookie += "\(cookie);"
                 } else {
-                    dyCookie += "ttwid=\(try await DouyinUtils.getTtwid());"
+                    dyCookie += "ttwid=\(await DouyinUtils.getTtwid());"
                 }
 
                 if cookie.contains("__ac_nonce") {
@@ -1599,9 +1596,7 @@ extension Douyin {
               let roomStore = state["roomStore"] as? [String: Any],
               let streamStore = state["streamStore"] as? [String: Any],
               let roomInfo = roomStore["roomInfo"] as? [String: Any],
-              let room = roomInfo["room"] as? [String: Any],
-              let userStore = state["userStore"] as? [String: Any],
-              let odin = userStore["odin"] as? [String: Any] else {
+              let room = roomInfo["room"] as? [String: Any] else {
             throw LiveParseError.parse(
                 .missingRequiredField(
                     field: "state/roomStore/streamStore",
@@ -1612,18 +1607,13 @@ extension Douyin {
         }
         
         let roomId = room["id_str"] as? String ?? ""
-        let userUniqueId = odin["user_unique_id"] as? String ?? ""
-
         let owner = room["owner"] as? [String: Any]
         let anchor = roomInfo["anchor"] as? [String: Any]
-        
         let roomStatus = (room["status"] as? Int ?? 0) == 2
-        
-        let cookie = try await getCookie(roomId: webRid)
         
         // 构建DouyinLiveUserInfo
         let userInfo = DouyinLiveUserInfo(
-            id_str: roomId,
+            id_str: roomId, 
             nickname: roomStatus ? (owner?["nickname"] as? String) : (anchor?["nickname"] as? String),
             avatar_thumb: DouyinLiveUserAvatarInfo(
                 url_list: roomStatus ? 

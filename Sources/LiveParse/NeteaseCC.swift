@@ -168,7 +168,35 @@ public struct NeteaseCC: LiveParse {
             guard let item = dataReq.data.first else {
                 throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("解析直播数据失败")")
             }
-            return LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: item.cuteid == nil ? "0" : "1", userId: "\(item.channel_id == nil ? userId : "\(item.channel_id ?? 0)")", roomId: "\(item.cuteid == nil ? roomId : "\(item.cuteid ?? 0)")", liveWatchedCount: "\(item.visitor ?? 0)")
+            // Prefer latest channel_id if available; fall back to passed-in userId string
+            let resolvedChannelId: String = {
+                if let ch = item.channel_id {
+                    return String(ch)
+                } else if let passed = userId {
+                    return passed
+                } else {
+                    return "0"
+                }
+            }()
+            let resolvedRoomId: String = {
+                if let cute = item.cuteid {
+                    return String(cute)
+                } else {
+                    return roomId
+                }
+            }()
+            let liveState = (item.cuteid == nil) ? "0" : "1"
+            return LiveModel(
+                userName: item.nickname ?? "",
+                roomTitle: item.title,
+                roomCover: item.poster ?? item.adv_img ?? "",
+                userHeadImg: item.portraiturl ?? item.purl ?? "",
+                liveType: .cc,
+                liveState: liveState,
+                userId: resolvedChannelId,
+                roomId: resolvedRoomId,
+                liveWatchedCount: String(item.visitor ?? 0)
+            )
         }catch {
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
@@ -188,7 +216,7 @@ public struct NeteaseCC: LiveParse {
                 ]
             ).serializingDecodable(CCLastestRoomModel.self).value
             var liveQuality: [LiveQualityModel] = []
-            guard let allCdnArray = dataReq.data.first?.quickplay?.priority else {
+            guard dataReq.data.first?.quickplay?.priority != nil else {
                 throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("解析直播数据失败")")
             }
             if let original = dataReq.data.first?.quickplay?.resolution?.original {
@@ -369,7 +397,7 @@ public struct NeteaseCC: LiveParse {
             var tempArray: [LiveModel] = []
             let roomList = dataReq.webcc_anchor.result
             for item in roomList {
-                tempArray.append(LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id ?? 0)", roomId: "\(item.cuteid ?? 0)", liveWatchedCount: "\(item.visitor)"))
+                tempArray.append(LiveModel(userName: item.nickname ?? "", roomTitle: item.title, roomCover: item.poster ?? item.adv_img ?? "", userHeadImg: item.portraiturl ?? item.purl ?? "", liveType: .cc, liveState: "1", userId: "\(item.channel_id ?? 0)", roomId: "\(item.cuteid ?? 0)", liveWatchedCount: "\(item.visitor ?? 0)"))
             }
             return tempArray
         }catch {
@@ -400,7 +428,6 @@ public struct NeteaseCC: LiveParse {
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
         do {
             var roomId = ""
-            var realUrl = ""
             if shareCode.contains("cc.163.com") { //长链接
                 // 定义正则表达式模式
                 let pattern = #"https://h5\.cc\.163\.com/cc/(\d+)\?rid=(\d+)&cid=(\d+)"#
@@ -412,7 +439,7 @@ public struct NeteaseCC: LiveParse {
                     if let match = results.first {
                         // 提取匹配到的值
                         let id = nsString.substring(with: match.range(at: 1))
-                        let rid = nsString.substring(with: match.range(at: 2))
+                        _ = nsString.substring(with: match.range(at: 2))
                         let cid = nsString.substring(with: match.range(at: 3))
                         return try await NeteaseCC.getLiveLastestInfo(roomId: id, userId: cid)
                     } else {

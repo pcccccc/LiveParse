@@ -11,7 +11,7 @@ import CloudKit
 
 public struct LiveModel: Identifiable, Codable, Equatable, Sendable {
     
-    public let id = UUID()
+    public var id = UUID()
     public let userName: String
     public let roomTitle: String
     public let roomCover: String
@@ -72,7 +72,7 @@ public struct LiveQualityModel: Codable, Sendable {
     }
 }
 
-public struct LiveQualityDetail: Codable {
+public struct LiveQualityDetail: Codable, Sendable {
     public var roomId: String
     public var title: String
     public var qn: Int //bilibili用qn请求地址
@@ -113,7 +113,7 @@ public struct LiveMainListModel: Codable {
     }
 }
 
-public enum LiveType: String, Codable {
+public enum LiveType: String, Codable, Sendable {
     case bilibili = "0",
          huya = "1",
          douyin = "2",
@@ -131,7 +131,7 @@ public enum LiveState: String, Codable {
          unknow = "3" //未知
 }
 
-public enum LiveCodeType: String, Codable {
+public enum LiveCodeType: String, Codable, Sendable {
     case flv = "flv",
          hls = "m3u8"
 }

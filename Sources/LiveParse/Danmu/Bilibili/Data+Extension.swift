@@ -26,52 +26,71 @@ extension Data {
     }
     
     static func decompressGzipData(data: Data) -> Data? {
-        let bufferSize = 1024
-        var buffer = [UInt8](repeating: 0, count: bufferSize)
-        var decompressedData = Data()
-        
-        let source = UnsafeMutablePointer<Bytef>(mutating: (data as NSData).bytes.bindMemory(to: Bytef.self, capacity: data.count))
-        let destination = UnsafeMutablePointer<Bytef>(mutating: &buffer)
-        
-        var zStream = z_stream()
-        zStream.next_in = source
-        zStream.avail_in = UInt32(data.count)
-        zStream.next_out = destination
-        zStream.avail_out = UInt32(bufferSize)
-        
-        let result = inflateInit2_(&zStream, MAX_WBITS + 32, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size))
-        if result != Z_OK {
-            return nil
-        }
-        
-        while true {
-            let inflateResult = inflate(&zStream, Z_SYNC_FLUSH)
-            if inflateResult == Z_STREAM_END {
-                break
-            }
-            
-            if inflateResult != Z_OK {
-                inflateEnd(&zStream)
+        // Guard empty input
+        if data.isEmpty { return Data() }
+
+        var stream = z_stream()
+
+        let outputData: Data? = data.withUnsafeBytes { inputRawBuffer in
+            guard let inputBase = inputRawBuffer.bindMemory(to: Bytef.self).baseAddress else {
                 return nil
             }
-            
-            if zStream.avail_out == 0 {
-                decompressedData.append(buffer, count: bufferSize)
-                zStream.next_out = destination
-                zStream.avail_out = UInt32(bufferSize)
+
+            stream.next_in = UnsafeMutablePointer<Bytef>(mutating: inputBase)
+            stream.avail_in = UInt32(inputRawBuffer.count)
+
+            // Initialize for gzip (16 + MAX_WBITS)
+            let initStatus = inflateInit2_(&stream, MAX_WBITS + 16, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size))
+            if initStatus != Z_OK {
+                return nil
             }
+            defer { inflateEnd(&stream) }
+
+            var output = Data()
+            output.reserveCapacity(Swift.max(1024, data.count * 2))
+
+            let bufferSize = 32 * 1024
+            var buffer = [UInt8](repeating: 0, count: bufferSize)
+
+            while true {
+                let loopResult: Int = buffer.withUnsafeMutableBytes { outRawBuffer in
+                    guard let outBase = outRawBuffer.bindMemory(to: Bytef.self).baseAddress else {
+                        return -3 // memory error
+                    }
+
+                    stream.next_out = outBase
+                    stream.avail_out = UInt32(bufferSize)
+
+                    let status = inflate(&stream, Z_NO_FLUSH)
+                    let produced = bufferSize - Int(stream.avail_out)
+                    switch status {
+                    case Z_STREAM_END:
+                        if produced > 0 {
+                            output.append(outBase, count: produced)
+                        }
+                        return -1 // done
+                    case Z_OK:
+                        if produced > 0 {
+                            output.append(outBase, count: produced)
+                        }
+                        return produced // continue
+                    default:
+                        return -2 // error
+                    }
+                }
+
+                if loopResult == -1 { // finished
+                    break
+                } else if loopResult == -2 || loopResult == -3 { // error
+                    return nil
+                }
+                // otherwise continue looping
+            }
+
+            return output
         }
-        
-        inflateEnd(&zStream)
-        
-        if zStream.avail_out < bufferSize {
-            decompressedData.append(buffer, count: bufferSize - Int(zStream.avail_out))
-        }
-        
-        return decompressedData
+
+        return outputData
     }
 
 }
-
-
- 

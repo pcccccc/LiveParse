@@ -8,6 +8,9 @@ func printEnhancedError(_ error: LiveParseError, title: String = "错误详情")
     print("   \(title)")
     print(String(repeating: "═", count: 60))
 
+    print("\n🏷️ 错误标题:")
+    print("   \(error.title)")
+
     print("\n📌 用户友好提示:")
     print("   \(error.userFriendlyMessage)")
 
@@ -23,6 +26,11 @@ func printEnhancedError(_ error: LiveParseError, title: String = "错误详情")
 
     print("\n📋 完整错误描述:")
     error.description.split(separator: "\n").forEach { line in
+        print("   \(line)")
+    }
+
+    print("\n📄 错误详情内容:")
+    error.detail.split(separator: "\n").forEach { line in
         print("   \(line)")
     }
 

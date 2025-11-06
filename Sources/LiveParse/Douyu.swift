@@ -162,178 +162,397 @@ struct DouyuSearchRelateShow: Codable {
 }
 
 public struct Douyu: LiveParse {
-    
-    public static func getCategoryList() async throws -> [LiveMainListModel] {
-        do {
-            let url = "https://m.douyu.com/api/cate/list"
-            let dataReq = try await AF.request(url, method: .get).serializingDecodable(DouyuCateV2Model.self).value
-            if dataReq.code == 0 {
-                var finalList: [LiveMainListModel] = []
-                for cate1 in dataReq.data.cate1Info {
-                    var categoryArray: [LiveCategoryModel] = []
-                    for cate2 in dataReq.data.cate2Info {
-                        if cate2.cate1Id == cate1.cate1Id {
-                            categoryArray.append(LiveCategoryModel(id: "\(cate2.cate2Id)", parentId: "\(cate2.cate1Id)", title: cate2.cate2Name, icon: cate2.icon))
-                        }
-                    }
-                    var listModel = LiveMainListModel(id: "\(cate1.cate1Id)", title: cate1.cate1Name, icon: "", biz: nil, subList: categoryArray)
-                    finalList.append(listModel)
-                }
-                return finalList
-            }else {
-                let dataReq = try await AF.request(url, method: .get).serializingString().value
-                throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "服务器返回信息：\(dataReq)")
-            }
-        }catch {
-            throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+    private static let desktopUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"
+    private static let defaultReferer = "https://www.douyu.com/"
+
+    private static func buildRequestDetail(
+        url: String,
+        method: HTTPMethod,
+        headers: HTTPHeaders? = nil,
+        parameters: Parameters? = nil,
+        body: String? = nil
+    ) -> NetworkRequestDetail {
+        NetworkRequestDetail(
+            url: url,
+            method: method.rawValue,
+            headers: headers?.dictionary,
+            parameters: parameters,
+            body: body
+        )
+    }
+
+    private static func isValidRoomId(_ roomId: String?) -> Bool {
+        guard let roomId = roomId, let value = Int(roomId), value > 0 else {
+            return false
         }
+        return true
+    }
+
+    private static func firstMatch(in text: String, pattern: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+
+        let nsText = text as NSString
+        let range = NSRange(location: 0, length: nsText.length)
+        guard let match = regex.firstMatch(in: text, range: range), match.numberOfRanges > 1 else {
+            return nil
+        }
+        return nsText.substring(with: match.range(at: 1))
+    }
+
+    private static func extractUrl(from text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: "[a-zA-Z]+://[^\\s]+") else {
+            return nil
+        }
+        let nsText = text as NSString
+        let range = NSRange(location: 0, length: nsText.length)
+        guard let match = regex.firstMatch(in: text, range: range) else {
+            return nil
+        }
+        return nsText.substring(with: match.range)
+    }
+
+    private static func sanitizedSnippet(_ text: String, limit: Int = 300) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count <= limit {
+            return trimmed
+        }
+        let index = trimmed.index(trimmed.startIndex, offsetBy: limit)
+        return "\(trimmed[..<index])..."
+    }
+
+    public static func getCategoryList() async throws -> [LiveMainListModel] {
+        let url = "https://m.douyu.com/api/cate/list"
+
+        logDebug("开始获取斗鱼分类列表")
+
+        let dataReq: DouyuCateV2Model = try await LiveParseRequest.get(url)
+
+        guard dataReq.code == 0 else {
+            logWarning("斗鱼分类接口返回错误 code: \(dataReq.code)")
+            throw LiveParseError.business(.permissionDenied(
+                reason: "斗鱼分类接口返回错误 (code: \(dataReq.code))"
+            ))
+        }
+
+        var finalList: [LiveMainListModel] = []
+        for cate1 in dataReq.data.cate1Info {
+            var categoryArray: [LiveCategoryModel] = []
+            for cate2 in dataReq.data.cate2Info where cate2.cate1Id == cate1.cate1Id {
+                categoryArray.append(LiveCategoryModel(
+                    id: "\(cate2.cate2Id)",
+                    parentId: "\(cate2.cate1Id)",
+                    title: cate2.cate2Name,
+                    icon: cate2.icon
+                ))
+            }
+
+            let listModel = LiveMainListModel(
+                id: "\(cate1.cate1Id)",
+                title: cate1.cate1Name,
+                icon: "",
+                subList: categoryArray
+            )
+            finalList.append(listModel)
+        }
+
+        guard !finalList.isEmpty else {
+            throw LiveParseError.business(.emptyResult(
+                location: "Douyu.getCategoryList",
+                request: buildRequestDetail(url: url, method: .get)
+            ))
+        }
+
+        logInfo("成功获取斗鱼分类列表，共 \(finalList.count) 个分类")
+        return finalList
     }
     
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
-        do {
-            let dataReq = try await AF.request(
-                "https://www.douyu.com/gapi/rkc/directory/mixList/2_\(id)/\(page)",
-                method: .get
-            ).serializingDecodable(DouyuRoomMain.self).value
-            var tempArray: Array<LiveModel> = []
-            for item in dataReq.data.rl {
-                if item.type == 1 {
-                    tempArray.append(LiveModel(userName: item.nn!, roomTitle: item.rn!, roomCover: item.rs16_avif!, userHeadImg: item.av!, liveType: .douyu, liveState: "", userId: "\(item.uid!)", roomId: "\(item.rid!)", liveWatchedCount: "\(item.ol ?? 0)"))
-                }
-            }
-            return tempArray
-        }catch {
-            throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        let url = "https://www.douyu.com/gapi/rkc/directory/mixList/2_\(id)/\(page)"
+
+        logDebug("开始获取斗鱼直播间列表，分类ID: \(id)，页码: \(page)")
+
+        let dataReq: DouyuRoomMain = try await LiveParseRequest.get(url)
+
+        guard dataReq.code == 0 else {
+            logWarning("斗鱼直播间接口返回错误 code: \(dataReq.code), msg: \(dataReq.msg)")
+            throw LiveParseError.business(.permissionDenied(
+                reason: "斗鱼直播间接口返回错误 (code: \(dataReq.code)) - \(dataReq.msg)"
+            ))
         }
+
+        var result: [LiveModel] = []
+        for item in dataReq.data.rl where item.type == 1 {
+            result.append(LiveModel(
+                userName: item.nn ?? "",
+                roomTitle: item.rn ?? "",
+                roomCover: item.rs16_avif ?? item.av ?? "",
+                userHeadImg: item.av ?? "",
+                liveType: .douyu,
+                liveState: "",
+                userId: "\(item.uid ?? 0)",
+                roomId: "\(item.rid ?? 0)",
+                liveWatchedCount: "\(item.ol ?? 0)"
+            ))
+        }
+
+        guard !result.isEmpty else {
+            logWarning("斗鱼直播间列表为空，分类ID: \(id)，页码: \(page)")
+            throw LiveParseError.business(.emptyResult(
+                location: "Douyu.getRoomList",
+                request: buildRequestDetail(url: url, method: .get)
+            ))
+        }
+
+        logInfo("成功获取斗鱼直播间列表，共 \(result.count) 个房间")
+        return result
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
-        do {
-            return try await getRealPlayArgs(roomId: roomId, rate: 0, cdn: nil)
-        }catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        logDebug("开始获取斗鱼播放线路，房间ID: \(roomId)")
+
+        let qualities = try await getRealPlayArgs(roomId: roomId, rate: 0, cdn: nil)
+
+        guard !qualities.isEmpty else {
+            throw LiveParseError.business(.emptyResult(
+                location: "Douyu.getPlayArgs",
+                request: buildRequestDetail(url: "https://www.douyu.com/lapi/live/getH5Play/\(roomId)", method: .post)
+            ))
         }
+
+        logInfo("成功获取斗鱼播放线路，共 \(qualities.count) 条")
+        return qualities
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
+        let url = "https://www.douyu.com/betard/\(roomId)"
+        let headers = HTTPHeaders([
+            HTTPHeader(name: "referer", value: "\(defaultReferer)\(roomId)"),
+            HTTPHeader(name: "user-agent", value: desktopUserAgent),
+        ])
+
+        logDebug("开始获取斗鱼房间详情，房间ID: \(roomId)")
+
+        let raw = try await LiveParseRequest.requestRaw(
+            url,
+            method: .get,
+            headers: headers
+        )
+
+        let jsonObject: Any
         do {
-            let dataReq = try await AF.request(
-                "https://www.douyu.com/betard/\(roomId)",
-                method: .get,
-                headers: HTTPHeaders([
-                    HTTPHeader.init(name: "referer", value: "https://www.douyu.com/\(roomId)"),
-                    HTTPHeader.init(name: "user-agent", value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"),
-                ])
-            ).serializingData().value
-            let json = try JSONSerialization.jsonObject(with: dataReq, options: .mutableContainers)
-            let jsonDict = json as! Dictionary<String, Any>
-            let roomDict = jsonDict["room"] as! Dictionary<String, Any>
-            let liveStatus = roomDict["show_status"] as? Int ?? -1
-            let videoLoop = roomDict["videoLoop"] as? Int ?? -1
-            var liveState = ""
-            if liveStatus == 1 && videoLoop == 0 {
-                liveState = LiveState.live.rawValue
-            }else if liveStatus == 0 && videoLoop == 1 {
-                liveState = LiveState.video.rawValue
-            }else if liveStatus == 1 && videoLoop == 1 {
-                liveState = LiveState.video.rawValue
-            }else {
-                liveState = LiveState.close.rawValue
-            }
-            let roomBizAll = roomDict["room_biz_all"] as? Dictionary<String, Any>
-            return LiveModel(userName: roomDict["nickname"] as? String ?? "", roomTitle: roomDict["room_name"] as? String ?? "", roomCover: roomDict["room_pic"] as? String ?? "", userHeadImg: roomDict["owner_avatar"] as? String ?? "", liveType: .douyu, liveState: liveState, userId: "\(roomDict["owner_id"] as? Int ?? 0)", roomId: roomId, liveWatchedCount: "\(roomBizAll?["hot"] as? String ?? "")")
-        }catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+            jsonObject = try JSONSerialization.jsonObject(with: raw.data, options: .mutableContainers)
+        } catch {
+            throw LiveParseError.parse(.invalidJSON(
+                location: "Douyu.getLiveLastestInfo.parseJSON",
+                request: raw.request,
+                response: raw.response
+            ))
         }
+
+        guard let jsonDict = jsonObject as? [String: Any] else {
+            throw LiveParseError.parse(.invalidDataFormat(
+                expected: "Dictionary",
+                actual: String(describing: type(of: jsonObject)),
+                location: "Douyu.getLiveLastestInfo.parseRoot"
+            ))
+        }
+
+        guard let roomDict = jsonDict["room"] as? [String: Any] else {
+            throw LiveParseError.parse(.missingRequiredField(
+                field: "room",
+                location: "Douyu.getLiveLastestInfo.room",
+                response: raw.response
+            ))
+        }
+
+        let liveStatus = roomDict["show_status"] as? Int ?? -1
+        let videoLoop = roomDict["videoLoop"] as? Int ?? -1
+
+        let liveState: String
+        if liveStatus == 1 && videoLoop == 0 {
+            liveState = LiveState.live.rawValue
+        } else if liveStatus == 0 && videoLoop == 1 {
+            liveState = LiveState.video.rawValue
+        } else if liveStatus == 1 && videoLoop == 1 {
+            liveState = LiveState.video.rawValue
+        } else {
+            liveState = LiveState.close.rawValue
+        }
+
+        let roomBizAll = roomDict["room_biz_all"] as? [String: Any]
+
+        let model = LiveModel(
+            userName: roomDict["nickname"] as? String ?? "",
+            roomTitle: roomDict["room_name"] as? String ?? "",
+            roomCover: roomDict["room_pic"] as? String ?? "",
+            userHeadImg: roomDict["owner_avatar"] as? String ?? "",
+            liveType: .douyu,
+            liveState: liveState,
+            userId: "\(roomDict["owner_id"] as? Int ?? 0)",
+            roomId: roomId,
+            liveWatchedCount: roomBizAll?["hot"] as? String ?? ""
+        )
+
+        logInfo("成功获取斗鱼房间详情: \(model.userName) - 房间 \(model.roomId)")
+        return model
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+        logDebug("开始获取斗鱼房间状态，房间ID: \(roomId)")
+
         do {
-            let dataReq = try await Douyu.getLiveLastestInfo(roomId: roomId, userId: userId)
-            return LiveState(rawValue: dataReq.liveState ?? "unknow") ?? .unknow
-        }catch {
-            throw LiveParseError.liveStateParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+            let info = try await Douyu.getLiveLastestInfo(roomId: roomId, userId: userId)
+            let state = LiveState(rawValue: info.liveState ?? LiveState.unknow.rawValue) ?? .unknow
+            logInfo("斗鱼房间状态: \(state.rawValue) - 房间 \(roomId)")
+            return state
+        } catch let error as LiveParseError {
+            throw error
+        } catch {
+            throw LiveParseError.liveStateParseError(
+                "斗鱼房间状态获取失败",
+                "房间ID: \(roomId)\n原因：\(error.localizedDescription)"
+            )
         }
     }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
-        do {
-            let did = String.generateRandomString(length: 32)
-            let dataReq =  try await AF.request(
-                "https://www.douyu.com/japi/search/api/searchShow",
-                method: .get,
-                parameters: [
-                    "kw": keyword,
-                    "page": page,
-                    "pageSize": 20
-                ],
-                headers: HTTPHeaders([
-                    HTTPHeader.init(name: "referer", value: "https://www.douyu.com/search/"),
-                    HTTPHeader.init(name: "user-agent", value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"),
-                    HTTPHeader.init(name: "Cookie", value: "dy_did=\(did);acf_did=\(did)"),
-                ])
-            ).serializingDecodable(DouyuSearchResult.self).value
-            var finalArray: Array<LiveModel> = []
-            for item in dataReq.data.relateShow {
-                finalArray.append(LiveModel(userName: item.nickName, roomTitle: item.roomName, roomCover: item.roomSrc, userHeadImg: item.avatar, liveType: .douyu, liveState: item.roomType == 0 ? "1" :"0", userId: "\(item.rid)", roomId: "\(item.rid)", liveWatchedCount: item.hot))
-            }
-            return finalArray
-        }catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        logDebug("开始搜索斗鱼直播间，关键词: \(keyword)，页码: \(page)")
+
+        let did = String.generateRandomString(length: 32)
+
+        let headers = HTTPHeaders([
+            HTTPHeader(name: "referer", value: "https://www.douyu.com/search/"),
+            HTTPHeader(name: "user-agent", value: desktopUserAgent),
+            HTTPHeader(name: "Cookie", value: "dy_did=\(did);acf_did=\(did)")
+        ])
+
+        let parameters: Parameters = [
+            "kw": keyword,
+            "page": page,
+            "pageSize": 20
+        ]
+
+        let dataReq: DouyuSearchResult = try await LiveParseRequest.get(
+            "https://www.douyu.com/japi/search/api/searchShow",
+            parameters: parameters,
+            headers: headers
+        )
+
+        var finalArray: [LiveModel] = []
+        for item in dataReq.data.relateShow {
+            finalArray.append(LiveModel(
+                userName: item.nickName,
+                roomTitle: item.roomName,
+                roomCover: item.roomSrc,
+                userHeadImg: item.avatar,
+                liveType: .douyu,
+                liveState: item.roomType == 0 ? LiveState.live.rawValue : LiveState.close.rawValue,
+                userId: "\(item.rid)",
+                roomId: "\(item.rid)",
+                liveWatchedCount: item.hot
+            ))
         }
+
+        guard !finalArray.isEmpty else {
+            throw LiveParseError.business(.emptyResult(
+                location: "Douyu.searchRooms",
+                request: buildRequestDetail(
+                    url: "https://www.douyu.com/japi/search/api/searchShow",
+                    method: .get,
+                    headers: headers,
+                    parameters: parameters
+                )
+            ))
+        }
+
+        logInfo("斗鱼搜索结果: \(finalArray.count) 条，关键词: \(keyword)")
+        return finalArray
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+        let trimmed = shareCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        logDebug("开始解析斗鱼分享码: \(trimmed)")
+
         do {
-            var roomId = ""
-            var realUrl = ""
-            if shareCode.contains("douyu.com") { //长链接
-                realUrl = shareCode
-            }else { //默认为房间号处理
-                roomId = shareCode
+            if isValidRoomId(trimmed) {
+                logInfo("斗鱼分享码解析到房间ID: \(trimmed)")
+                return try await Douyu.getLiveLastestInfo(roomId: trimmed, userId: nil)
             }
-            if roomId == "" { //如果不是房间号，就解析链接中的房间号
-                let pattern = "https://www\\.douyu\\.com/(\\d+)"
-                do {
-                    let regex = try NSRegularExpression(pattern: pattern)
-                    let nsString = realUrl as NSString
-                    let results = regex.matches(in: realUrl, range: NSRange(location: 0, length: nsString.length))
-                    if let match = results.first {
-                        let range = match.range(at: 1) // 第1个捕获组
-                        let numberString = nsString.substring(with: range)
-                        roomId = numberString
-                    } else {
-                        roomId = ""
-                    }
-                } catch {
-                    roomId = ""
+
+            var resolvedRoomId: String?
+            var responseDetail: NetworkResponseDetail?
+            var htmlSnippet: String?
+            var finalURLString: String?
+
+            if trimmed.contains("douyu.com") {
+                resolvedRoomId = firstMatch(in: trimmed, pattern: "douyu\\.com/(\\d+)")
+                if !isValidRoomId(resolvedRoomId) {
+                    resolvedRoomId = firstMatch(in: trimmed, pattern: "rid=(\\d+)")
                 }
             }
-            if roomId == "" || Int(roomId) ?? -1 < 0 { //最后尝试是不是平台的短链接，需要进行重定向
-                let dataReq = await AF.request(shareCode).serializingData().response
-                realUrl = dataReq.response?.url?.absoluteString ?? ""
-                let pattern = "rid=(\\d+)"
-                do {
-                    let regex = try NSRegularExpression(pattern: pattern)
-                    let nsString = realUrl as NSString
-                    let results = regex.matches(in: realUrl, range: NSRange(location: 0, length: nsString.length))
-                    if let match = results.first {
-                        let range = match.range(at: 1) // 第1个捕获组
-                        let numberString = nsString.substring(with: range)
-                        roomId = numberString
-                    } else {
-                        roomId = ""
+
+            var candidateUrl: String?
+            if let directUrl = extractUrl(from: trimmed) {
+                candidateUrl = directUrl
+            } else if trimmed.hasPrefix("http") {
+                candidateUrl = trimmed
+            } else if trimmed.contains("douyu") {
+                candidateUrl = "https://www.douyu.com/\(trimmed)"
+            }
+
+            if !isValidRoomId(resolvedRoomId), let url = candidateUrl {
+                let raw = try await LiveParseRequest.requestRaw(url)
+                responseDetail = raw.response
+                finalURLString = raw.finalURL ?? raw.request.url
+
+                if let finalURLString = finalURLString {
+                    resolvedRoomId = firstMatch(in: finalURLString, pattern: "(?:douyu\\.com/|rid=)(\\d+)")
+                }
+
+                if !isValidRoomId(resolvedRoomId) {
+                    let html = String(data: raw.data, encoding: .utf8) ?? ""
+                    if !html.isEmpty {
+                        htmlSnippet = sanitizedSnippet(html)
+                        let patterns = [
+                            "\\\"room_id\\\":\\s*(\\d+)",
+                            "\\\"rid\\\":\\s*\\\"?(\\d+)",
+                            "roomId\\s*[:=]\\s*\\\"?(\\d+)"
+                        ]
+                        for pattern in patterns {
+                            resolvedRoomId = firstMatch(in: html, pattern: pattern)
+                            if isValidRoomId(resolvedRoomId) {
+                                break
+                            }
+                        }
                     }
-                } catch {
-                    roomId = ""
                 }
             }
-            if roomId == "" || Int(roomId) ?? -1 < 0 {
-                throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\("解析房间号失败，请检查分享码/分享链接是否正确")")
+
+            guard let roomId = resolvedRoomId, isValidRoomId(roomId) else {
+                var detail = "分享码: \(trimmed)"
+                if let finalURLString = finalURLString {
+                    detail += "\n重定向 URL: \(finalURLString)"
+                }
+                if let snippet = htmlSnippet, !snippet.isEmpty {
+                    detail += "\nHTML 片段:\n\(snippet)"
+                }
+                if let responseDetail = responseDetail {
+                    detail += "\n\n响应详情:\n\(responseDetail.formattedString)"
+                }
+                throw LiveParseError.shareCodeParseError("斗鱼分享码解析失败", detail)
             }
+
+            logInfo("斗鱼分享码解析成功，房间ID: \(roomId)")
             return try await Douyu.getLiveLastestInfo(roomId: roomId, userId: nil)
-        }catch {
-            throw LiveParseError.shareCodeParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        } catch let error as LiveParseError {
+            throw error
+        } catch {
+            throw LiveParseError.shareCodeParseError(
+                "斗鱼分享码解析失败",
+                "分享码: \(trimmed)\n原因：\(error.localizedDescription)"
+            )
         }
     }
     
@@ -342,25 +561,50 @@ public struct Douyu: LiveParse {
     }
     
     public static func getCategoryList(id: String, name: String) async throws -> Array<LiveCategoryModel> {
-        do {
-            let dataReq = try await AF.request(
-                "https://www.douyu.com/japi/weblist/apinc/getC2List",
-                method: .get,
-                parameters: [
-                    "shortName": name,
-                    "customClassId": id,
-                    "offset": 0,
-                    "limit": 200,
-                ]
-            ).serializingDecodable(DouyuSubListMain.self).value
-            var tempArray: [LiveCategoryModel] = []
-            for item in dataReq.data.list {
-                tempArray.append(.init(id: "\(item.cid2)", parentId: "\(item.cid1)", title: item.cname2, icon: item.squareIconUrlW))
-            }
-            return tempArray
-        }catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        logDebug("开始获取斗鱼子分类列表，分类ID: \(id)，名称: \(name)")
+
+        let parameters: Parameters = [
+            "shortName": name,
+            "customClassId": id,
+            "offset": 0,
+            "limit": 200
+        ]
+
+        let dataReq: DouyuSubListMain = try await LiveParseRequest.get(
+            "https://www.douyu.com/japi/weblist/apinc/getC2List",
+            parameters: parameters
+        )
+
+        guard dataReq.error == 0 else {
+            logWarning("斗鱼子分类接口返回错误 error: \(dataReq.error), msg: \(dataReq.msg)")
+            throw LiveParseError.business(.permissionDenied(
+                reason: "斗鱼子分类接口返回错误 (code: \(dataReq.error)) - \(dataReq.msg)"
+            ))
         }
+
+        var tempArray: [LiveCategoryModel] = []
+        for item in dataReq.data.list {
+            tempArray.append(.init(
+                id: "\(item.cid2)",
+                parentId: "\(item.cid1)",
+                title: item.cname2,
+                icon: item.squareIconUrlW
+            ))
+        }
+
+        guard !tempArray.isEmpty else {
+            throw LiveParseError.business(.emptyResult(
+                location: "Douyu.getCategoryList.sub",
+                request: buildRequestDetail(
+                    url: "https://www.douyu.com/japi/weblist/apinc/getC2List",
+                    method: .get,
+                    parameters: parameters
+                )
+            ))
+        }
+
+        logInfo("成功获取斗鱼子分类，共 \(tempArray.count) 个")
+        return tempArray
     }
     
     public static func getRealPlayArgs(roomId: String, rate: Int = 0, cdn: String?) async throws -> [LiveQualityModel] {

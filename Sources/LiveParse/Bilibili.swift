@@ -616,10 +616,14 @@ public struct Bilibili: LiveParse {
             // 短链接
             logDebug("识别为B站短链接")
             let url = shareCode.getUrlStringWithShareCode()
-            let dataReq = await AF.request(url, headers: BiliBiliCookie.cookie == "" ? nil : [
+            let headers = BiliBiliCookie.cookie.isEmpty ? nil : HTTPHeaders([
                 "cookie": BiliBiliCookie.cookie
-            ]).serializingData().response
-            realUrl = dataReq.response?.url?.absoluteString ?? ""
+            ])
+            let redirectResponse = try await LiveParseRequest.requestRaw(
+                url,
+                headers: headers
+            )
+            realUrl = redirectResponse.finalURL ?? url
             logDebug("短链接跳转后: \(realUrl)")
         } else if shareCode.contains("live.bilibili.com") {
             // 长链接
@@ -675,26 +679,39 @@ public struct Bilibili: LiveParse {
             "https://passport.bilibili.com/x/passport-login/web/qrcode/generate"
         )
 
-        logInfo("成功获取B站二维码: \(dataReq.data.qrcode_key)")
+        logInfo("成功获取B站二维码: \(dataReq.data.qrcode_key ?? "")")
         return dataReq
     }
     
     public static func getQRCodeState(qrcode_key: String) async throws -> (BilibiliQRMainModel, String) {
         logDebug("检查B站二维码扫描状态")
 
-        let resp = AF.request(
+        let rawResponse = try await LiveParseRequest.requestRaw(
             "https://passport.bilibili.com/x/passport-login/web/qrcode/poll",
-            method: .get,
             parameters: [
                 "qrcode_key": qrcode_key
             ]
         )
 
-        let dataReq = try await resp.serializingDecodable(BilibiliQRMainModel.self).value
+        let decoder = JSONDecoder()
+        let dataReq: BilibiliQRMainModel
+
+        do {
+            dataReq = try decoder.decode(BilibiliQRMainModel.self, from: rawResponse.data)
+        } catch {
+            logError("二维码状态解析失败: \(error.localizedDescription)")
+            throw LiveParseError.parse(.decodingFailed(
+                type: String(describing: BilibiliQRMainModel.self),
+                location: "\(#file):\(#line)",
+                response: rawResponse.response,
+                underlyingError: error
+            ))
+        }
 
         if dataReq.data.code == 0 {
             logInfo("二维码扫描成功，已登录")
-            BiliBiliCookie.cookie = resp.response?.headers["Set-Cookie"] ?? ""
+            let setCookie = rawResponse.httpURLResponse?.value(forHTTPHeaderField: "Set-Cookie") ?? ""
+            BiliBiliCookie.cookie = setCookie
 
             if let respUrl = dataReq.data.url {
                 let pattern = "DedeUserID=(\\d+)"
@@ -711,10 +728,10 @@ public struct Bilibili: LiveParse {
                     logWarning("解析用户ID的正则表达式创建失败")
                 }
             }
-            return (dataReq, resp.response?.headers["Set-Cookie"] ?? "")
+            return (dataReq, setCookie)
         }
 
-        logDebug("二维码状态码: \(dataReq.data.code)")
+        logDebug("二维码状态码: \(dataReq.data.code ?? 0)")
         return (dataReq, "")
     }
     
@@ -856,7 +873,7 @@ public struct Bilibili: LiveParse {
         func encWbi(params: [String: Any], imgKey: String, subKey: String) -> [String: Any] {
             var params = params
             let mixinKey = getMixinKey(orig: imgKey + subKey)
-            let currTime = Int(round((Date().timeIntervalSince1970 * 1000))) ?? 0
+            let currTime = Int(round((Date().timeIntervalSince1970 * 1000)))
             params["wts"] = currTime
             params = params.sorted { $0.key < $1.key }.reduce(into: [:]) { $0[$1.key] = $1.value }
             params = params.mapValues { String(describing: $0).filter { !"!'()*".contains($0) } }
