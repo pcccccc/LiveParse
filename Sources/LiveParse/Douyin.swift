@@ -324,12 +324,14 @@ private var browserType = "edge"
 private var fakeRoomId = "870887192950"
 
 
-var headers = HTTPHeaders.init([
-    "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7; application/json",
-    "Authority": "live.douyin.com",
-    "Referer": "https://live.douyin.com",
-    "User-Agent": dyua,
-])
+private var headers: HTTPHeaders = {
+    var h = HTTPHeaders()
+    h.add(name: "Accept", value: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7; application/json")
+    h.add(name: "Authority", value: "live.douyin.com")
+    h.add(name: "Referer", value: "https://live.douyin.com")
+    h.add(name: "User-Agent", value: dyua)
+    return h
+}()
 
 public struct Douyin: LiveParse {}
 
