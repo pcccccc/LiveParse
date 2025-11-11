@@ -7,6 +7,8 @@
 
 import Foundation
 import Alamofire
+import CommonCrypto
+import JavaScriptCore
 
 struct DouyuMainListModel: Codable {
     let id: String
@@ -607,110 +609,176 @@ public struct Douyu: LiveParse {
         return tempArray
     }
     
+    private static func calculateMD5(_ string: String) -> String {
+        let data = Data(string.utf8)
+        var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
+        _ = data.withUnsafeBytes {
+            CC_MD5($0.baseAddress, CC_LONG(data.count), &digest)
+        }
+        return digest.map { String(format: "%02hhx", $0) }.joined()
+    }
+
+    private static func getDouyuSign(roomId: String) async throws -> [String: String] {
+        // Fetch JS encryption code
+        let jsEncReq = try await AF.request(
+            "https://www.douyu.com/swf_api/homeH5Enc?rids=\(roomId)",
+            method: .get,
+            headers: HTTPHeaders([
+                HTTPHeader(name: "referer", value: "https://www.douyu.com/\(roomId)"),
+                HTTPHeader(name: "user-agent", value: desktopUserAgent),
+            ])
+        ).serializingData().value
+
+        let jsEncJson = try JSONSerialization.jsonObject(with: jsEncReq, options: .mutableContainers)
+        guard let jsEncDict = jsEncJson as? [String: Any],
+              let jsEncData = jsEncDict["data"] as? [String: Any],
+              var jsEnc = jsEncData["room\(roomId)"] as? String else {
+            throw LiveParseError.liveParseError("获取JS加密代码失败", "房间ID: \(roomId)")
+        }
+
+        // Replace return eval to extract sign functions
+        jsEnc = jsEnc.replacingOccurrences(of: "return eval", with: "return [strc, vdwdae325w_64we];")
+
+        // Extract the encryption function
+        let pattern = "(vdwdae325w_64we[\\s\\S]*function ub98484234[\\s\\S]*?)function"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            throw LiveParseError.liveParseError("正则表达式创建失败", "")
+        }
+
+        let nsText = jsEnc as NSString
+        let matches = regex.matches(in: jsEnc, range: NSRange(location: 0, length: nsText.length))
+        guard let match = matches.first else {
+            throw LiveParseError.liveParseError("未找到加密函数", "JS代码可能已更新")
+        }
+
+        let matchRange = match.range
+        var encFunction = nsText.substring(with: NSRange(location: matchRange.location, length: matchRange.length - 8))
+
+        // Replace eval pattern
+        let evalPattern = "eval.*?;\\}"
+        guard let evalRegex = try? NSRegularExpression(pattern: evalPattern, options: .caseInsensitive) else {
+            throw LiveParseError.liveParseError("正则表达式创建失败", "")
+        }
+        encFunction = evalRegex.stringByReplacingMatches(in: encFunction, options: [], range: NSRange(location: 0, length: encFunction.count), withTemplate: "strc;}")
+
+        // Execute JavaScript to get sign function and sign_v
+        guard let jsContext = JSContext() else {
+            throw LiveParseError.liveParseError("JavaScript引擎初始化失败", "")
+        }
+
+        // Execute the encryption function
+        let jsCode = "\(encFunction);ub98484234();"
+        guard let result = jsContext.evaluateScript(jsCode),
+              let resultArray = result.toArray() as? [Any],
+              resultArray.count >= 2,
+              var signFun = resultArray[0] as? String,
+              let signV = resultArray[1] as? String else {
+            throw LiveParseError.liveParseError("执行JS代码失败", "返回值格式不正确")
+        }
+
+        // Generate timestamps and hashes
+        let tt = String(Int(Date().timeIntervalSince1970))
+        let did = calculateMD5(tt)
+        let rb = calculateMD5("\(roomId)\(did)\(tt)\(signV)")
+
+        // Replace CryptoJS.MD5 call with calculated rb
+        signFun = signFun.trimmingCharacters(in: CharacterSet(charactersIn: ";"))
+            .replacingOccurrences(of: "CryptoJS.MD5(cb).toString()", with: "\"\(rb)\"")
+        signFun += "(\"\(roomId)\",\"\(did)\",\"\(tt)\");"
+
+        // Execute the final sign function to get parameters
+        guard let paramsResult = jsContext.evaluateScript(signFun),
+              let paramsString = paramsResult.toString() else {
+            throw LiveParseError.liveParseError("生成签名参数失败", "")
+        }
+
+        // Parse query string into dictionary
+        var params: [String: String] = [:]
+        let pairs = paramsString.components(separatedBy: "&")
+        for pair in pairs {
+            let components = pair.components(separatedBy: "=")
+            if components.count == 2 {
+                params[components[0]] = components[1]
+            }
+        }
+
+        return params
+    }
+
     public static func getRealPlayArgs(roomId: String, rate: Int = 0, cdn: String?) async throws -> [LiveQualityModel] {
         do {
-            let jsEncReq = try await AF.request(
-                "https://www.douyu.com/swf_api/homeH5Enc?rids=\(roomId)",
-                method: .get,
+            // Get sign parameters locally
+            var signParams = try await getDouyuSign(roomId: roomId)
+
+            // Update with rate and cdn if provided
+            signParams["rate"] = "\(rate)"
+            if let cdn = cdn {
+                signParams["cdn"] = cdn
+            }
+
+            // Make request to getH5Play API
+            let dataReq = try await AF.request(
+                "https://www.douyu.com/lapi/live/getH5Play/\(roomId)",
+                method: .post,
+                parameters: signParams,
                 headers: HTTPHeaders([
-                    HTTPHeader.init(name: "referer", value: "https://www.douyu.com/\(roomId)"),
-                    HTTPHeader.init(name: "user-agent", value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"),
+                    HTTPHeader(name: "referer", value: "https://www.douyu.com/\(roomId)"),
+                    HTTPHeader(name: "user-agent", value: desktopUserAgent),
                 ])
-            ).serializingData().value
-            let jsEncJson = try JSONSerialization.jsonObject(with: jsEncReq, options: .mutableContainers)
-            let jsEncDict = jsEncJson as! Dictionary<String, Any>
-            let jsEncData = jsEncDict["data"] as? Dictionary<String, Any>
-            let cryText = jsEncData?["room\(roomId)"] as? String ?? ""
-            
-            let regex = try NSRegularExpression(pattern: "(vdwdae325w_64we[\\s\\S]*function ub98484234[\\s\\S]*?)function", options: [])
-            let matchs =  regex.matches(in: cryText, range: NSRange(location: 0, length:  cryText.count))
-            if matchs.count > 0 {
-                let match = matchs.first!
-                let matchRange = Range(match.range, in: cryText)!
-                let matchedSubstring = cryText[matchRange]
-                let nsstr = NSString(string: "\(matchedSubstring.prefix(matchedSubstring.count - 9))")
-                let regex = "eval.*?;\\}"
-                let RE = try NSRegularExpression(pattern: regex, options: .caseInsensitive)
-                let res = RE.stringByReplacingMatches(in: String(nsstr), options: .reportProgress, range: NSRange(location: 0, length: String(nsstr).count), withTemplate: "strc;}")
-                var request = URLRequest(url: URL(string: "http://alive.nsapps.cn/api/AllLive/DouyuSign")!)
-                request.httpMethod = "post"
-                request.setValue("application/json", forHTTPHeaderField: "Accept")
-                request.setValue("application/json;charset=UTF-8", forHTTPHeaderField: "Content-Type")
-                let parameter = [
-                    "html": res,
-                    "rid": roomId
-                ]
-                request.httpBody = try JSONSerialization.data(withJSONObject: parameter)
-                let dataReq = try await AF.request(request).serializingData().value
-                 let json = try JSONSerialization.jsonObject(with: dataReq, options: .mutableContainers)
-                if let jsonDict = json as? Dictionary<String, Any> {
-                    if jsonDict["code"] as? Int ?? -1 == 0 {
-                        var playData = NSString(string: "{\"\(jsonDict["data"] as? String ?? "")\"}")
-                        playData = playData.replacingOccurrences(of: "&", with: "\",\"") as NSString
-                        playData = playData.replacingOccurrences(of: "=", with: "\":\"") as NSString
-                        let finalData = (playData as String).data(using: .utf8) ?? Data()
-                        let jsEncJson = try JSONSerialization.jsonObject(with: finalData, options: .mutableContainers)
-                        var jsEncDict = jsEncJson as! Dictionary<String, Any>
-                        
-                        jsEncDict.updateValue(rate, forKey: "rate")
-                        if cdn != nil {
-                            jsEncDict.updateValue(cdn!, forKey: "cdn")
-                        }
-                        let dataReq = try await AF.request(
-                            "https://www.douyu.com/lapi/live/getH5Play/\(roomId)",
-                            method: .post,
-                            parameters: jsEncDict,
-                            headers: HTTPHeaders([
-                                HTTPHeader.init(name: "referer", value: "https://www.douyu.com/\(roomId)"),
-                                HTTPHeader.init(name: "user-agent", value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"),
-                            ])
-                        ).serializingString().value
-                        guard let resData = dataReq.data(using: .utf8) else { return [] }
-                        let resJson = try JSONSerialization.jsonObject(with: resData, options: .mutableContainers)
-                        let resDict = resJson as! Dictionary<String, Any>
-                        let dataDict = resDict["data"] as? Dictionary<String, Any>
-                        var playQualitys: Array<DouyuPlayQuality> = []
-                        if let multirates = dataDict?["multirates"] as? Array<Dictionary<String, Any>> {
-                            for item in multirates {
-                                let playQualityData = jsonToData(jsonDic: item)
-                                let playQuality = try JSONDecoder().decode(DouyuPlayQuality.self, from: playQualityData ?? Data())
-                                playQualitys.append(playQuality)
-                            }
-                        }
-                        
-                        var cdnsArray: [LiveQualityModel] = []
-                        if let cdns = dataDict?["cdnsWithName"] as? Array<Dictionary<String, Any>> {
-                            for item in cdns {
-                                var tempArray: [LiveQualityDetail] = []
-                                for i in 0..<playQualitys.count {
-                                    let playQuality = playQualitys[i]
-                                    tempArray.append(.init(roomId: roomId, title: playQuality.name, qn: playQuality.rate, url: "\(dataDict?["rtmp_url"] as? String ?? "")/\(dataDict?["rtmp_live"] as? String ?? "")", liveCodeType: .flv, liveType: .douyu))
-                                }
-                                let serverCdn = item["cdn"] as? String ?? ""
-                                if serverCdn == cdn || cdn == nil {
-                                    cdnsArray.append(.init(cdn: item["name"] as? String ?? "", douyuCdnName: serverCdn, qualitys: tempArray))
-                                }
-                            }
-                        }
-                        return cdnsArray
+            ).serializingString().value
+
+            guard let resData = dataReq.data(using: .utf8) else {
+                throw LiveParseError.liveParseError("数据解析失败", "无法转换响应数据")
+            }
+
+            let resJson = try JSONSerialization.jsonObject(with: resData, options: .mutableContainers)
+            guard let resDict = resJson as? [String: Any],
+                  let dataDict = resDict["data"] as? [String: Any] else {
+                throw LiveParseError.liveParseError("数据解析失败", "响应格式不正确")
+            }
+
+            // Parse play qualities
+            var playQualitys: [DouyuPlayQuality] = []
+            if let multirates = dataDict["multirates"] as? [[String: Any]] {
+                for item in multirates {
+                    let playQualityData = jsonToData(jsonDic: item)
+                    let playQuality = try JSONDecoder().decode(DouyuPlayQuality.self, from: playQualityData ?? Data())
+                    playQualitys.append(playQuality)
+                }
+            }
+
+            // Build CDN array
+            var cdnsArray: [LiveQualityModel] = []
+            if let cdns = dataDict["cdnsWithName"] as? [[String: Any]] {
+                for item in cdns {
+                    var tempArray: [LiveQualityDetail] = []
+                    for playQuality in playQualitys {
+                        let rtmpUrl = dataDict["rtmp_url"] as? String ?? ""
+                        let rtmpLive = dataDict["rtmp_live"] as? String ?? ""
+                        tempArray.append(.init(
+                            roomId: roomId,
+                            title: playQuality.name,
+                            qn: playQuality.rate,
+                            url: "\(rtmpUrl)/\(rtmpLive)",
+                            liveCodeType: .flv,
+                            liveType: .douyu
+                        ))
+                    }
+                    let serverCdn = item["cdn"] as? String ?? ""
+                    if serverCdn == cdn || cdn == nil {
+                        cdnsArray.append(.init(
+                            cdn: item["name"] as? String ?? "",
+                            douyuCdnName: serverCdn,
+                            qualitys: tempArray
+                        ))
                     }
                 }
-                
-            } else {
-                let dataReq = try await AF.request(
-                    "https://www.douyu.com/swf_api/homeH5Enc?rids=\(roomId)",
-                    method: .get,
-                    headers: HTTPHeaders([
-                        HTTPHeader.init(name: "referer", value: "https://www.douyu.com/\(roomId)"),
-                        HTTPHeader.init(name: "user-agent", value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"),
-                    ])
-                ).serializingString().value
-                throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "服务器返回信息：\(dataReq)")
             }
-        }catch {
+
+            return cdnsArray
+        } catch {
             throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
         }
-        return []
     }
     
     static func jsonToData(jsonDic:Dictionary<String, Any>) -> Data? {
