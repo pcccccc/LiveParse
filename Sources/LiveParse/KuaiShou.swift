@@ -403,9 +403,26 @@ public struct KuaiShou: LiveParse {
 
         let liveData = try await getKSLiveRoom(roomId: roomId)
 
-        guard let playList = liveData.liveroom.playList?.first,
-              let playUrls = playList.liveStream.playUrls else {
-            throw LiveParseError.business(.liveNotStarted(roomId: roomId))
+        guard let playList = liveData.liveroom.playList?.first else {
+            // playList 为空，可能是主播未开播或需要滑块验证
+            let detail = """
+            快手获取播放地址失败
+            房间ID: \(roomId)
+            playList: \(liveData.liveroom.playList == nil ? "nil" : "空数组")
+            可能原因: 主播未开播 或 需要在浏览器打开快手直播间通过滑块验证
+            """
+            throw LiveParseError.liveParseError("主播未开播或需要验证", detail)
+        }
+
+        guard let playUrls = playList.liveStream.playUrls else {
+            let detail = """
+            快手获取播放地址失败
+            房间ID: \(roomId)
+            playUrls 为空
+            isLiving: \(playList.isLiving ?? false)
+            可能原因: 主播未开播
+            """
+            throw LiveParseError.liveParseError("主播未开播", detail)
         }
 
         var qualityDetails: [LiveQualityDetail] = []

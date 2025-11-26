@@ -184,7 +184,7 @@ public final class LiveParseTools {
 }
 
 
-public enum LiveParseError: Error, CustomStringConvertible {
+public enum LiveParseError: Error, CustomStringConvertible, LocalizedError {
 
     case shareCodeParseError(String, String)
     case liveParseError(String, String)
@@ -222,5 +222,17 @@ public enum LiveParseError: Error, CustomStringConvertible {
             return detail
         }
         return "\(title)\n\(detail)"
+    }
+
+    // MARK: - LocalizedError 协议实现
+
+    /// 错误描述（用于 localizedDescription）
+    public var errorDescription: String? {
+        return title
+    }
+
+    /// 失败原因
+    public var failureReason: String? {
+        return detail.isEmpty ? nil : detail
     }
 }
