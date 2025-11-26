@@ -184,7 +184,7 @@ public final class LiveParseTools {
 }
 
 
-enum LiveParseError: Error, CustomStringConvertible {
+public enum LiveParseError: Error, CustomStringConvertible {
 
     case shareCodeParseError(String, String)
     case liveParseError(String, String)
@@ -192,7 +192,7 @@ enum LiveParseError: Error, CustomStringConvertible {
     case danmuArgsParseError(String, String)
 
     /// 错误标题（用于展示给用户或日志分类）
-    var title: String {
+    public var title: String {
         switch self {
         case .shareCodeParseError(let title, _),
              .liveParseError(let title, _),
@@ -203,7 +203,7 @@ enum LiveParseError: Error, CustomStringConvertible {
     }
 
     /// 详细错误信息（包含网络请求详情等调试信息）
-    var detail: String {
+    public var detail: String {
         switch self {
         case .shareCodeParseError(_, let detail),
              .liveParseError(_, let detail),
@@ -214,7 +214,7 @@ enum LiveParseError: Error, CustomStringConvertible {
     }
 
     /// 完整描述，用于打印或展示
-    var description: String {
+    public var description: String {
         if detail.isEmpty {
             return title
         }
