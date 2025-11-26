@@ -697,7 +697,26 @@ public struct Bilibili: LiveParse {
 
         if dataReq.data.code == 0 {
             logInfo("二维码扫描成功，已登录")
-            let setCookie = rawResponse.httpURLResponse?.value(forHTTPHeaderField: "Set-Cookie") ?? ""
+            var setCookie = rawResponse.httpURLResponse?.value(forHTTPHeaderField: "Set-Cookie") ?? ""
+
+            if let httpResponse = rawResponse.httpURLResponse, let url = httpResponse.url {
+                var headerFields: [String: String] = [:]
+                for (key, value) in httpResponse.allHeaderFields {
+                    guard let keyString = key as? String else { continue }
+                    if let valueString = value as? String {
+                        headerFields[keyString] = valueString
+                    } else {
+                        headerFields[keyString] = String(describing: value)
+                    }
+                }
+
+                let cookies = HTTPCookie.cookies(withResponseHeaderFields: headerFields, for: url)
+                let cookiePairs = cookies.map { "\($0.name)=\($0.value)" }
+                if cookiePairs.isEmpty == false {
+                    setCookie = cookiePairs.joined(separator: ";")
+                }
+            }
+
             BiliBiliCookie.cookie = setCookie
 
             if let respUrl = dataReq.data.url {
@@ -810,13 +829,18 @@ public struct Bilibili: LiveParse {
     }
     
     static func getHeaders() async throws -> HTTPHeaders {
-        let buvids = try await getBuvid3And4()
         var cookie: [String: String] = [:]
         if BiliBiliCookie.cookie == "" {
+            let buvids = try await getBuvid3And4()
             cookie["cookie"] = "buvid3=\(buvids.0); buvid4=\(buvids.1);DedeUserID=\(arc4random() % 100000)"
             cookie["User-Agent"] = ua
             cookie["Referer"] = referer
+        }else if BiliBiliCookie.cookie.contains("buvid3") {
+            cookie["cookie"] = BiliBiliCookie.cookie
+            cookie["User-Agent"] = ua
+            cookie["Referer"] = referer
         }else {
+            let buvids = try await getBuvid3And4()
             cookie["cookie"] = "\(BiliBiliCookie.cookie);buvid3=\(buvids.0); buvid4=\(buvids.1);DedeUserID=\(BiliBiliCookie.uid)"
             cookie["User-Agent"] = ua
             cookie["Referer"] = referer
