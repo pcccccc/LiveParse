@@ -30,8 +30,8 @@ public struct BiliBiliCookie {
 struct BilibiliMainData<T: Codable>: Codable {
     var code: Int
     var msg: String
-    var data: T
-    
+    var data: T?
+
     enum CodingKeys: String, CodingKey {
         case code
         case msg = "message"
@@ -303,7 +303,7 @@ public struct Bilibili: LiveParse {
         )
 
         var tempArray: [LiveMainListModel] = []
-        for item in dataReq.data {
+        for item in dataReq.data ?? [] {
             var subList: [LiveCategoryModel] = []
             guard let subCategoryList = item.list else {
                 continue
@@ -330,7 +330,7 @@ public struct Bilibili: LiveParse {
                 method: .get,
                 headers: headers
             ).serializingDecodable(BilibiliMainData<BiliBiliCategoryRoomMainModel>.self).value
-            if let listModelArray = dataReq.data.list {
+            if let listModelArray = dataReq.data?.list {
                 var tempArray: Array<LiveModel> = []
                 for item in listModelArray {
                     tempArray.append(LiveModel(userName: item.uname, roomTitle: item.title ?? "", roomCover: item.cover ?? "", userHeadImg: item.face ?? "", liveType: .bilibili, liveState: "", userId: "\(item.uid)", roomId: "\(item.roomid)", liveWatchedCount: item.watched_show?.text_small ?? ""))
@@ -366,7 +366,7 @@ public struct Bilibili: LiveParse {
         var liveQualitys: [LiveQualityDetail] = []
         var hostArray: [String] = []
 
-        if let qualityDescription = dataReq.data.quality_description {
+        if let qualityDescription = dataReq.data?.quality_description {
             logDebug("找到 \(qualityDescription.count) 个清晰度选项")
 
             // 第二步：为每个清晰度获取播放地址
@@ -385,12 +385,16 @@ public struct Bilibili: LiveParse {
                     headers: headers
                 )
 
-                for streamInfo in playInfoReq.data.playurl_info.playurl.stream {
+                guard let playUrlInfo = playInfoReq.data?.playurl_info else { continue }
+                for streamInfo in playUrlInfo.playurl.stream {
                     if streamInfo.protocol_name == "http_hls" || streamInfo.protocol_name == "http_stream" {
-                        if hostArray.contains((streamInfo.format.last?.codec.last?.url_info.last?.host ?? "")) == false {
-                            hostArray.append((streamInfo.format.last?.codec.last?.url_info.last?.host ?? ""))
+                        let host = streamInfo.format.last?.codec.last?.url_info.last?.host ?? ""
+                        let baseUrl = streamInfo.format.last?.codec.last?.base_url ?? ""
+                        let extra = streamInfo.format.last?.codec.last?.url_info.last?.extra ?? ""
+                        if hostArray.contains(host) == false {
+                            hostArray.append(host)
                         }
-                        let url = (streamInfo.format.last?.codec.last?.url_info.last?.host ?? "") + (streamInfo.format.last?.codec.last?.base_url ?? "") + (streamInfo.format.last?.codec.last?.url_info.last?.extra ?? "")
+                        let url = host + baseUrl + extra
                         liveQualitys.append(.init(roomId: roomId, title: item.desc, qn: item.qn, url: url, liveCodeType: streamInfo.protocol_name == "http_hls" ? .hls : .flv, liveType: .bilibili))
                     }
                 }
@@ -428,13 +432,18 @@ public struct Bilibili: LiveParse {
                 headers: headers
             )
 
-            for streamInfo in playInfoReq.data.playurl_info.playurl.stream {
-                if streamInfo.protocol_name == "http_hls" || streamInfo.protocol_name == "http_stream" {
-                    if hostArray.contains((streamInfo.format.last?.codec.last?.url_info.last?.host ?? "")) == false {
-                        hostArray.append((streamInfo.format.last?.codec.last?.url_info.last?.host ?? ""))
+            if let playUrlInfo = playInfoReq.data?.playurl_info {
+                for streamInfo in playUrlInfo.playurl.stream {
+                    if streamInfo.protocol_name == "http_hls" || streamInfo.protocol_name == "http_stream" {
+                        let host = streamInfo.format.last?.codec.last?.url_info.last?.host ?? ""
+                        let baseUrl = streamInfo.format.last?.codec.last?.base_url ?? ""
+                        let extra = streamInfo.format.last?.codec.last?.url_info.last?.extra ?? ""
+                        if hostArray.contains(host) == false {
+                            hostArray.append(host)
+                        }
+                        let url = host + baseUrl + extra
+                        liveQualitys.append(.init(roomId: roomId, title: "默认", qn: 1500, url: url, liveCodeType: streamInfo.protocol_name == "http_hls" ? .hls : .flv, liveType: .bilibili))
                     }
-                    let url = (streamInfo.format.last?.codec.last?.url_info.last?.host ?? "") + (streamInfo.format.last?.codec.last?.base_url ?? "") + (streamInfo.format.last?.codec.last?.url_info.last?.extra ?? "")
-                    liveQualitys.append(.init(roomId: roomId, title: "默认", qn: 1500, url: url, liveCodeType: streamInfo.protocol_name == "http_hls" ? .hls : .flv, liveType: .bilibili))
                 }
             }
 
@@ -468,7 +477,7 @@ public struct Bilibili: LiveParse {
         )
 
         var liveStatus = LiveState.unknow.rawValue
-        switch dataReq.data.room_info.live_status {
+        switch dataReq.data?.room_info.live_status {
         case 0:
             liveStatus = LiveState.close.rawValue
         case 1:
@@ -480,23 +489,25 @@ public struct Bilibili: LiveParse {
         }
 
         var realRoomId = roomId
-        if roomId != "\(dataReq.data.room_info.room_id)" {
+        if let data = dataReq.data, roomId != "\(data.room_info.room_id)" {
             // 如果两个RoomId不相等，用服务器返回的真实ID
-            realRoomId = "\(dataReq.data.room_info.room_id)"
+            realRoomId = "\(data.room_info.room_id)"
             logDebug("房间ID不匹配，使用真实ID: \(realRoomId)")
         }
 
-        logInfo("成功获取B站房间信息: \(dataReq.data.anchor_info.base_info.uname)")
+        let roomCover = dataReq.data?.room_info.cover.isEmpty == false ? dataReq.data!.room_info.cover : "https://s1.hdslb.com/bfs/static/blive/blfe-link-center/static/img/average-backimg.e65973e.png"
+
+        logInfo("成功获取B站房间信息: \(dataReq.data?.anchor_info.base_info.uname ?? "")")
         return LiveModel(
-            userName: dataReq.data.anchor_info.base_info.uname,
-            roomTitle: dataReq.data.room_info.title,
-            roomCover: dataReq.data.room_info.cover,
-            userHeadImg: dataReq.data.anchor_info.base_info.face,
+            userName: dataReq.data?.anchor_info.base_info.uname ?? "",
+            roomTitle: dataReq.data?.room_info.title ?? "",
+            roomCover: roomCover,
+            userHeadImg: dataReq.data?.anchor_info.base_info.face ?? "",
             liveType: .bilibili,
             liveState: liveStatus,
-            userId: "\(dataReq.data.room_info.uid)",
+            userId: "\(dataReq.data?.room_info.uid ?? 0)",
             roomId: realRoomId,
-            liveWatchedCount: dataReq.data.watched_show?.text_small ?? ""
+            liveWatchedCount: dataReq.data?.watched_show?.text_small ?? ""
         )
     }
     
@@ -809,8 +820,8 @@ public struct Bilibili: LiveParse {
             let dataReq: BilibiliMainData<BilibiliBuvidModel> = try await LiveParseRequest.get(
                 "https://api.bilibili.com/x/frontend/finger/spi"
             )
-            logInfo("成功获取buvid3: \(dataReq.data.b_3)")
-            return dataReq.data.b_3
+            logInfo("成功获取buvid3: \(dataReq.data?.b_3 ?? "")")
+            return dataReq.data?.b_3 ?? ""
         } catch {
             logError("获取buvid3失败: \(error.localizedDescription)")
             return ""
@@ -824,8 +835,8 @@ public struct Bilibili: LiveParse {
             "https://api.bilibili.com/x/frontend/finger/spi"
         )
 
-        logDebug("成功获取buvid3: \(dataReq.data.b_3), buvid4: \(dataReq.data.b_4)")
-        return (dataReq.data.b_3, dataReq.data.b_4)
+        logDebug("成功获取buvid3: \(dataReq.data?.b_3 ?? ""), buvid4: \(dataReq.data?.b_4 ?? "")")
+        return (dataReq.data?.b_3 ?? "", dataReq.data?.b_4 ?? "")
     }
     
     static func getHeaders() async throws -> HTTPHeaders {
@@ -859,8 +870,11 @@ public struct Bilibili: LiveParse {
             headers: headers
         )
 
-        logInfo("成功获取弹幕详情，token: \(dataReq.data.token.prefix(10))...")
-        return dataReq.data
+        guard let data = dataReq.data else {
+            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：弹幕详情数据为空")
+        }
+        logInfo("成功获取弹幕详情，token: \(data.token.prefix(10))...")
+        return data
     }
     
     public static func getBilibiliLiveStateString(liveState: Int) -> LiveState {
