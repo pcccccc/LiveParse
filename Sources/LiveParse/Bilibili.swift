@@ -322,29 +322,38 @@ public struct Bilibili: LiveParse {
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
         logDebug("开始获取B站直播间列表，分类ID: \(id), 页码: \(page)")
 
-        do {
-            var headers = try await getHeaders()
-            let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43&w_webid=\(try await getAccessId())") ?? ""
-            let dataReq = try await AF.request(
-                "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)",
-                method: .get,
-                headers: headers
-            ).serializingDecodable(BilibiliMainData<BiliBiliCategoryRoomMainModel>.self).value
-            if let listModelArray = dataReq.data?.list {
-                var tempArray: Array<LiveModel> = []
-                for item in listModelArray {
-                    tempArray.append(LiveModel(userName: item.uname, roomTitle: item.title ?? "", roomCover: item.cover ?? "", userHeadImg: item.face ?? "", liveType: .bilibili, liveState: "", userId: "\(item.uid)", roomId: "\(item.roomid)", liveWatchedCount: item.watched_show?.text_small ?? ""))
-                }
-                logInfo("成功获取B站直播间列表，共 \(tempArray.count) 个房间")
-                return tempArray
-            }else {
-                
-                throw
-                LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\("请求B站直播间列表失败,返回的列表为空")")
-            }
-        }catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+        let headers = try await getHeaders()
+        let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43&w_webid=\(try await getAccessId())") ?? ""
+        let url = "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)"
+
+        let dataReq: BilibiliMainData<BiliBiliCategoryRoomMainModel> = try await LiveParseRequest.get(
+            url,
+            headers: headers
+        )
+
+        guard let listModelArray = dataReq.data?.list, !listModelArray.isEmpty else {
+            throw LiveParseError.business(.emptyResult(
+                location: "Bilibili.getRoomList",
+                request: buildRequestDetail(url: url, method: .get, headers: headers)
+            ))
         }
+
+        let rooms: [LiveModel] = listModelArray.map { item in
+            LiveModel(
+                userName: item.uname,
+                roomTitle: item.title ?? "",
+                roomCover: item.cover ?? "",
+                userHeadImg: item.face ?? "",
+                liveType: .bilibili,
+                liveState: "",
+                userId: "\(item.uid)",
+                roomId: "\(item.roomid)",
+                liveWatchedCount: item.watched_show?.text_small ?? ""
+            )
+        }
+
+        logInfo("成功获取B站直播间列表，共 \(rooms.count) 个房间")
+        return rooms
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
@@ -999,5 +1008,19 @@ public struct Bilibili: LiveParse {
             location: "\(#file):\(#line)",
             rawData: resp.prefix(500).description
         ))
+    }
+
+    private static func buildRequestDetail(
+        url: String,
+        method: HTTPMethod,
+        parameters: Parameters? = nil,
+        headers: HTTPHeaders? = nil
+    ) -> NetworkRequestDetail {
+        NetworkRequestDetail(
+            url: url,
+            method: method.rawValue,
+            headers: headers?.dictionary,
+            parameters: parameters
+        )
     }
 }

@@ -492,7 +492,7 @@ public struct KuaiShou: LiveParse {
             let matches = regex.matches(in: html, range: NSRange(location: 0, length: nsString.length))
 
             guard let match = matches.first else {
-                throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "服务器返回信息：\(html)")
+                throw LiveParseError.liveParseError("错误位置：\(#function)", "服务器返回信息：\(html)")
             }
 
             let matchedSubstring = nsString.substring(with: match.range)
@@ -514,7 +514,7 @@ public struct KuaiShou: LiveParse {
         } catch let error as LiveParseError {
             throw error
         } catch {
-            throw LiveParseError.liveParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
+            throw LiveParseError.liveParseError("错误位置：\(#function)", "错误信息：\(error.localizedDescription)")
         }
     }
 

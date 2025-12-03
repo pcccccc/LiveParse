@@ -36,6 +36,36 @@ public struct NetworkRequestDetail {
         self.timestamp = timestamp
     }
 
+    /// 生成 curl 命令，方便用户复现请求
+    public var curlCommand: String {
+        var curl = "curl -X \(method.uppercased())"
+
+        // 添加 headers
+        if let headers = headers {
+            for (key, value) in headers {
+                // 隐藏敏感信息
+                let displayValue: String
+                if key.lowercased().contains("cookie") || key.lowercased().contains("authorization") {
+                    displayValue = "[已隐藏]"
+                } else {
+                    displayValue = value
+                }
+                curl += " \\\n  -H '\(key): \(displayValue)'"
+            }
+        }
+
+        // 添加请求体
+        if let body = body {
+            let escapedBody = body.replacingOccurrences(of: "'", with: "'\\''")
+            curl += " \\\n  -d '\(escapedBody)'"
+        }
+
+        // 添加 URL（如果有 parameters 且是 GET 请求，parameters 已经在 URL 中）
+        curl += " \\\n  '\(url)'"
+
+        return curl
+    }
+
     /// 格式化的请求详情字符串，用于日志输出
     public var formattedString: String {
         var result = """
@@ -68,6 +98,9 @@ public struct NetworkRequestDetail {
         if let body = body {
             result += "请求体:\n\(body)\n"
         }
+
+        // 添加 curl 命令
+        result += "\nCURL 命令（可直接复制使用）:\n\(curlCommand)\n"
 
         result += "==================================================\n"
         return result
@@ -130,6 +163,19 @@ public enum NetworkError: Error {
     case invalidResponse(request: NetworkRequestDetail, response: NetworkResponseDetail?)
     case requestFailed(request: NetworkRequestDetail, response: NetworkResponseDetail?, underlyingError: Error)
 
+    /// 获取关联的 curl 命令
+    public var curl: String? {
+        switch self {
+        case .timeout(let request),
+             .serverError(_, _, let request, _),
+             .invalidResponse(let request, _),
+             .requestFailed(let request, _, _):
+            return request.curlCommand
+        case .noConnection, .invalidURL:
+            return nil
+        }
+    }
+
     var description: String {
         switch self {
         case .timeout(let request):
@@ -164,10 +210,20 @@ public enum ParseError: Error {
     case decodingFailed(type: String, location: String, response: NetworkResponseDetail?, underlyingError: Error)
     case regexMatchFailed(pattern: String, location: String, rawData: String?)
 
+    /// 获取关联的 curl 命令
+    public var curl: String? {
+        switch self {
+        case .invalidJSON(_, let request, _):
+            return request?.curlCommand
+        case .missingRequiredField, .invalidDataFormat, .decodingFailed, .regexMatchFailed:
+            return nil
+        }
+    }
+
     var description: String {
         switch self {
         case .invalidJSON(let location, let request, let response):
-            var result = "JSON解析失败 [\(location)]"
+            var result = "JSON解析失败 [\(formatLocation(location))]"
             if let request = request {
                 result += request.formattedString
             }
@@ -176,21 +232,21 @@ public enum ParseError: Error {
             }
             return result
         case .missingRequiredField(let field, let location, let response):
-            var result = "缺少必需字段: \(field) [\(location)]"
+            var result = "缺少必需字段: \(field) [\(formatLocation(location))]"
             if let response = response {
                 result += response.formattedString
             }
             return result
         case .invalidDataFormat(let expected, let actual, let location):
-            return "数据格式不正确 [\(location)]: 期望 \(expected), 实际 \(actual)"
+            return "数据格式不正确 [\(formatLocation(location))]: 期望 \(expected), 实际 \(actual)"
         case .decodingFailed(let type, let location, let response, let error):
-            var result = "解码失败: \(type) [\(location)]\n原因: \(error.localizedDescription)"
+            var result = "解码失败: \(type) [\(formatLocation(location))]\n原因: \(error.localizedDescription)"
             if let response = response {
                 result += response.formattedString
             }
             return result
         case .regexMatchFailed(let pattern, let location, let rawData):
-            var result = "正则匹配失败 [\(location)]\n模式: \(pattern)"
+            var result = "正则匹配失败 [\(formatLocation(location))]\n模式: \(pattern)"
             if let rawData = rawData {
                 let truncated = rawData.count > 500 ? "\(rawData.prefix(500))...[已截断]" : rawData
                 result += "\n原始数据: \(truncated)"
@@ -210,6 +266,16 @@ public enum BusinessError: Error {
     case platformMaintenance(platform: LiveType)
     case emptyResult(location: String, request: NetworkRequestDetail?)
 
+    /// 获取关联的 curl 命令
+    public var curl: String? {
+        switch self {
+        case .emptyResult(_, let request):
+            return request?.curlCommand
+        case .roomNotFound, .liveNotStarted, .permissionDenied, .cookieExpired, .rateLimit, .platformMaintenance:
+            return nil
+        }
+    }
+
     var description: String {
         switch self {
         case .roomNotFound(let roomId):
@@ -228,7 +294,7 @@ public enum BusinessError: Error {
         case .platformMaintenance(let platform):
             return "\(LiveParseTools.getLivePlatformName(platform))正在维护中"
         case .emptyResult(let location, let request):
-            var result = "返回结果为空 [\(location)]"
+            var result = "返回结果为空 [\(formatLocation(location))]"
             if let request = request {
                 result += request.formattedString
             }
@@ -244,6 +310,16 @@ public enum WebSocketError: Error {
     case messageDecodingFailed(platform: LiveType, rawData: Data?)
     case heartbeatTimeout(platform: LiveType)
     case reconnectExceeded(attempts: Int, platform: LiveType)
+
+    /// 获取关联的 curl 命令
+    public var curl: String? {
+        switch self {
+        case .authenticationFailed(_, let request):
+            return request?.curlCommand
+        case .connectionFailed, .messageDecodingFailed, .heartbeatTimeout, .reconnectExceeded:
+            return nil
+        }
+    }
 
     var description: String {
         switch self {
@@ -288,6 +364,26 @@ extension LiveParseError {
 
     public static func websocket(_ error: WebSocketError) -> LiveParseError {
         return .danmuArgsParseError("WebSocket错误", error.description)
+    }
+
+    /// 从错误详情中提取 curl 命令
+    public var curl: String? {
+        let detail = self.detail
+
+        // 查找 "CURL 命令（可直接复制使用）:" 标记
+        guard let curlStart = detail.range(of: "CURL 命令（可直接复制使用）:\n") else {
+            return nil
+        }
+
+        let startIndex = curlStart.upperBound
+
+        // 查找结束标记
+        guard let endRange = detail[startIndex...].range(of: "\n====================") else {
+            // 如果没有找到结束标记，取到字符串末尾
+            return String(detail[startIndex...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return String(detail[startIndex..<endRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // 用户友好的错误提示
@@ -446,4 +542,34 @@ func logError(_ message: String, file: String = #file, function: String = #funct
     guard LiveParseConfig.logLevel <= .error else { return }
     LiveParseConfig.logger.log(.error, message: message, file: file, function: function, line: line)
     LiveParseConfig.customLogHandler?(.error, message)
+}
+
+// MARK: - 辅助函数
+
+/// 格式化位置信息，去掉文件路径和行号，只保留平台和函数名
+/// - Parameter location: 原始位置信息，可能包含文件路径和行号（如 "/path/to/file.swift:123"）或函数名（如 "Platform.functionName"）
+/// - Returns: 格式化后的位置信息（如 "Platform.functionName"）
+private func formatLocation(_ location: String) -> String {
+    // 如果已经是 "Platform.functionName" 格式，直接返回
+    if !location.contains("/") && !location.contains(":") {
+        return location
+    }
+
+    // 如果包含文件路径（如 "/path/to/Bilibili.swift:123"），提取文件名（去掉路径和行号）
+    if location.contains("/") {
+        // 提取文件名（去掉路径）
+        let fileName = (location as NSString).lastPathComponent
+        // 去掉 .swift 扩展名和行号
+        if let dotIndex = fileName.firstIndex(of: ".") {
+            return String(fileName[..<dotIndex])
+        }
+        // 去掉可能的行号
+        if let colonIndex = fileName.firstIndex(of: ":") {
+            return String(fileName[..<colonIndex])
+        }
+        return fileName
+    }
+
+    // 其他情况保持原样
+    return location
 }

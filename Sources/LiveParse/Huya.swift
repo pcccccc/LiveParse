@@ -445,12 +445,8 @@ public struct Huya: LiveParse {
 
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
-        do {
-            guard let liveStatus = try await Huya.getLiveLastestInfo(roomId: roomId, userId: userId).liveState else { return .unknow }
-            return LiveState(rawValue: liveStatus)!
-        }catch {
-            throw LiveParseError.liveStateParseError("错误位置\(#file)-\(#function)", "错误信息：\(error.localizedDescription)")
-        }
+        guard let liveStatus = try await Huya.getLiveLastestInfo(roomId: roomId, userId: userId).liveState else { return .unknow }
+        return LiveState(rawValue: liveStatus)!
     }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
