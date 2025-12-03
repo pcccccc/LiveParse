@@ -1150,7 +1150,7 @@ extension Douyin {
                 headers: HTTPHeaders([
                     "User-Agent": dyua,
                     "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2",
-                    "Cookie": "s_v_web_id=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf"
+                    "Cookie": try await getCookie(roomId: roomId)
                 ])
             )
 
