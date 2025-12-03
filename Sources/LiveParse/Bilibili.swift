@@ -326,10 +326,30 @@ public struct Bilibili: LiveParse {
         let query = try await Bilibili.biliWbiSign(param: "area_id=\(id)&page=\(page)&parent_area_id=\(parentId ?? "")&platform=web&sort_type=&vajra_business_key=&web_location=444.43&w_webid=\(try await getAccessId())") ?? ""
         let url = "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?\(query)"
 
-        let dataReq: BilibiliMainData<BiliBiliCategoryRoomMainModel> = try await LiveParseRequest.get(
+        // 先获取原始响应以便检查 code
+        let rawResponse = try await LiveParseRequest.requestRaw(
             url,
+            method: .get,
             headers: headers
         )
+
+        // 解析响应
+        let dataReq: BilibiliMainData<BiliBiliCategoryRoomMainModel> = try JSONDecoder().decode(
+            BilibiliMainData<BiliBiliCategoryRoomMainModel>.self,
+            from: rawResponse.data
+        )
+
+        // 检查 API 返回的 code
+        if dataReq.code != 0 {
+            throw LiveParseError.business(.apiError(
+                code: dataReq.code,
+                message: dataReq.msg,
+                platform: "Bilibili",
+                location: "Bilibili.getRoomList",
+                request: rawResponse.request,
+                response: rawResponse.response
+            ))
+        }
 
         guard let listModelArray = dataReq.data?.list, !listModelArray.isEmpty else {
             throw LiveParseError.business(.emptyResult(

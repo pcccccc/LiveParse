@@ -70,39 +70,11 @@ public struct NetworkRequestDetail {
     public var formattedString: String {
         var result = """
 
-        ==================== 网络请求详情 ====================
-        时间: \(timestamp)
-        URL: \(url)
-        方法: \(method)
+        ==================== 请求详情 ====================
+        CURL 命令（可直接复制使用）:
+        \(curlCommand)
+        ==================================================
         """
-
-        if let headers = headers, !headers.isEmpty {
-            result += "\n请求头:\n"
-            for (key, value) in headers {
-                // 隐藏敏感信息
-                if key.lowercased().contains("cookie") || key.lowercased().contains("authorization") {
-                    result += "  \(key): [已隐藏]\n"
-                } else {
-                    result += "  \(key): \(value)\n"
-                }
-            }
-        }
-
-        if let parameters = parameters, !parameters.isEmpty {
-            result += "请求参数:\n"
-            for (key, value) in parameters {
-                result += "  \(key): \(value)\n"
-            }
-        }
-
-        if let body = body {
-            result += "请求体:\n\(body)\n"
-        }
-
-        // 添加 curl 命令
-        result += "\nCURL 命令（可直接复制使用）:\n\(curlCommand)\n"
-
-        result += "==================================================\n"
         return result
     }
 }
@@ -130,21 +102,15 @@ public struct NetworkResponseDetail {
     public var formattedString: String {
         var result = """
 
-        ==================== 网络响应详情 ====================
-        时间: \(timestamp)
-        状态码: \(statusCode)
+        ==================== 服务器返回 ====================
+        HTTP 状态码: \(statusCode)
         """
 
-        if let headers = headers, !headers.isEmpty {
-            result += "\n响应头:\n"
-            for (key, value) in headers {
-                result += "  \(key): \(value)\n"
-            }
-        }
-
         if let body = body {
-            let truncatedBody = body.count > 1000 ? "\(body.prefix(1000))... [已截断，总长度: \(body.count)]" : body
-            result += "响应体:\n\(truncatedBody)\n"
+            let truncatedBody = body.count > 2000 ? "\(body.prefix(2000))...\n[已截断，总长度: \(body.count) 字符]" : body
+            result += "\n原始返回内容:\n\(truncatedBody)\n"
+        } else {
+            result += "\n原始返回内容: [空]\n"
         }
 
         result += "==================================================\n"
@@ -265,11 +231,14 @@ public enum BusinessError: Error {
     case rateLimit(platform: LiveType, retryAfter: TimeInterval?)
     case platformMaintenance(platform: LiveType)
     case emptyResult(location: String, request: NetworkRequestDetail?)
+    case apiError(code: Int, message: String, platform: String, location: String, request: NetworkRequestDetail?, response: NetworkResponseDetail?)
 
     /// 获取关联的 curl 命令
     public var curl: String? {
         switch self {
         case .emptyResult(_, let request):
+            return request?.curlCommand
+        case .apiError(_, _, _, _, let request, _):
             return request?.curlCommand
         case .roomNotFound, .liveNotStarted, .permissionDenied, .cookieExpired, .rateLimit, .platformMaintenance:
             return nil
@@ -298,6 +267,38 @@ public enum BusinessError: Error {
             if let request = request {
                 result += request.formattedString
             }
+            return result
+        case .apiError(let code, let message, let platform, let location, let request, let response):
+            var result = "\(platform) API 错误 [\(formatLocation(location))]\n"
+            result += "错误代码: \(code)\n"
+            result += "错误信息: \(message)"
+
+            // 特殊错误码提示
+            if platform.contains("Bilibili") || platform.contains("哔哩") {
+                switch code {
+                case 352:
+                    result += "\n\n⚠️ 风控验证失败，请登录 B站 账号后重试"
+                case 412:
+                    result += "\n\n⚠️ 请求被拦截，可能需要人机验证"
+                case -101:
+                    result += "\n\n⚠️ 账号未登录"
+                case -400:
+                    result += "\n\n⚠️ 请求错误"
+                case -404:
+                    result += "\n\n⚠️ 无此项"
+                default:
+                    break
+                }
+            }
+
+            if let request = request {
+                result += request.formattedString
+            }
+
+            if let response = response {
+                result += response.formattedString
+            }
+
             return result
         }
     }
