@@ -15,9 +15,9 @@ let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KH
 let referer = "https://live.bilibili.com/"
 
 public struct BiliBiliCookie {
-    public static var cookie = UserDefaults.standard.value(forKey: "LiveParse.Bilibili.Cookie") as? String ?? "" {
+    public static var cookie = UserDefaults.standard.value(forKey: "SimpleLive.Setting.BilibiliCookie") as? String ?? "" {
         didSet {
-            UserDefaults.standard.setValue(cookie, forKey: "LiveParse.Bilibili.Cookie")
+            UserDefaults.standard.setValue(cookie, forKey: "SimpleLive.Setting.BilibiliCookie")
         }
     }
     public static var uid = UserDefaults.standard.value(forKey: "LiveParse.Bilibili.uid") as? String ?? "0" {
