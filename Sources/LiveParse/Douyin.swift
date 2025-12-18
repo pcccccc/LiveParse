@@ -156,6 +156,16 @@ struct DouyinPlayQualitiesInfo: Codable {
     let user_count_str: String?
     let cover: DouyinLiveUserAvatarInfo?
     let owner: DouyinRoomOwnerData?
+    let episode_extra: DouyinEpisodeExtra?
+}
+
+struct DouyinEpisodeExtra: Codable {
+    let camera_infos: [DouyinCameraInfo]?
+}
+
+struct DouyinCameraInfo: Codable {
+    let title: String?
+    let stream_info: DouyinPlayQualities?
 }
 
 struct DouyinLiveCoreSDKData: Codable {
@@ -716,11 +726,47 @@ extension Douyin {
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
-        logDebug("开始获取抖音播放地址，房间ID: \(roomId)")
-
         let liveData = try await Douyin.getDouyinRoomDetail(roomId: roomId, userId: userId ?? "")
         var tempArray: [LiveQualityDetail] = []
+        var multiCamResults: [LiveQualityModel] = []
+
             if liveData.data?.data?.count ?? 0 > 0 {
+                let targetRoom = liveData.data?.data?.first
+
+                // 检测多机位/多场次直播
+                if let episodeExtra = targetRoom?.episode_extra,
+                   let cameraInfos = episodeExtra.camera_infos,
+                   !cameraInfos.isEmpty {
+                    logInfo("检测到多机位直播，共 \(cameraInfos.count) 个视角")
+
+                    for (index, camera) in cameraInfos.enumerated() {
+                        let camTitle = camera.title ?? "视角\(index + 1)"
+                        guard let streamInfo = camera.stream_info else { continue }
+
+                        var camStreams: [LiveQualityDetail] = []
+
+                        // 解析 HLS 流
+                        if let fullHD = streamInfo.hls_pull_url_map.FULL_HD1, !fullHD.isEmpty {
+                            camStreams.append(.init(roomId: roomId, title: "超清", qn: 0, url: fullHD, liveCodeType: .hls, liveType: .douyin))
+                        }
+                        if let hd = streamInfo.hls_pull_url_map.HD1, !hd.isEmpty {
+                            camStreams.append(.init(roomId: roomId, title: "高清", qn: 0, url: hd, liveCodeType: .hls, liveType: .douyin))
+                        }
+                        if let sd1 = streamInfo.hls_pull_url_map.SD1, !sd1.isEmpty {
+                            camStreams.append(.init(roomId: roomId, title: "标清", qn: 0, url: sd1, liveCodeType: .hls, liveType: .douyin))
+                        }
+
+                        if !camStreams.isEmpty {
+                            multiCamResults.append(LiveQualityModel(cdn: "多机位-\(camTitle)", qualitys: camStreams))
+                        }
+                    }
+
+                    if !multiCamResults.isEmpty {
+                        logInfo("成功解析多机位流，共 \(multiCamResults.count) 个视角")
+                    }
+                }
+
+                // 继续解析主画面流
                 if liveData.data?.data?.first?.stream_url?.live_core_sdk_data?.pull_data?.stream_data ?? "" != "" {
                     let resJson = liveData.data?.data?.first?.stream_url?.live_core_sdk_data?.pull_data?.stream_data ?? ""
                     if let jsonData = resJson.data(using: .utf8) {
@@ -791,7 +837,9 @@ extension Douyin {
                                 }
                             }
                             logInfo("成功获取抖音播放地址（JSON 流）共 \(tempArray.count) 条")
-                            return [qualityFlv, qualityHls]
+                            var result = [qualityFlv, qualityHls]
+                            result.append(contentsOf: multiCamResults)
+                            return result
                         } catch {
                             logError("抖音播放地址 JSON 解析失败: \(error.localizedDescription)")
                         }
@@ -825,6 +873,7 @@ extension Douyin {
                         
                         var result: [LiveQualityModel] = []
                         if !qualityHls.qualitys.isEmpty { result.append(qualityHls) }
+                        result.append(contentsOf: multiCamResults)
                         // HTML 数据暂未返回 FLV/LLS 线路，后续可按需开启
                         logInfo("成功获取抖音播放地址（HTML 流）共 \(tempArray.count) 条")
                         return result
@@ -850,7 +899,9 @@ extension Douyin {
                         tempArray.append(.init(roomId: roomId, title: "标清 2", qn: 0, url: SD2, liveCodeType: .hls, liveType: .douyin))
                     }
                     logInfo("成功获取抖音播放地址（HLS 兜底）共 \(tempArray.count) 条")
-                    return [.init(cdn: "线路 1", qualitys: tempArray)]
+                    var result = [LiveQualityModel(cdn: "线路 1", qualitys: tempArray)]
+                    result.append(contentsOf: multiCamResults)
+                    return result
                 }
             }
             logWarning("抖音播放地址为空，房间ID: \(roomId)")
@@ -1659,7 +1710,9 @@ extension Douyin {
                 avatar_thumb: DouyinRoomOwnerAvatarThumbData(
                     url_list: ((owner?["avatar_thumb"] as? [String: Any])?["url_list"] as? [String]) ?? []
                 )
-            ))
+            ),
+            episode_extra: nil
+        )
         // 构建DouyinRoomPlayInfoData
         let playInfoData = DouyinRoomPlayInfoData(
             data: [playQualitiesInfo],

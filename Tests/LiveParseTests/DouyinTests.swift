@@ -332,6 +332,35 @@ func douyinErrorHandling_NetworkDetails() async throws {
     }
 }
 
+@Test("测试多机位 camera_id 作为弹幕 roomId")
+func douyinTestCameraIdAsDanmukuRoomId() async throws {
+    LiveParseConfig.logLevel = .debug
+    LiveParseConfig.includeDetailedNetworkInfo = true
+
+    print("📋 抖音测试：camera_id 作为弹幕 roomId")
+
+    // 使用从 JSON 中提取的 camera_id
+    let cameraId = "7584986812533134399"
+
+    print("🔍 尝试使用 camera_id: \(cameraId) 连接弹幕服务器")
+
+    do {
+        let danmuArgs = try await Douyin.getDanmukuArgs(roomId: cameraId, userId: nil)
+
+        print("✅ 成功生成弹幕参数！")
+        print("   room_id: \(danmuArgs.0["room_id"] ?? "无")")
+        print("   参数数量: \(danmuArgs.0.count)")
+
+        #expect(!danmuArgs.0.isEmpty, "弹幕参数不应为空")
+        #expect(danmuArgs.0["room_id"] != nil, "应包含 room_id")
+
+    } catch let error as LiveParseError {
+        print("❌ camera_id 无法作为弹幕 roomId 使用")
+        printEnhancedError(error, title: "camera_id 弹幕测试失败")
+        throw error
+    }
+}
+
 @Test("抖音性能测试-批量请求")
 func douyinPerformance_BatchRequests() async throws {
     LiveParseConfig.logLevel = .debug
