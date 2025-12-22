@@ -166,8 +166,16 @@ struct HuyaSearchDocs: Codable {
 }
 
 public struct Huya: LiveParse {
-    
-    static let tupClient = TarsHttp(baseUrl: "http://wup.huya.com", servantName: "liveui")
+
+    private static let baseUrl = "https://m.huya.com/"
+    private static let HYSDK_UA = "HYSDK(Windows,30000002)_APP(pc_exe&7030003&official)_SDK(trans&2.29.0.5493)"
+    private static let requestHeaders: [String: String] = [
+        "Origin": baseUrl,
+        "Referer": baseUrl,
+        "User-Agent": HYSDK_UA
+    ]
+
+    static let tupClient = TarsHttp(baseUrl: "http://wup.huya.com", servantName: "liveui", headers: requestHeaders)
     
     // MARK: - 正则表达式常量
     private static let roomIdPattern = "(?:huya\\.com/)(\\d+)"
