@@ -8,6 +8,7 @@
 import Foundation
 import Alamofire
 
+
 // Define the struct for the game data
 struct KSCategoryModel: Codable {
     let id: String
@@ -186,13 +187,14 @@ struct KSPlayUrls: Codable {
 
 // MARK: - KSPlayUrl
 struct KSPlayUrl: Codable {
-    let hideAuto: Bool
-    let autoDefaultSelect: Bool
-    let cdnFeature: [String]
-    let businessType: Int
-    let freeTrafficCdn: Bool
-    let version, type: String
-    let adaptationSet: KSAdaptationSet
+    let hideAuto: Bool?
+    let autoDefaultSelect: Bool?
+    let cdnFeature: [String]?
+    let businessType: Int?
+    let freeTrafficCdn: Bool?
+    let version: String?
+    let type: String?
+    let adaptationSet: KSAdaptationSet?
 }
 
 // MARK: - KSAdaptationSet
@@ -459,8 +461,8 @@ public struct KuaiShou: LiveParse {
         }
 
         let author = current.author
-        let hasH264 = !(current.liveStream.playUrls?.h264?.adaptationSet.representation.isEmpty ?? true)
-        let hasHevc = !(current.liveStream.playUrls?.hevc?.adaptationSet.representation.isEmpty ?? true)
+        let hasH264 = !(current.liveStream.playUrls?.h264?.adaptationSet?.representation.isEmpty ?? true)
+        let hasHevc = !(current.liveStream.playUrls?.hevc?.adaptationSet?.representation.isEmpty ?? true)
         let hasStream = hasH264 || hasHevc
         let liveState = (current.isLiving ?? hasStream) ? LiveState.live.rawValue : LiveState.close.rawValue
 
@@ -483,9 +485,8 @@ public struct KuaiShou: LiveParse {
 
     static func getKSLiveRoom(roomId: String) async throws -> KSLiveRoot {
         let url = "https://live.kuaishou.com/u/\(roomId)"
-
         do {
-            let html = try await LiveParseRequest.requestString(url)
+            let html = try await LiveParseRequest.requestString(url, headers: ["user-agent": ua])
             let pattern = #"<script>window.__INITIAL_STATE__=\s*(.*?)\;"#
             let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
             let nsString = html as NSString
@@ -587,7 +588,8 @@ public struct KuaiShou: LiveParse {
     // MARK: - Helpers
 
     private static func makeQualityDetails(from playUrl: KSPlayUrl, roomId: String) -> [LiveQualityDetail] {
-        playUrl.adaptationSet.representation.map { representation in
+        guard let adaptationSet = playUrl.adaptationSet else { return [] }
+        return adaptationSet.representation.map { representation in
             LiveQualityDetail(
                 roomId: roomId,
                 title: representation.name,
