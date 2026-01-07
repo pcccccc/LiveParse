@@ -168,7 +168,7 @@ struct HuyaSearchDocs: Codable {
 public struct Huya: LiveParse {
 
     private static let baseUrl = "https://m.huya.com/"
-    private static let HYSDK_UA = "HYSDK(Windows,30000002)_APP(pc_exe&7030003&official)_SDK(trans&2.29.0.5493)"
+    private static let HYSDK_UA = "HYSDK(Windows, 30000002)_APP(pc_exe&7060000&official)_SDK(trans&2.32.3.5646)"
     private static let requestHeaders: [String: String] = [
         "Origin": baseUrl,
         "Referer": baseUrl,
@@ -249,53 +249,17 @@ public struct Huya: LiveParse {
             responseDetail: rawResponse.response
         )
 
+        // 提取 topSid (presenterUid)
+        let topSid = extractTopSid(from: html)
+
         var results: [LiveQualityModel] = []
 
         if let liveStreamInfo = liveData.roomInfo.tLiveInfo.tLiveStreamInfo {
             let streams = liveStreamInfo.vStreamInfo.value
             let bitRates = liveStreamInfo.vBitRateInfo.value
 
-            if let sampleStream = streams.first {
-                var playQualitiesInfo: [String: String] = [:]
-                if let urlComponent = URLComponents(string: "?\(sampleStream.sFlvAntiCode)") {
-                    urlComponent.queryItems?.forEach { item in
-                        playQualitiesInfo[item.name] = item.value ?? ""
-                    }
-                }
-
-                playQualitiesInfo["ver"] = "1"
-                playQualitiesInfo["sv"] = "202411221719"
-                let uid = Huya.getUid(t: 13, e: 10)
-                let now = Int(Date().timeIntervalSince1970) * 1000
-                playQualitiesInfo["seqid"] = "\((Int(uid) ?? 0) + Int(now))"
-                playQualitiesInfo["uid"] = uid
-                playQualitiesInfo["uuid"] = Huya.getUUID()
-                playQualitiesInfo["t"] = "103"
-                playQualitiesInfo["ctype"] = "tars_mobile"
-                playQualitiesInfo["dMod"] = "mseh-0"
-                playQualitiesInfo["sdkPcdn"] = "1_1"
-                playQualitiesInfo["sdk_sid"] = "1732862566708"
-                playQualitiesInfo["a_block"] = "0"
-
-                let ss = "\(playQualitiesInfo["seqid"] ?? "")|\(playQualitiesInfo["ctype"] ?? "")|\(playQualitiesInfo["t"] ?? "")".md5
-
-                if let fmEncoded = playQualitiesInfo["fm"],
-                   let fmData = Data(base64Encoded: fmEncoded),
-                   let fmString = String(data: fmData, encoding: .utf8) {
-                    var fm = fmString as NSString
-                    fm = fm.replacingOccurrences(of: "$0", with: uid) as NSString
-                    fm = fm.replacingOccurrences(of: "$1", with: sampleStream.sStreamName) as NSString
-                    fm = fm.replacingOccurrences(of: "$2", with: ss) as NSString
-                    fm = fm.replacingOccurrences(of: "$3", with: playQualitiesInfo["wsTime"] ?? "") as NSString
-
-                    playQualitiesInfo["wsSecret"] = (fm as String).md5
-                    playQualitiesInfo.removeValue(forKey: "fm")
-                    playQualitiesInfo.removeValue(forKey: "txyp")
-                }
-            }
-
             for stream in streams {
-                guard stream.iMobilePriorityRate > 15 else { continue }
+                guard !stream.sFlvUrl.isEmpty else { continue }
 
                 var qualities: [LiveQualityDetail] = []
                 for bitRate in bitRates {
@@ -303,8 +267,9 @@ public struct Huya: LiveParse {
 
                     let playUrl = try await Huya.getPlayURL(
                         url: stream.sFlvUrl,
-                        cdnType: stream.sCdnType,
                         streamName: stream.sStreamName,
+                        flvAntiCode: stream.sFlvAntiCode,
+                        presenterUid: topSid,
                         iBitRate: bitRate.iBitRate
                     )
 
@@ -348,14 +313,109 @@ public struct Huya: LiveParse {
         ))
     }
 
-    
-    public static func getPlayURL(url: String, cdnType: String, streamName: String, iBitRate: Int) async throws -> String {
+    /// 从HTML中提取topSid (presenterUid)
+    private static func extractTopSid(from html: String) -> Int {
+        let pattern = "lChannelId\":(\\d+)"
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+              let range = Range(match.range(at: 1), in: html) else {
+            return 0
+        }
+        return Int(html[range]) ?? 0
+    }
+
+    /// 获取CDN Token (新接口)
+    private static func getCdnTokenInfoEx(streamName: String) async throws -> String {
+        let tid = HuyaUserId()
+        tid.sHuYaUA = "pc_exe&7060000&official"
+
+        let req = GetCdnTokenExReq()
+        req.tId = tid
+        req.sStreamName = streamName
+
+        let resp = try await tupClient.tupRequest("getCdnTokenInfoEx", tReq: req, tRsp: GetCdnTokenExResp())
+        return resp.sFlvToken
+    }
+
+    /// 构建antiCode签名
+    private static func buildAntiCode(stream: String, presenterUid: Int, antiCode: String) -> String {
+        guard let urlComponents = URLComponents(string: "?\(antiCode)"),
+              let queryItems = urlComponents.queryItems else {
+            return antiCode
+        }
+
+        var mapAnti: [String: String] = [:]
+        for item in queryItems {
+            mapAnti[item.name] = item.value ?? ""
+        }
+
+        guard mapAnti["fm"] != nil else {
+            return antiCode
+        }
+
+        let ctype = mapAnti["ctype"] ?? "huya_pc_exe"
+        let platformId = Int(mapAnti["t"] ?? "0") ?? 0
+        let isWap = platformId == 103
+        let calcStartTime = Int(Date().timeIntervalSince1970 * 1000)
+
+        let seqId = presenterUid + calcStartTime
+        let secretHash = "\(seqId)|\(ctype)|\(platformId)".md5
+
+        let convertUid = rotl64(presenterUid)
+        let calcUid = isWap ? presenterUid : convertUid
+
+        guard let fmEncoded = mapAnti["fm"],
+              let fmDecoded = fmEncoded.removingPercentEncoding,
+              let fmData = Data(base64Encoded: fmDecoded),
+              let fmString = String(data: fmData, encoding: .utf8) else {
+            return antiCode
+        }
+
+        let secretPrefix = fmString.components(separatedBy: "_").first ?? ""
+        let wsTime = mapAnti["wsTime"] ?? ""
+        let secretStr = "\(secretPrefix)_\(calcUid)_\(stream)_\(secretHash)_\(wsTime)"
+        let wsSecret = secretStr.md5
+
+        let wsTimeInt = Int(wsTime, radix: 16) ?? 0
+        let ct = Int((Double(wsTimeInt) + Double.random(in: 0..<1)) * 1000)
+        let uuid = Int((Double(ct % 10000000000) + Double.random(in: 0..<1)) * 1000) % 0xFFFFFFFF
+
+        var antiCodeRes: [String: Any] = [
+            "wsSecret": wsSecret,
+            "wsTime": wsTime,
+            "seqid": seqId,
+            "ctype": ctype,
+            "ver": "1",
+            "fs": mapAnti["fs"] ?? "",
+            "fm": fmEncoded.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? fmEncoded,
+            "t": platformId
+        ]
+
+        if isWap {
+            antiCodeRes["uid"] = presenterUid
+            antiCodeRes["uuid"] = uuid
+        } else {
+            antiCodeRes["u"] = convertUid
+        }
+
+        return antiCodeRes.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
+    }
+
+    /// rotl64 位旋转
+    private static func rotl64(_ t: Int) -> Int {
+        let low = t & 0xFFFFFFFF
+        let rotatedLow = ((low << 8) | (low >> 24)) & 0xFFFFFFFF
+        let high = t & ~0xFFFFFFFF
+        return high | rotatedLow
+    }
+
+    public static func getPlayURL(url: String, streamName: String, flvAntiCode: String, presenterUid: Int, iBitRate: Int) async throws -> String {
         let requestDetail = NetworkRequestDetail(
-            url: "tars://wup.huya.com/liveui/getCdnTokenInfo",
+            url: "tars://wup.huya.com/liveui/getCdnTokenInfoEx",
             method: "TARS",
             parameters: [
-                "cdnType": cdnType,
                 "streamName": streamName,
+                "presenterUid": presenterUid,
                 "iBitRate": iBitRate
             ]
         )
@@ -368,25 +428,10 @@ public struct Huya: LiveParse {
         }
 
         do {
-            let req = GetCdnTokenReq()
-            req.cdnType = cdnType
-            req.streamName = streamName
-            let resp = try await tupClient.tupRequest("getCdnTokenInfo", tReq: req, tRsp: GetCdnTokenResp())
+            let antiCode = try await getCdnTokenInfoEx(streamName: streamName)
+            let finalAntiCode = buildAntiCode(stream: streamName, presenterUid: presenterUid, antiCode: antiCode)
 
-            let responseDetail = NetworkResponseDetail(
-                statusCode: 200,
-                headers: nil,
-                body: "streamName=\(resp.streamName), antiCodeLength=\(resp.antiCode.count)"
-            )
-
-            guard !resp.streamName.isEmpty, !resp.antiCode.isEmpty else {
-                throw LiveParseError.network(.invalidResponse(
-                    request: requestDetail,
-                    response: responseDetail
-                ))
-            }
-
-            var finalURL = "\(url)/\(resp.streamName).flv?\(resp.antiCode)&codec=264"
+            var finalURL = "\(url)/\(streamName).flv?\(finalAntiCode)&codec=264"
             if iBitRate > 0 {
                 finalURL += "&ratio=\(iBitRate)"
             }
