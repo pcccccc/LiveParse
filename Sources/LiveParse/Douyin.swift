@@ -333,6 +333,52 @@ private var browserVer = "141.0.0.0"
 private var browserType = "edge"
 private var fakeRoomId = "870887192950"
 
+// Cookie 缓存管理器（使用 actor 保证并发安全）
+private actor DouyinCookieManager {
+    private var cachedCookie: String?
+    private var cookieCacheTime: Date?
+    private let cookieTTL: TimeInterval = 86400 // 24 小时
+    private var fetchTask: Task<String, Error>?
+
+    func getCachedCookie() -> String? {
+        guard let cached = cachedCookie,
+              let cacheTime = cookieCacheTime,
+              Date().timeIntervalSince(cacheTime) < cookieTTL else {
+            return nil
+        }
+        return cached
+    }
+
+    func setCookie(_ cookie: String) {
+        cachedCookie = cookie
+        cookieCacheTime = Date()
+    }
+
+    func ensureCookie(fetcher: @Sendable @escaping () async throws -> String) async throws -> String {
+        // 检查缓存
+        if let cached = getCachedCookie() {
+            return cached
+        }
+
+        // 如果已有正在进行的获取任务，等待它完成
+        if let existingTask = fetchTask {
+            return try await existingTask.value
+        }
+
+        // 创建新的获取任务
+        let task = Task<String, Error> {
+            let cookie = try await fetcher()
+            setCookie(cookie)
+            return cookie
+        }
+        fetchTask = task
+
+        defer { fetchTask = nil }
+        return try await task.value
+    }
+}
+
+private let cookieManager = DouyinCookieManager()
 
 private var headers: HTTPHeaders = {
     var h = HTTPHeaders()
@@ -347,15 +393,18 @@ public struct Douyin: LiveParse {}
 
 extension Douyin {
     private static func ensureCookie(for roomId: String) async throws -> String {
-        if let existing = headers["cookie"], existing.isEmpty == false {
-            return existing
-        }
+        return try await cookieManager.ensureCookie { @Sendable in
+            // 检查 headers 中是否已有 cookie
+            if let existing = headers["cookie"], existing.isEmpty == false {
+                return existing
+            }
 
-        logDebug("抖音 Cookie 缺失，开始获取新 Cookie，房间ID: \(roomId)")
-        let cookie = try await Douyin.getCookie(roomId: roomId)
-        headers["cookie"] = cookie
-        logInfo("已刷新抖音 Cookie")
-        return cookie
+            logDebug("抖音 Cookie 缺失或过期，开始获取新 Cookie，房间ID: \(roomId)")
+            let cookie = try await Douyin.getCookie(roomId: roomId)
+            headers["cookie"] = cookie
+            logInfo("已刷新抖音 Cookie")
+            return cookie
+        }
     }
 
     private static func buildRequestDetail(
@@ -1047,17 +1096,17 @@ extension Douyin {
             throw LiveParseError.business(.roomNotFound(roomId: roomId))
         }
 
-        var liveState = LiveState.unknow
+        // 直接根据 status 判断，避免调用 getPlayArgs 导致重复请求
+        let liveState: LiveState
         switch roomInfo.status {
+        case 2:
+            // status==2 且有流数据即为直播中
+            let hasStream = roomInfo.stream_url?.live_core_sdk_data?.pull_data?.stream_data?.isEmpty == false
+                || roomInfo.stream_url?.hls_pull_url_map.FULL_HD1?.isEmpty == false
+                || detail.htmlStreamData != nil
+            liveState = hasStream ? .live : .close
         case 4:
             liveState = .close
-        case 2:
-            let playArgs = try await getPlayArgs(roomId: roomId, userId: userId)
-            if let firstQuality = playArgs.first, firstQuality.qualitys.isEmpty == false {
-                liveState = .live
-            } else {
-                liveState = .close
-            }
         default:
             liveState = .unknow
         }
@@ -1100,40 +1149,89 @@ extension Douyin {
         logInfo("获取抖音房间状态成功，状态: \(state)")
         return state
     }
-    
-    static func getDouyinRoomDetail(roomId: String, userId: String) async throws -> DouyinRoomPlayInfoMainData {
+
+    /// 轻量版状态获取，用于收藏同步场景（减少重试，跳过 HTML 回退）
+    public static func getLiveStateFast(roomId: String, userId: String?) async throws -> LiveState {
+        let detail = try await Douyin.getDouyinRoomDetail(roomId: roomId, userId: userId ?? "", fastMode: true)
+        guard let status = detail.data?.data?.first?.status else {
+            throw LiveParseError.business(.roomNotFound(roomId: roomId))
+        }
+        return status == 2 ? .live : (status == 4 ? .close : .unknow)
+    }
+
+    /// 轻量版房间信息获取，用于收藏同步场景（减少重试，跳过 HTML 回退）
+    public static func getLiveLastestInfoFast(roomId: String, userId: String?) async throws -> LiveModel {
+        let detail = try await Douyin.getDouyinRoomDetail(roomId: roomId, userId: userId ?? "", fastMode: true)
+        guard let roomInfo = detail.data?.data?.first else {
+            throw LiveParseError.business(.roomNotFound(roomId: roomId))
+        }
+        let hasStream = roomInfo.stream_url?.live_core_sdk_data?.pull_data?.stream_data?.isEmpty == false
+            || roomInfo.stream_url?.hls_pull_url_map.FULL_HD1?.isEmpty == false
+            || detail.htmlStreamData != nil
+        let liveState: LiveState = roomInfo.status == 2 ? (hasStream ? .live : .close) : (roomInfo.status == 4 ? .close : .unknow)
+        return LiveModel(
+            userName: detail.data?.user?.nickname ?? "",
+            roomTitle: roomInfo.title ?? "",
+            roomCover: roomInfo.cover?.url_list?.first ?? "",
+            userHeadImg: detail.data?.user?.avatar_thumb?.url_list?.first ?? "",
+            liveType: .douyin,
+            liveState: liveState.rawValue,
+            userId: userId ?? roomInfo.id_str ?? "",
+            roomId: roomId,
+            liveWatchedCount: roomInfo.user_count_str ?? ""
+        )
+    }
+
+    static func getDouyinRoomDetail(roomId: String, userId: String, fastMode: Bool = false) async throws -> DouyinRoomPlayInfoMainData {
+        let maxRetries = fastMode ? 1 : 3
         var apiErrorCount = 0
         var lastError: Error?
+        let startTime = CFAbsoluteTimeGetCurrent()
 
-        while apiErrorCount < 3 {
+        while apiErrorCount < maxRetries {
             do {
-                return try await Douyin._getRoomDetailByWebRidApi(roomId, userId: userId)
+                let result = try await Douyin._getRoomDetailByWebRidApi(roomId, userId: userId)
+                let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+                logInfo("🎯 抖音房间详情 [API] 成功，房间ID: \(roomId)，耗时: \(String(format: "%.0f", elapsed))ms")
+                return result
             } catch let error as LiveParseError {
                 apiErrorCount += 1
                 lastError = error
-                logWarning("抖音房间详情 API 获取失败，正在重试 (\(apiErrorCount)/3)：\(error)")
-                if apiErrorCount < 3 {
+                logWarning("抖音房间详情 API 获取失败，正在重试 (\(apiErrorCount)/\(maxRetries))：\(error)")
+                if apiErrorCount < maxRetries {
                     try? await Task.sleep(nanoseconds: 500_000_000)
                 }
             } catch {
                 apiErrorCount += 1
                 lastError = error
-                logWarning("抖音房间详情 API 获取出现未知错误：\(error.localizedDescription)，重试计数 \(apiErrorCount)/3")
-                if apiErrorCount < 3 {
+                logWarning("抖音房间详情 API 获取出现未知错误：\(error.localizedDescription)，重试计数 \(apiErrorCount)/\(maxRetries)")
+                if apiErrorCount < maxRetries {
                     try? await Task.sleep(nanoseconds: 500_000_000)
                 }
             }
         }
 
-        logInfo("抖音房间详情 API 连续失败3次，尝试 HTML 方案")
+        // fastMode 跳过 HTML 回退
+        if fastMode {
+            let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+            logWarning("🎯 抖音房间详情 [API] 失败(fastMode)，房间ID: \(roomId)，耗时: \(String(format: "%.0f", elapsed))ms")
+            throw lastError ?? LiveParseError.business(.roomNotFound(roomId: roomId))
+        }
+
+        logInfo("抖音房间详情 API 连续失败\(maxRetries)次，尝试 HTML 方案")
 
         do {
-            return try await Douyin._getRoomDetailByWebRidHtml(roomId)
+            let result = try await Douyin._getRoomDetailByWebRidHtml(roomId)
+            let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+            logInfo("🎯 抖音房间详情 [HTML] 成功，房间ID: \(roomId)，耗时: \(String(format: "%.0f", elapsed))ms")
+            return result
         } catch let error as LiveParseError {
-            logError("抖音房间详情 HTML 解析失败: \(error)")
+            let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+            logError("🎯 抖音房间详情 [HTML] 失败，房间ID: \(roomId)，耗时: \(String(format: "%.0f", elapsed))ms，错误: \(error)")
             throw error
         } catch {
-            logError("抖音房间详情 HTML 解析出现未知错误: \(error.localizedDescription)")
+            let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+            logError("🎯 抖音房间详情 [HTML] 失败，房间ID: \(roomId)，耗时: \(String(format: "%.0f", elapsed))ms，错误: \(error.localizedDescription)")
             if let lastError = lastError {
                 throw LiveParseError.parse(
                     .invalidDataFormat(
@@ -1540,14 +1638,15 @@ extension Douyin {
         let customFP = BrowserFingerprintGenerator.generateFingerprint(browserType: browserType)
         let abogus = ABogus(fp: customFP, userAgent: dyua)
         let signature = abogus.generateAbogus(params: urlParams).1
-        let cookie = try await Douyin.getCookie(roomId: webRid)
+
+        // 使用缓存的 Cookie
+        let cookie = try await ensureCookie(for: webRid)
 
         var requestHeaders = headers
         requestHeaders.add(name: "cookie", value: cookie)
         requestHeaders.add(name: "accept", value: "application/json, text/plain, */*")
 
         let requestUrl = "\(url)?\(urlParams)&a_bogus=\(signature)"
-        logDebug("抖音房间详情请求 URL: \(requestUrl)")
 
         let response: DouyinRoomPlayInfoMainData = try await LiveParseRequest.get(
             requestUrl,
