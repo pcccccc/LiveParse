@@ -14,16 +14,15 @@ import SwiftyJSON
 let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 let referer = "https://live.bilibili.com/"
 
-public struct BiliBiliCookie {
-    public static var cookie = UserDefaults.standard.value(forKey: "SimpleLive.Setting.BilibiliCookie") as? String ?? "" {
-        didSet {
-            UserDefaults.standard.setValue(cookie, forKey: "SimpleLive.Setting.BilibiliCookie")
-        }
+public struct BiliBiliCookie: Sendable {
+    public static var cookie: String {
+        get { UserDefaults.standard.string(forKey: "SimpleLive.Setting.BilibiliCookie") ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: "SimpleLive.Setting.BilibiliCookie") }
     }
-    public static var uid = UserDefaults.standard.value(forKey: "LiveParse.Bilibili.uid") as? String ?? "0" {
-        didSet {
-            UserDefaults.standard.setValue(uid, forKey: "LiveParse.Bilibili.uid")
-        }
+
+    public static var uid: String {
+        get { UserDefaults.standard.string(forKey: "LiveParse.Bilibili.uid") ?? "0" }
+        set { UserDefaults.standard.set(newValue, forKey: "LiveParse.Bilibili.uid") }
     }
 }
 

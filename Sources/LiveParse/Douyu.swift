@@ -620,7 +620,7 @@ public struct Douyu: LiveParse {
 
     private static func getDouyuSign(roomId: String) async throws -> [String: String] {
         // Fetch JS encryption code
-        let jsEncReq = try await AF.request(
+        let jsEncReq = try await LiveParseNetworkSession.shared.request(
             "https://www.douyu.com/swf_api/homeH5Enc?rids=\(roomId)",
             method: .get,
             headers: HTTPHeaders([
@@ -717,7 +717,7 @@ public struct Douyu: LiveParse {
             }
 
             // Make request to getH5Play API
-            let dataReq = try await AF.request(
+            let dataReq = try await LiveParseNetworkSession.shared.request(
                 "https://www.douyu.com/lapi/live/getH5Play/\(roomId)",
                 method: .post,
                 parameters: signParams,

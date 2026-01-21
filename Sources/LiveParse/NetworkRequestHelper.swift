@@ -9,6 +9,23 @@
 import Foundation
 import Alamofire
 
+enum LiveParseNetworkSession {
+    static let shared: Session = {
+        let configuration = URLSessionConfiguration.af.default
+        configuration.httpMaximumConnectionsPerHost = 16
+        return Session(configuration: configuration)
+    }()
+}
+
+enum LiveParseURLSession {
+    static let shared: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.httpMaximumConnectionsPerHost = 16
+        return URLSession(configuration: configuration)
+    }()
+}
+
+
 // MARK: - 原始响应封装
 
 /// 包含原始数据和响应详情的请求结果
@@ -60,7 +77,7 @@ public struct LiveParseRequest {
         logDebug("发起网络请求(Raw): \(method.rawValue) \(url)")
 
         do {
-            let dataRequest = AF.request(
+            let dataRequest = LiveParseNetworkSession.shared.request(
                 url,
                 method: method,
                 parameters: parameters,

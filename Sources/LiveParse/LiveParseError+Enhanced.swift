@@ -503,7 +503,7 @@ public class LiveParseConfig {
     public static var logger: LiveParseLogger = DefaultLiveParseLogger()
 
     /// 最小日志级别，低于此级别的日志不会被记录
-    public static var logLevel: LogLevel = .warning
+    public static var logLevel: LogLevel = .debug
 
     /// 是否在错误日志中包含详细的请求/响应信息
     public static var includeDetailedNetworkInfo: Bool = true

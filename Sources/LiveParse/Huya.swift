@@ -501,6 +501,31 @@ public struct Huya: LiveParse {
         guard let liveStatus = try await Huya.getLiveLastestInfo(roomId: roomId, userId: userId).liveState else { return .unknow }
         return LiveState(rawValue: liveStatus)!
     }
+
+    /// 轻量版状态获取，用于收藏同步场景（只解析 eLiveStatus）
+    public static func getLiveStateFast(roomId: String, userId: String?) async throws -> LiveState {
+        let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69"
+        let (html, _) = try await fetchHTML(
+            "https://m.huya.com/\(roomId)",
+            headers: [HTTPHeader(name: "user-agent", value: userAgent)],
+            context: "Huya.getLiveStateFast"
+        )
+
+        // 只提取 eLiveStatus 字段
+        let pattern = #""eLiveStatus"\s*:\s*(\d+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+              let range = Range(match.range(at: 1), in: html),
+              let status = Int(html[range]) else {
+            return .unknow
+        }
+
+        switch status {
+        case 2: return .live
+        case 3: return .video
+        default: return .close
+        }
+    }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
         let dataReq: HuyaSearchResult = try await LiveParseRequest.get(

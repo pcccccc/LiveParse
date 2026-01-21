@@ -428,8 +428,13 @@ extension Douyin {
         return cookie + (cookie.hasSuffix(";") ? "" : ";") + "__ac_nonce=\(String.generateRandomString(length: 21))"
     }
 
-    private static func cookieWithNonce() async throws -> String {
-        let cookie = try await ensureCookie(for: fakeRoomId)
+    private static func cookieWithNonce(baseCookie: String? = nil) async throws -> String {
+        var cookie = ""
+        if baseCookie == nil {
+            cookie = try await ensureCookie(for: fakeRoomId)
+        }else {
+            cookie = baseCookie ?? ""
+        }
         return appendNonce(to: cookie)
     }
 
@@ -445,7 +450,7 @@ extension Douyin {
         request.httpMethod = "GET"
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await LiveParseURLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw LiveParseError.network(.invalidResponse(request: requestDetail, response: nil))
             }
@@ -540,9 +545,10 @@ extension Douyin {
         logDebug("开始获取抖音分类列表")
 
         let cookie = try await ensureCookie(for: fakeRoomId)
+        logInfo("cookie: \(cookie)")
         headers["cookie"] = cookie
 
-        let url = "https://live.douyin.com"
+        let url = "https://live.douyin.com/categorynew/4_101"
         let pageHTML = try await LiveParseRequest.requestString(url, headers: headers)
         
         let pattern = "categoryData.*?\\]\\)"
@@ -561,7 +567,7 @@ extension Douyin {
         }
 
         guard let match = regex.firstMatch(in: pageHTML, range: NSRange(location: 0, length: pageHTML.count)),
-              let range = Range(match.range, in: pageHTML) else {
+            let range = Range(match.range, in: pageHTML) else {
             logWarning("未从抖音页面解析到分类数据")
             throw LiveParseError.parse(
                 .regexMatchFailed(
@@ -731,7 +737,7 @@ extension Douyin {
 
         let signature = try generateSignature(for: urlParams, userAgent: dyua)
         let requestUrl = "https://live.douyin.com/webcast/web/partition/detail/room/v2/?\(urlParams)&a_bogus=\(signature)"
-        let cookieHeader = try await cookieWithNonce()
+        let cookieHeader = try await cookieWithNonce(baseCookie: baseCookie)
         let requestHeaders = HTTPHeaders([
             "Accept": "application/json, text/plain, */*",
             "Authority": "live.douyin.com",
@@ -1030,7 +1036,7 @@ extension Douyin {
 
         let baseCookie = try await ensureCookie(for: fakeRoomId)
         headers["cookie"] = baseCookie
-        let cookieHeader = try await cookieWithNonce()
+        let cookieHeader = try await cookieWithNonce(baseCookie: baseCookie)
 
         let requestHeaders = HTTPHeaders([
             "Accept": "application/json, text/plain, */*",
@@ -1491,7 +1497,7 @@ extension Douyin {
         request.httpMethod = "GET"
 
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (_, response) = try await LiveParseURLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw LiveParseError.network(.invalidResponse(request: requestDetail, response: nil))
             }
@@ -1883,7 +1889,7 @@ public struct DouyinUtils {
                                                             requestData)
             
             // 发送请求
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (_, response) = try await LiveParseURLSession.shared.data(for: request)
             
             // 获取 Set-Cookie header
             guard let httpResponse = response as? HTTPURLResponse,
