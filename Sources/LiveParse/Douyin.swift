@@ -15,6 +15,13 @@ struct DouyinMainModel: Codable {
     let categoryData: Array<DouyinCategoryData>
 }
 
+/// 本地分类数据文件格式
+struct DouyinLocalCategoryFile: Codable {
+    let version: String
+    let description: String
+    let categoryData: [DouyinCategoryData]
+}
+
 struct DouyinCategoryData: Codable {
     let partition: DouyinPartitionData
     let sub_partition: Array<DouyinCategoryData>?
@@ -333,25 +340,48 @@ private var browserVer = "141.0.0.0"
 private var browserType = "edge"
 private var fakeRoomId = "870887192950"
 
-// Cookie 缓存管理器（使用 actor 保证并发安全）
+// Cookie 缓存管理器（使用 actor 保证并发安全，持久化到 UserDefaults）
 private actor DouyinCookieManager {
-    private var cachedCookie: String?
-    private var cookieCacheTime: Date?
+    private let cookieKey = "com.liveparse.douyin.cookie"
+    private let cookieTimeKey = "com.liveparse.douyin.cookie.time"
     private let cookieTTL: TimeInterval = 86400 // 24 小时
     private var fetchTask: Task<String, Error>?
 
+    // 内存缓存，避免频繁读取 UserDefaults
+    private var memoryCookie: String?
+    private var memoryCookieTime: Date?
+
     func getCachedCookie() -> String? {
-        guard let cached = cachedCookie,
-              let cacheTime = cookieCacheTime,
+        // 优先检查内存缓存
+        if let cached = memoryCookie,
+           let cacheTime = memoryCookieTime,
+           Date().timeIntervalSince(cacheTime) < cookieTTL {
+            return cached
+        }
+
+        // 从 UserDefaults 读取持久化缓存
+        guard let cached = UserDefaults.standard.string(forKey: cookieKey),
+              let cacheTime = UserDefaults.standard.object(forKey: cookieTimeKey) as? Date,
               Date().timeIntervalSince(cacheTime) < cookieTTL else {
             return nil
         }
+
+        // 更新内存缓存
+        memoryCookie = cached
+        memoryCookieTime = cacheTime
+        logDebug("从持久化缓存加载抖音 Cookie，剩余有效期: \(Int(cookieTTL - Date().timeIntervalSince(cacheTime)))秒")
         return cached
     }
 
     func setCookie(_ cookie: String) {
-        cachedCookie = cookie
-        cookieCacheTime = Date()
+        let now = Date()
+        // 更新内存缓存
+        memoryCookie = cookie
+        memoryCookieTime = now
+        // 持久化到 UserDefaults
+        UserDefaults.standard.set(cookie, forKey: cookieKey)
+        UserDefaults.standard.set(now, forKey: cookieTimeKey)
+        logDebug("抖音 Cookie 已持久化缓存，有效期24小时")
     }
 
     func ensureCookie(fetcher: @Sendable @escaping () async throws -> String) async throws -> String {
@@ -542,67 +572,41 @@ extension Douyin {
 
 
     public static func getCategoryList() async throws -> [LiveMainListModel] {
-        logDebug("开始获取抖音分类列表")
+        logDebug("开始获取抖音分类列表（从本地数据）")
 
-        let cookie = try await ensureCookie(for: fakeRoomId)
-        logInfo("cookie: \(cookie)")
-        headers["cookie"] = cookie
+        // 从 Bundle 加载本地分类数据
+        guard let url = Bundle.module.url(forResource: "douyin_categories", withExtension: "json") else {
+            logError("找不到本地分类数据文件 douyin_categories.json")
+            throw LiveParseError.business(
+                .emptyResult(
+                    location: "\(#file):\(#line)",
+                    request: nil
+                )
+            )
+        }
 
-        let url = "https://live.douyin.com/categorynew/4_101"
-        let pageHTML = try await LiveParseRequest.requestString(url, headers: headers)
-        
-        let pattern = "categoryData.*?\\]\\)"
-        let regex: NSRegularExpression
+        let jsonData: Data
         do {
-            regex = try NSRegularExpression(pattern: pattern, options: [])
+            jsonData = try Data(contentsOf: url)
         } catch {
-            logError("抖音分类正则编译失败: \(error.localizedDescription)")
-            throw LiveParseError.parse(
-                .regexMatchFailed(
-                    pattern: pattern,
-                    location: "\(#file):\(#line)",
-                    rawData: nil
-                )
-            )
-        }
-
-        guard let match = regex.firstMatch(in: pageHTML, range: NSRange(location: 0, length: pageHTML.count)),
-            let range = Range(match.range, in: pageHTML) else {
-            logWarning("未从抖音页面解析到分类数据")
-            throw LiveParseError.parse(
-                .regexMatchFailed(
-                    pattern: pattern,
-                    location: "\(#file):\(#line)",
-                    rawData: pageHTML
-                )
-            )
-        }
-
-        var matchedSubstring = String(pageHTML[range])
-        if matchedSubstring.count >= 6 {
-            matchedSubstring = String(matchedSubstring.dropLast(6))
-        }
-
-        let cleanedString = ("{\"" + matchedSubstring).replacingOccurrences(of: "\\", with: "")
-
-        guard let jsonData = cleanedString.data(using: .utf8) else {
+            logError("读取本地分类数据文件失败: \(error.localizedDescription)")
             throw LiveParseError.parse(
                 .invalidDataFormat(
-                    expected: "UTF-8 字符串",
-                    actual: "nil",
+                    expected: "本地 JSON 文件",
+                    actual: "读取失败",
                     location: "\(#file):\(#line)"
                 )
             )
         }
 
-        let decodedModel: DouyinMainModel
+        let localFile: DouyinLocalCategoryFile
         do {
-            decodedModel = try JSONDecoder().decode(DouyinMainModel.self, from: jsonData)
+            localFile = try JSONDecoder().decode(DouyinLocalCategoryFile.self, from: jsonData)
         } catch {
-            logError("抖音分类数据解析失败: \(error.localizedDescription)")
+            logError("抖音本地分类数据解析失败: \(error.localizedDescription)")
             throw LiveParseError.parse(
                 .decodingFailed(
-                    type: "DouyinMainModel",
+                    type: "DouyinLocalCategoryFile",
                     location: "\(#file):\(#line)",
                     response: nil,
                     underlyingError: error
@@ -610,9 +614,11 @@ extension Douyin {
             )
         }
 
+        logInfo("加载本地分类数据，版本: \(localFile.version)")
+
         var result: [LiveMainListModel] = []
 
-        for item in decodedModel.categoryData {
+        for item in localFile.categoryData {
             if item.sub_partition?.isEmpty == true {
                 let subList = [LiveCategoryModel(
                     id: item.partition.id_str,
@@ -687,16 +693,16 @@ extension Douyin {
         }
 
         guard !result.isEmpty else {
-            logWarning("抖音分类结果为空")
+            logWarning("抖音本地分类数据为空")
             throw LiveParseError.business(
                 .emptyResult(
                     location: "\(#file):\(#line)",
-                    request: buildRequestDetail(url: url, method: .get, headers: headers)
+                    request: nil
                 )
             )
         }
 
-        logInfo("成功获取抖音分类列表，共 \(result.count) 个分类")
+        logInfo("成功获取抖音分类列表（本地数据），共 \(result.count) 个分类")
         return result
     }
 
