@@ -89,9 +89,11 @@ public class DouyuSocketDataParser: WebSocketDataParser {
             if let str = contents.first {
                 if NSString(string: str).contains("chatmsg") == true {
                     let barrageDict = formatBarrageDict(msg: str)
-                    print("昵称：\(barrageDict["nickname"] as? String ?? "")")
-                    print("弹幕：\(barrageDict["content"] as? String ?? "")")
-                    connection.delegate?.webSocketDidReceiveMessage(text: barrageDict["content"] as? String ?? "", nickname: barrageDict["nickname"] as? String ?? "", color: UInt32(getDouyinLiveColor(col: barrageDict["col"] as? Int ?? 0)))
+                    if (barrageDict["dms"] as? Int ?? -1) > -1 {
+                        print("昵称：\(barrageDict["nickname"] as? String ?? "")")
+                        print("弹幕：\(barrageDict["content"] as? String ?? "")")
+                        connection.delegate?.webSocketDidReceiveMessage(text: barrageDict["content"] as? String ?? "", nickname: barrageDict["nickname"] as? String ?? "", color: UInt32(getDouyinLiveColor(col: barrageDict["col"] as? Int ?? 0)))
+                    }
                 }
             }
         }
@@ -99,14 +101,15 @@ public class DouyuSocketDataParser: WebSocketDataParser {
     
     private func formatBarrageDict(msg: String) -> [String: Any] {
        do {
-           let keys = ["rid", "uid", "nn", "level", "bnn", "bl", "brid", "diaf", "txt", "col"]
+           let keys = ["rid", "uid", "nn", "level", "bnn", "bl", "brid", "diaf", "txt", "col", "dms"]
            var values: [Any] = []
-           
+           print(msg)
            for key in keys {
                let regex = try NSRegularExpression(pattern: #"\#(key)@=(.*?)/"#)
                if let match = regex.firstMatch(in: msg, range: NSRange(msg.startIndex..., in: msg)) {
                    let matchedString = String(msg[Range(match.range(at: 1), in: msg)!])
                    values.append(matchedString)
+                   
                }else {
                    values.append("")
                }
@@ -122,7 +125,8 @@ public class DouyuSocketDataParser: WebSocketDataParser {
                "brid": Int(values[6] as? String ?? "") ?? 0,
                "is_diaf": Int(values[7] as? String ?? "") ?? 0,
                "content": values[8] as? String ?? "",
-               "col": Int(values[9] as? String ?? "") ?? 0
+               "col": Int(values[9] as? String ?? "") ?? 0,
+               "dms": values[10] as? Int ?? -1
            ]
            return barrageDict
        } catch {
