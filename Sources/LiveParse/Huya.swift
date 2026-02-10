@@ -238,8 +238,7 @@ public struct Huya: LiveParse {
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
         if LiveParseConfig.enableJSPlugins {
             do {
-                let manager = try LiveParsePluginManager()
-                let result: [LiveQualityModel] = try await manager.callDecodable(
+                let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "huya",
                     function: "getPlayArgs",
                     payload: [
@@ -784,8 +783,7 @@ public struct Huya: LiveParse {
             }
 
             do {
-                let manager = try LiveParsePluginManager()
-                let result: PluginResult = try await manager.callDecodable(
+                let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "huya",
                     function: "getDanmukuArgs",
                     payload: [
