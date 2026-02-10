@@ -75,6 +75,37 @@ async function __lp_huya_getRoomList(gameId, page) {
   });
 }
 
+async function __lp_huya_searchRooms(keyword, page) {
+  const qs = [
+    "m=Search",
+    "do=getSearchContent",
+    `q=${encodeURIComponent(String(keyword))}`,
+    "uid=0",
+    "v=4",
+    "typ=-5",
+    "livestate=0",
+    "rows=20",
+    `start=${encodeURIComponent(String((page - 1) * 20))}`
+  ].join("&");
+  const url = `https://search.cdn.huya.com/?${qs}`;
+  const resp = await Host.http.request({ url, method: "GET", timeout: 20 });
+  const obj = JSON.parse(resp.bodyText || "{}");
+  const docs = (obj && obj.response && obj.response["3"] && obj.response["3"].docs) || [];
+  return docs.map(function (item) {
+    return {
+      userName: String(item.game_nick || ""),
+      roomTitle: String(item.game_introduction || ""),
+      roomCover: String(item.game_screenshot || ""),
+      userHeadImg: String(item.game_imgUrl || ""),
+      liveType: "1",
+      liveState: "1",
+      userId: String(item.uid || ""),
+      roomId: String(item.room_id || ""),
+      liveWatchedCount: String(item.game_total_count || "")
+    };
+  });
+}
+
 function __lp_convertUnicodeEscapes(input) {
   return String(input).replace(/\\u([0-9A-Fa-f]{4})/g, function (_, hex) {
     return String.fromCharCode(parseInt(hex, 16));
@@ -191,6 +222,13 @@ globalThis.LiveParsePlugin = {
     const page = (payload && payload.page) ? Number(payload.page) : 1;
     if (!id) throw new Error("id is required");
     return await __lp_huya_getRoomList(id, page);
+  },
+
+  async searchRooms(payload) {
+    const keyword = String(payload && payload.keyword ? payload.keyword : "");
+    const page = (payload && payload.page) ? Number(payload.page) : 1;
+    if (!keyword) throw new Error("keyword is required");
+    return await __lp_huya_searchRooms(keyword, page);
   },
 
   async getLiveLastestInfo(payload) {

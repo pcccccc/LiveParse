@@ -656,6 +656,49 @@ public struct Huya: LiveParse {
     }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "huya",
+                    function: "searchRooms",
+                    payload: [
+                        "keyword": keyword,
+                        "page": page
+                    ]
+                )
+                logInfo("Huya.searchRooms 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .huya,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("Huya.searchRooms JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let dataReq: HuyaSearchResult = try await LiveParseRequest.get(
             "https://search.cdn.huya.com/",
             parameters: [
