@@ -1,0 +1,8 @@
+{
+  "pluginId": "example",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "displayName": "Example Plugin",
+  "liveTypes": [],
+  "entry": "lp_plugin_example_1.0.0_index.js"
+}

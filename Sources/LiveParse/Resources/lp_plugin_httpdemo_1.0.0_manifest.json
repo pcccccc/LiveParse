@@ -1,0 +1,8 @@
+{
+  "pluginId": "httpdemo",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "displayName": "HTTP Demo",
+  "liveTypes": [],
+  "entry": "lp_plugin_httpdemo_1.0.0_index.js"
+}

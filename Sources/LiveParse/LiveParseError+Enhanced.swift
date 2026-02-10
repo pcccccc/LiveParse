@@ -513,6 +513,12 @@ public class LiveParseConfig {
 
     /// 自定义日志处理器（例如写入文件）
     public static var customLogHandler: ((LogLevel, String) -> Void)?
+
+    /// 是否启用 JS 插件系统（JavaScriptCore）
+    public static var enableJSPlugins: Bool = true
+
+    /// 当插件执行失败时，是否回退到 Swift 内置实现
+    public static var pluginFallbackToSwiftImplementation: Bool = true
 }
 
 // MARK: - 日志辅助函数

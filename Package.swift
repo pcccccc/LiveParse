@@ -38,7 +38,10 @@ let package = Package(
                 .product(name: "TarsKit", package: "TarsKit"),
                 .product(name: "GMObjC", package: "GMObjC")
             ],
-            resources: [.process("Resources")]
+            resources: [.process("Resources")],
+            linkerSettings: [
+                .linkedFramework("JavaScriptCore")
+            ]
         ),
         .testTarget(
             name: "LiveParseTests",

@@ -236,6 +236,27 @@ public struct Huya: LiveParse {
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let manager = try LiveParsePluginManager()
+                let result: [LiveQualityModel] = try await manager.callDecodable(
+                    pluginId: "huya",
+                    function: "getPlayArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+                logInfo("Huya.getPlayArgs 使用 JS 插件返回 \(result.count) 组线路")
+                return result
+            } catch {
+                logWarning("Huya.getPlayArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Mobile/15E148 Safari/604.1"
         let (html, rawResponse) = try await fetchHTML(
             "https://m.huya.com/\(roomId)",
@@ -335,6 +356,11 @@ public struct Huya: LiveParse {
 
         let resp = try await tupClient.tupRequest("getCdnTokenInfoEx", tReq: req, tRsp: GetCdnTokenExResp())
         return resp.sFlvToken
+    }
+
+    /// 暴露给插件系统的 token 获取（内部调用同一套 Tars 流程）
+    static func plugin_getCdnTokenInfoEx(streamName: String) async throws -> String {
+        try await getCdnTokenInfoEx(streamName: streamName)
     }
 
     /// 构建antiCode签名
