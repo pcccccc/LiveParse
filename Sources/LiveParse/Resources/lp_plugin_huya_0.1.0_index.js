@@ -28,6 +28,53 @@ function __lp_parseQueryString(qs) {
   return out;
 }
 
+async function __lp_huya_getCategorySubList(bussType) {
+  const resp = await Host.http.request({
+    url: `https://live.cdn.huya.com/liveconfig/game/bussLive?bussType=${encodeURIComponent(String(bussType))}`,
+    method: "GET",
+    timeout: 20
+  });
+  const obj = JSON.parse(resp.bodyText || "{}");
+  const list = (obj && obj.data) || [];
+  return list.map(function (item) {
+    const gid = item.gid;
+    return {
+      id: String(gid),
+      parentId: "",
+      title: String(item.gameFullName || ""),
+      icon: `https://huyaimg.msstatic.com/cdnimage/game/${gid}-MS.jpg`,
+      biz: ""
+    };
+  });
+}
+
+async function __lp_huya_getRoomList(gameId, page) {
+  const qs = [
+    "m=LiveList",
+    "do=getLiveListByPage",
+    "tagAll=0",
+    `gameId=${encodeURIComponent(String(gameId))}`,
+    `page=${encodeURIComponent(String(page))}`
+  ].join("&");
+  const url = `https://www.huya.com/cache.php?${qs}`;
+  const resp = await Host.http.request({ url, method: "GET", timeout: 20 });
+  const obj = JSON.parse(resp.bodyText || "{}");
+  const datas = (obj && obj.data && obj.data.datas) || [];
+  return datas.map(function (item) {
+    return {
+      userName: String(item.nick || ""),
+      roomTitle: String(item.introduction || ""),
+      roomCover: String(item.screenshot || ""),
+      userHeadImg: String(item.avatar180 || ""),
+      liveType: "1",
+      liveState: "",
+      userId: String(item.uid || ""),
+      roomId: String(item.profileRoom || ""),
+      liveWatchedCount: String(item.totalCount || "")
+    };
+  });
+}
+
 function __lp_convertUnicodeEscapes(input) {
   return String(input).replace(/\\u([0-9A-Fa-f]{4})/g, function (_, hex) {
     return String.fromCharCode(parseInt(hex, 16));
@@ -124,6 +171,28 @@ async function __lp_getPlayURL(stream, presenterUid, bitRate) {
 
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
+  async getCategoryList(payload) {
+    const main = [
+      { id: "1", title: "网游" },
+      { id: "2", title: "单机" },
+      { id: "8", title: "娱乐" },
+      { id: "3", title: "手游" }
+    ];
+    const out = [];
+    for (const item of main) {
+      const subList = await __lp_huya_getCategorySubList(item.id);
+      out.push({ id: item.id, title: item.title, icon: "", biz: "", subList });
+    }
+    return out;
+  },
+
+  async getRoomList(payload) {
+    const id = String(payload && payload.id ? payload.id : "");
+    const page = (payload && payload.page) ? Number(payload.page) : 1;
+    if (!id) throw new Error("id is required");
+    return await __lp_huya_getRoomList(id, page);
+  },
+
   async getLiveLastestInfo(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) throw new Error("roomId is required");
