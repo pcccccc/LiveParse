@@ -124,6 +124,59 @@ async function __lp_getPlayURL(stream, presenterUid, bitRate) {
 
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
+  async getLiveLastestInfo(payload) {
+    const roomId = String(payload && payload.roomId ? payload.roomId : "");
+    if (!roomId) throw new Error("roomId is required");
+
+    const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69";
+    const resp = await Host.http.request({
+      url: `https://m.huya.com/${roomId}`,
+      method: "GET",
+      headers: { "user-agent": ua },
+      timeout: 20
+    });
+    const html = resp.bodyText || "";
+    const data = __lp_extractHNFGlobalInit(html);
+
+    const roomInfo = data && data.roomInfo;
+    const eLiveStatus = roomInfo ? roomInfo.eLiveStatus : 0;
+
+    let liveState = "0";
+    let liveInfo = roomInfo ? roomInfo.tRecentLive : null;
+
+    if (eLiveStatus === 2) {
+      liveState = "1";
+      liveInfo = roomInfo.tLiveInfo;
+    } else if (eLiveStatus === 3) {
+      if (roomInfo && roomInfo.tReplayInfo) {
+        liveState = "2";
+        liveInfo = roomInfo.tReplayInfo;
+      } else {
+        liveState = "0";
+        liveInfo = roomInfo ? roomInfo.tRecentLive : null;
+      }
+    } else {
+      liveState = "0";
+      liveInfo = roomInfo ? roomInfo.tRecentLive : null;
+    }
+
+    if (!liveInfo) {
+      throw new Error("missing liveInfo");
+    }
+
+    // liveInfo 结构与 Swift 侧 HuyaRoomTLiveInfo 对齐
+    return {
+      userName: String(liveInfo.sNick || ""),
+      roomTitle: String(liveInfo.sIntroduction || ""),
+      roomCover: String(liveInfo.sScreenshot || ""),
+      userHeadImg: String(liveInfo.sAvatar180 || ""),
+      liveType: "1",
+      liveState,
+      userId: String(liveInfo.lYyid || ""),
+      roomId,
+      liveWatchedCount: String(liveInfo.lTotalCount || "")
+    };
+  },
   async getDanmukuArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) throw new Error("roomId is required");
