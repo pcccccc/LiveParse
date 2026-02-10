@@ -124,6 +124,36 @@ async function __lp_getPlayURL(stream, presenterUid, bitRate) {
 
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
+  async getDanmukuArgs(payload) {
+    const roomId = String(payload && payload.roomId ? payload.roomId : "");
+    if (!roomId) throw new Error("roomId is required");
+
+    const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69";
+    const resp = await Host.http.request({
+      url: `https://m.huya.com/${roomId}`,
+      method: "GET",
+      headers: { "user-agent": ua },
+      timeout: 20
+    });
+    const html = resp.bodyText || "";
+
+    const data = __lp_extractHNFGlobalInit(html);
+    const liveInfo = data && data.roomInfo && data.roomInfo.tLiveInfo;
+    const streamInfo = liveInfo && liveInfo.tLiveStreamInfo && liveInfo.tLiveStreamInfo.vStreamInfo;
+    const firstStream = streamInfo && streamInfo.value ? streamInfo.value[0] : null;
+    if (!liveInfo || !firstStream) {
+      throw new Error("missing stream info");
+    }
+
+    return {
+      args: {
+        lYyid: String(liveInfo.lYyid || ""),
+        lChannelId: String(firstStream.lChannelId || ""),
+        lSubChannelId: String(firstStream.lSubChannelId || "")
+      },
+      headers: null
+    };
+  },
   async getPlayArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) throw new Error("roomId is required");
@@ -189,4 +219,3 @@ globalThis.LiveParsePlugin = {
     throw new Error("empty result");
   }
 };
-
