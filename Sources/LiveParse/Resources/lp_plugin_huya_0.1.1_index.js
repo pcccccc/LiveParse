@@ -113,7 +113,8 @@ function __lp_convertUnicodeEscapes(input) {
 }
 
 function __lp_removeIncludeFunctionValue(input) {
-  return String(input).replace(/function\s*\([^}]*\}/g, );
+  // 保持 JSON 可解析：将 function(...) { ... } 替换为 ""。
+  return String(input).replace(/function\s*\([^}]*\}/g, "\"\"");
 }
 
 function __lp_extractHNFGlobalInit(html) {
@@ -132,6 +133,75 @@ function __lp_extractHNFGlobalInit(html) {
 function __lp_extractTopSid(html) {
   const m = String(html).match(/lChannelId\":(\d+)/);
   return m ? parseInt(m[1], 10) : 0;
+}
+
+function __lp_isValidRoomId(roomId) {
+  const s = String(roomId || "").trim();
+  if (!/^\d+$/.test(s)) return false;
+  const n = parseInt(s, 10);
+  return Number.isFinite(n) && n > 0;
+}
+
+function __lp_extractFirstURL(text) {
+  const m = String(text || "").match(/https?:\/\/[^\s|]+/);
+  if (!m) return "";
+  return String(m[0]).replace(/[),，。】]+$/g, "");
+}
+
+function __lp_extractRoomIdFromText(text) {
+  const s = String(text || "");
+  let m = s.match(/(?:huya\.com\/)(\d+)/);
+  if (m && m[1]) return m[1];
+  m = s.match(/(?:m\.huya\.com\/)(\d+)/);
+  if (m && m[1]) return m[1];
+  return "";
+}
+
+function __lp_extractRoomIdFromHtml(html) {
+  const s = String(html || "");
+  let m = s.match(/lProfileRoom\":(\d+)/);
+  if (m && m[1]) return m[1];
+  m = s.match(/\"lProfileRoom\":(\d+)/);
+  if (m && m[1]) return m[1];
+  m = s.match(/\"lProfileRoom\":(\d+),/);
+  if (m && m[1]) return m[1];
+  return "";
+}
+
+async function __lp_huya_resolveRoomIdFromShareCode(shareCode) {
+  const input = String(shareCode || "").trim();
+  if (!input) throw new Error("shareCode is empty");
+
+  if (__lp_isValidRoomId(input)) return input;
+
+  let roomId = __lp_extractRoomIdFromText(input);
+  if (__lp_isValidRoomId(roomId)) return roomId;
+
+  const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69";
+
+  const guessedURL = (input.includes("huya.com") && input.indexOf("://") < 0)
+    ? ("https://" + input.replace(/^\/\//, ""))
+    : "";
+  const url = __lp_extractFirstURL(input) || guessedURL;
+  if (url) {
+    roomId = __lp_extractRoomIdFromText(url);
+    if (__lp_isValidRoomId(roomId)) return roomId;
+
+    const resp = await Host.http.request({
+      url,
+      method: "GET",
+      headers: { "user-agent": ua },
+      timeout: 20
+    });
+
+    roomId = __lp_extractRoomIdFromText(resp.url || "");
+    if (__lp_isValidRoomId(roomId)) return roomId;
+
+    roomId = __lp_extractRoomIdFromHtml(resp.bodyText || "");
+    if (__lp_isValidRoomId(roomId)) return roomId;
+  }
+
+  throw new Error("roomId not found");
 }
 
 function __lp_rotl64(t) {
@@ -202,6 +272,12 @@ async function __lp_getPlayURL(stream, presenterUid, bitRate) {
 
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
+  async getRoomInfoFromShareCode(payload) {
+    const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
+    if (!shareCode) throw new Error("shareCode is required");
+    const roomId = await __lp_huya_resolveRoomIdFromShareCode(shareCode);
+    return await this.getLiveLastestInfo({ roomId, userId: null });
+  },
   async getCategoryList(payload) {
     const main = [
       { id: "1", title: "网游" },
