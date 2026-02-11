@@ -360,6 +360,21 @@ globalThis.LiveParsePlugin = {
       liveWatchedCount: String(liveInfo.lTotalCount || "")
     };
   },
+
+  async getLiveState(payload) {
+    const roomId = String(payload && payload.roomId ? payload.roomId : "");
+    if (!roomId) throw new Error("roomId is required");
+
+    const info = await this.getLiveLastestInfo({
+      roomId,
+      userId: payload && payload.userId ? payload.userId : null
+    });
+
+    return {
+      liveState: String(info && info.liveState ? info.liveState : "3")
+    };
+  },
+
   async getDanmukuArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) throw new Error("roomId is required");
