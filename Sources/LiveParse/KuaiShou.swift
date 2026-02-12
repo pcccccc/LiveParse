@@ -284,6 +284,23 @@ public struct KuaiShou: LiveParse {
     private static let shortLinkPattern = #"https://v\.kuaishou\.com/[A-Za-z0-9]+"#
 
     public static func getCategoryList() async throws -> [LiveMainListModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "ks",
+                    function: "getCategoryList",
+                    payload: [:]
+                )
+                logInfo("KuaiShou.getCategoryList 使用 JS 插件返回 \(result.count) 个主分类")
+                return result
+            } catch {
+                logWarning("KuaiShou.getCategoryList JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取快手分类列表")
 
         let categories: [(String, String)] = [
@@ -358,6 +375,50 @@ public struct KuaiShou: LiveParse {
     }
 
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "ks",
+                    function: "getRoomList",
+                    payload: [
+                        "id": id,
+                        "parentId": parentId as Any,
+                        "page": page
+                    ]
+                )
+                logInfo("KuaiShou.getRoomList 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .ks,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("KuaiShou.getRoomList JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let isNonGame = id.count >= 7
         let url = isNonGame ? nonGameListURL : gameListURL
         let parameters: Parameters = [
@@ -401,6 +462,26 @@ public struct KuaiShou: LiveParse {
     }
 
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "ks",
+                    function: "getPlayArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+                logInfo("KuaiShou.getPlayArgs 使用 JS 插件返回 \(result.count) 组线路")
+                return result
+            } catch {
+                logWarning("KuaiShou.getPlayArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取快手播放参数，房间ID: \(roomId)")
 
         let liveData = try await getKSLiveRoom(roomId: roomId)
@@ -447,11 +528,96 @@ public struct KuaiShou: LiveParse {
     }
 
     static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "ks",
+                    function: "searchRooms",
+                    payload: [
+                        "keyword": keyword,
+                        "page": page
+                    ]
+                )
+                logInfo("KuaiShou.searchRooms 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .ks,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("KuaiShou.searchRooms JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logInfo("快手暂未提供搜索接口，关键词: \(keyword)")
         return []
     }
 
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveInfo: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveType: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "ks",
+                    function: "getLiveLastestInfo",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+                logInfo("KuaiShou.getLiveLastestInfo 使用 JS 插件成功")
+                return LiveModel(
+                    userName: info.userName,
+                    roomTitle: info.roomTitle,
+                    roomCover: info.roomCover,
+                    userHeadImg: info.userHeadImg,
+                    liveType: .ks,
+                    liveState: info.liveState,
+                    userId: info.userId,
+                    roomId: info.roomId,
+                    liveWatchedCount: info.liveWatchedCount
+                )
+            } catch {
+                logWarning("KuaiShou.getLiveLastestInfo JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取快手房间信息，房间ID: \(roomId)")
 
         let liveData = try await getKSLiveRoom(roomId: roomId)
@@ -520,6 +686,41 @@ public struct KuaiShou: LiveParse {
     }
 
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveState: Decodable {
+                let liveState: String
+            }
+
+            do {
+                let result: PluginLiveState = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "ks",
+                    function: "getLiveState",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+
+                if let state = LiveState(rawValue: result.liveState) {
+                    logInfo("KuaiShou.getLiveState 使用 JS 插件成功")
+                    return state
+                }
+
+                logWarning("KuaiShou.getLiveState JS 插件返回无效状态：\(result.liveState)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw LiveParseError.liveStateParseError(
+                        "快手直播状态获取失败",
+                        "插件返回未知状态值: \(result.liveState)"
+                    )
+                }
+            } catch {
+                logWarning("KuaiShou.getLiveState JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取快手直播状态，房间ID: \(roomId)")
 
         let liveInfo = try await getLiveLastestInfo(roomId: roomId, userId: userId)
@@ -537,6 +738,47 @@ public struct KuaiShou: LiveParse {
     }
 
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveInfo: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveType: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "ks",
+                    function: "getRoomInfoFromShareCode",
+                    payload: [
+                        "shareCode": shareCode
+                    ]
+                )
+                logInfo("KuaiShou.getRoomInfoFromShareCode 使用 JS 插件成功")
+                return LiveModel(
+                    userName: info.userName,
+                    roomTitle: info.roomTitle,
+                    roomCover: info.roomCover,
+                    userHeadImg: info.userHeadImg,
+                    liveType: .ks,
+                    liveState: info.liveState,
+                    userId: info.userId,
+                    roomId: info.roomId,
+                    liveWatchedCount: info.liveWatchedCount
+                )
+            } catch {
+                logWarning("KuaiShou.getRoomInfoFromShareCode JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let trimmed = shareCode.trimmingCharacters(in: .whitespacesAndNewlines)
         logDebug("开始解析快手分享码: \(trimmed)")
 
@@ -581,6 +823,31 @@ public struct KuaiShou: LiveParse {
     }
 
     static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginResult: Decodable {
+                let args: [String: String]
+                let headers: [String: String]?
+            }
+
+            do {
+                let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "ks",
+                    function: "getDanmukuArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+                logInfo("KuaiShou.getDanmukuArgs 使用 JS 插件成功")
+                return (result.args, result.headers)
+            } catch {
+                logWarning("KuaiShou.getDanmukuArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logInfo("快手暂未开放弹幕接口，房间ID: \(roomId)")
         return ([:], nil)
     }

@@ -225,6 +225,23 @@ public struct Douyu: LiveParse {
     }
 
     public static func getCategoryList() async throws -> [LiveMainListModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyu",
+                    function: "getCategoryList",
+                    payload: [:]
+                )
+                logInfo("Douyu.getCategoryList 使用 JS 插件返回 \(result.count) 个主分类")
+                return result
+            } catch {
+                logWarning("Douyu.getCategoryList JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let url = "https://m.douyu.com/api/cate/list"
 
         logDebug("开始获取斗鱼分类列表")
@@ -271,6 +288,50 @@ public struct Douyu: LiveParse {
     }
     
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyu",
+                    function: "getRoomList",
+                    payload: [
+                        "id": id,
+                        "parentId": parentId as Any,
+                        "page": page
+                    ]
+                )
+                logInfo("Douyu.getRoomList 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .douyu,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("Douyu.getRoomList JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let url = "https://www.douyu.com/gapi/rkc/directory/mixList/2_\(id)/\(page)"
 
         logDebug("开始获取斗鱼直播间列表，分类ID: \(id)，页码: \(page)")
@@ -312,6 +373,26 @@ public struct Douyu: LiveParse {
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyu",
+                    function: "getPlayArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+                logInfo("Douyu.getPlayArgs 使用 JS 插件返回 \(result.count) 组线路")
+                return result
+            } catch {
+                logWarning("Douyu.getPlayArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取斗鱼播放线路，房间ID: \(roomId)")
 
         let qualities = try await getRealPlayArgs(roomId: roomId, rate: 0, cdn: nil)
@@ -328,6 +409,48 @@ public struct Douyu: LiveParse {
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveInfo: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveType: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyu",
+                    function: "getLiveLastestInfo",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+                logInfo("Douyu.getLiveLastestInfo 使用 JS 插件成功")
+                return LiveModel(
+                    userName: info.userName,
+                    roomTitle: info.roomTitle,
+                    roomCover: info.roomCover,
+                    userHeadImg: info.userHeadImg,
+                    liveType: .douyu,
+                    liveState: info.liveState,
+                    userId: info.userId,
+                    roomId: info.roomId,
+                    liveWatchedCount: info.liveWatchedCount
+                )
+            } catch {
+                logWarning("Douyu.getLiveLastestInfo JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let url = "https://www.douyu.com/betard/\(roomId)"
         let headers = HTTPHeaders([
             HTTPHeader(name: "referer", value: "\(defaultReferer)\(roomId)"),
@@ -402,6 +525,41 @@ public struct Douyu: LiveParse {
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveState: Decodable {
+                let liveState: String
+            }
+
+            do {
+                let result: PluginLiveState = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyu",
+                    function: "getLiveState",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+
+                if let state = LiveState(rawValue: result.liveState) {
+                    logInfo("Douyu.getLiveState 使用 JS 插件成功")
+                    return state
+                }
+
+                logWarning("Douyu.getLiveState JS 插件返回无效状态：\(result.liveState)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw LiveParseError.liveStateParseError(
+                        "斗鱼房间状态获取失败",
+                        "插件返回未知状态值: \(result.liveState)"
+                    )
+                }
+            } catch {
+                logWarning("Douyu.getLiveState JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取斗鱼房间状态，房间ID: \(roomId)")
 
         do {
@@ -420,6 +578,49 @@ public struct Douyu: LiveParse {
     }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyu",
+                    function: "searchRooms",
+                    payload: [
+                        "keyword": keyword,
+                        "page": page
+                    ]
+                )
+                logInfo("Douyu.searchRooms 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .douyu,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("Douyu.searchRooms JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始搜索斗鱼直播间，关键词: \(keyword)，页码: \(page)")
 
         let did = String.generateRandomString(length: 32)
@@ -474,6 +675,47 @@ public struct Douyu: LiveParse {
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveInfo: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveType: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyu",
+                    function: "getRoomInfoFromShareCode",
+                    payload: [
+                        "shareCode": shareCode
+                    ]
+                )
+                logInfo("Douyu.getRoomInfoFromShareCode 使用 JS 插件成功")
+                return LiveModel(
+                    userName: info.userName,
+                    roomTitle: info.roomTitle,
+                    roomCover: info.roomCover,
+                    userHeadImg: info.userHeadImg,
+                    liveType: .douyu,
+                    liveState: info.liveState,
+                    userId: info.userId,
+                    roomId: info.roomId,
+                    liveWatchedCount: info.liveWatchedCount
+                )
+            } catch {
+                logWarning("Douyu.getRoomInfoFromShareCode JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let trimmed = shareCode.trimmingCharacters(in: .whitespacesAndNewlines)
         logDebug("开始解析斗鱼分享码: \(trimmed)")
 
@@ -559,7 +801,32 @@ public struct Douyu: LiveParse {
     }
     
     public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
-        (["roomId": roomId], nil)
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginResult: Decodable {
+                let args: [String: String]
+                let headers: [String: String]?
+            }
+
+            do {
+                let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyu",
+                    function: "getDanmukuArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+                logInfo("Douyu.getDanmukuArgs 使用 JS 插件成功")
+                return (result.args, result.headers)
+            } catch {
+                logWarning("Douyu.getDanmukuArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
+        return (["roomId": roomId], nil)
     }
     
     public static func getCategoryList(id: String, name: String) async throws -> Array<LiveCategoryModel> {

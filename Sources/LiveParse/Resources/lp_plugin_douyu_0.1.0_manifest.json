@@ -1,0 +1,8 @@
+{
+  "pluginId": "douyu",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayName": "Douyu (JS PoC)",
+  "liveTypes": ["3"],
+  "entry": "lp_plugin_douyu_0.1.0_index.js"
+}

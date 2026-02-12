@@ -44,4 +44,52 @@ struct PluginSystemTests {
         #expect(plugin.manifest.pluginId == "example")
         try await plugin.load()
     }
+
+    @Test
+    func builtInDouyuPluginResolvable() async throws {
+        let manager = try LiveParsePluginManager()
+        let plugin = try manager.resolve(pluginId: "douyu")
+        #expect(plugin.manifest.pluginId == "douyu")
+        try await plugin.load()
+    }
+
+    @Test
+    func builtInCCPluginResolvable() async throws {
+        let manager = try LiveParsePluginManager()
+        let plugin = try manager.resolve(pluginId: "cc")
+        #expect(plugin.manifest.pluginId == "cc")
+        try await plugin.load()
+    }
+
+    @Test
+    func builtInYYPluginResolvable() async throws {
+        let manager = try LiveParsePluginManager()
+        let plugin = try manager.resolve(pluginId: "yy")
+        #expect(plugin.manifest.pluginId == "yy")
+        try await plugin.load()
+    }
+
+    @Test
+    func builtInKuaiShouPluginResolvable() async throws {
+        let manager = try LiveParsePluginManager()
+        let plugin = try manager.resolve(pluginId: "ks")
+        #expect(plugin.manifest.pluginId == "ks")
+        try await plugin.load()
+    }
+
+    @Test
+    func builtInBilibiliPluginResolvable() async throws {
+        let manager = try LiveParsePluginManager()
+        let plugin = try manager.resolve(pluginId: "bilibili")
+        #expect(plugin.manifest.pluginId == "bilibili")
+        try await plugin.load()
+    }
+
+    @Test
+    func builtInDouyinPluginResolvable() async throws {
+        let manager = try LiveParsePluginManager()
+        let plugin = try manager.resolve(pluginId: "douyin")
+        #expect(plugin.manifest.pluginId == "douyin")
+        try await plugin.load()
+    }
 }

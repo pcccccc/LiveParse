@@ -1,0 +1,331 @@
+const __lp_cc_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
+
+function __lp_cc_firstMatch(text, re) {
+  const m = String(text || "").match(re);
+  if (!m || !m[1]) return "";
+  return String(m[1]);
+}
+
+function __lp_cc_formatId(input) {
+  const m = String(input || "").match(/\d+/);
+  return m ? String(m[0]) : String(input || "");
+}
+
+function __lp_cc_sanitizeId(value) {
+  const s = String(value || "");
+  if (s.includes("Optional")) return __lp_cc_formatId(s);
+  return s;
+}
+
+function __lp_cc_isLive(room) {
+  return Number(room && room.cuteid ? room.cuteid : 0) > 0;
+}
+
+function __lp_cc_roomToLiveModel(room, fallbackRoomId) {
+  const resolvedRoomId = String((room && room.cuteid) || (room && room.roomid) || fallbackRoomId || 0);
+  const resolvedUserId = String((room && room.channel_id) || 0);
+  const isLive = __lp_cc_isLive(room);
+
+  return {
+    userName: String((room && room.nickname) || ""),
+    roomTitle: String((room && room.title) || ""),
+    roomCover: String((room && room.poster) || (room && room.adv_img) || ""),
+    userHeadImg: String((room && room.portraiturl) || (room && room.purl) || ""),
+    liveType: "4",
+    liveState: isLive ? "1" : "0",
+    userId: resolvedUserId,
+    roomId: resolvedRoomId,
+    liveWatchedCount: String((room && room.visitor) || 0)
+  };
+}
+
+async function __lp_cc_getCategorySubList(id) {
+  const resp = await Host.http.request({
+    url: `https://api.cc.163.com/v1/wapcc/gamecategory?catetype=${encodeURIComponent(String(id))}`,
+    method: "GET",
+    headers: {
+      "User-Agent": __lp_cc_ua
+    },
+    timeout: 20
+  });
+  const obj = JSON.parse(resp.bodyText || "{}");
+  const list = (((obj || {}).data || {}).category_info || {}).game_list || [];
+  return list.map(function (item) {
+    return {
+      id: String(item.gametype || ""),
+      parentId: "",
+      title: String(item.name || ""),
+      icon: String(item.cover || ""),
+      biz: ""
+    };
+  });
+}
+
+async function __lp_cc_fetchRoomDetail(roomId, userId) {
+  const sanitized = __lp_cc_sanitizeId(String(userId || roomId || ""));
+  const resp = await Host.http.request({
+    url: `https://cc.163.com/live/channel/?channelids=${encodeURIComponent(String(sanitized))}`,
+    method: "GET",
+    headers: {
+      "User-Agent": __lp_cc_ua
+    },
+    timeout: 20
+  });
+  const obj = JSON.parse(resp.bodyText || "{}");
+  const list = (obj && obj.data) || [];
+  const room = list && list.length > 0 ? list[0] : null;
+  if (!room) throw new Error("room not found");
+
+  const resolvedChannelId = String(room.channel_id || parseInt(String(sanitized), 10) || 0);
+  const resolvedRoomId = String(room.cuteid || room.roomid || __lp_cc_formatId(String(roomId || "")) || 0);
+
+  return {
+    room,
+    channelId: resolvedChannelId,
+    roomId: resolvedRoomId
+  };
+}
+
+function __lp_cc_buildQualityModel(label, resolution, roomId) {
+  if (!resolution || !resolution.cdn) return null;
+
+  const cdn = resolution.cdn;
+  const candidates = [
+    ["ali", cdn.ali],
+    ["ks", cdn.ks],
+    ["hs", cdn.hs],
+    ["hs2", cdn.hs2],
+    ["ws", cdn.ws],
+    ["dn", cdn.dn],
+    ["xy", cdn.xy]
+  ];
+
+  const details = [];
+  for (const item of candidates) {
+    const name = item[0];
+    const url = item[1];
+    if (!url) continue;
+    details.push({
+      roomId: String(roomId),
+      title: `线路 ${name}`,
+      qn: Number(resolution.vbr || 0),
+      url: String(url),
+      liveCodeType: "flv",
+      liveType: "4"
+    });
+  }
+
+  if (details.length === 0) return null;
+  return {
+    cdn: String(label),
+    qualitys: details
+  };
+}
+
+async function __lp_cc_getPlayArgs(roomId, userId) {
+  const detail = await __lp_cc_fetchRoomDetail(roomId, userId);
+  const room = detail.room;
+  const resolution = room && room.quickplay && room.quickplay.resolution;
+  if (!resolution) throw new Error("missing quickplay resolution");
+
+  const mapping = [
+    ["原画", resolution.original],
+    ["蓝光", resolution.blueray],
+    ["超清", resolution.ultra],
+    ["高清", resolution.high],
+    ["标准", resolution.standard],
+    ["标清", resolution.medium]
+  ];
+
+  const out = [];
+  for (const pair of mapping) {
+    const model = __lp_cc_buildQualityModel(pair[0], pair[1], detail.roomId);
+    if (model) out.push(model);
+  }
+  return out;
+}
+
+async function __lp_cc_search(keyword, page) {
+  const qs = [
+    `query=${encodeURIComponent(String(keyword))}`,
+    `page=${encodeURIComponent(String(page))}`,
+    "size=20"
+  ].join("&");
+
+  const resp = await Host.http.request({
+    url: `https://cc.163.com/search/anchor?${qs}`,
+    method: "GET",
+    headers: {
+      "User-Agent": __lp_cc_ua
+    },
+    timeout: 20
+  });
+  const obj = JSON.parse(resp.bodyText || "{}");
+  const list = (((obj || {}).webcc_anchor || {}).result) || [];
+  return list.map(function (item) {
+    return __lp_cc_roomToLiveModel(item, 0);
+  });
+}
+
+function __lp_cc_extractShareIds(text) {
+  const source = String(text || "");
+
+  let m = source.match(/https:\/\/h5\.cc\.163\.com\/cc\/(\d+)\?rid=(\d+)&cid=(\d+)/);
+  if (m && m[1] && m[3]) {
+    return {
+      roomId: String(m[1]),
+      channelId: String(m[3])
+    };
+  }
+
+  m = source.match(/https:\/\/cc\.163\.com\/(\d+)\/?/);
+  if (m && m[1]) {
+    return {
+      roomId: String(m[1]),
+      channelId: null
+    };
+  }
+
+  return null;
+}
+
+async function __lp_cc_getDanmukuArgs(roomId) {
+  const resp = await Host.http.request({
+    url: `https://api.cc.163.com/v1/activitylives/anchor/lives?anchor_ccid=${encodeURIComponent(String(roomId))}`,
+    method: "GET",
+    headers: {
+      "User-Agent": __lp_cc_ua
+    },
+    timeout: 20
+  });
+  const obj = JSON.parse(resp.bodyText || "{}");
+  const data = (obj && obj.data) || {};
+  const channelData = data[String(roomId)] || Object.values(data)[0] || null;
+  if (!channelData || !channelData.channel_id || !channelData.room_id) {
+    return {
+      args: {},
+      headers: null
+    };
+  }
+
+  return {
+    args: {
+      cid: String(channelData.channel_id || ""),
+      gametype: String(channelData.gametype || 0),
+      roomId: String(channelData.room_id || "")
+    },
+    headers: null
+  };
+}
+
+globalThis.LiveParsePlugin = {
+  apiVersion: 1,
+
+  async getCategoryList() {
+    const main = [
+      { id: "1", title: "网游" },
+      { id: "2", title: "单机" },
+      { id: "4", title: "竞技" },
+      { id: "5", title: "综艺" }
+    ];
+
+    const out = [];
+    for (const item of main) {
+      const subList = await __lp_cc_getCategorySubList(item.id);
+      out.push({
+        id: item.id,
+        title: item.title,
+        icon: "",
+        biz: "",
+        subList
+      });
+    }
+    return out;
+  },
+
+  async getRoomList(payload) {
+    const id = String(payload && payload.id ? payload.id : "");
+    const page = payload && payload.page ? Number(payload.page) : 1;
+    if (!id) throw new Error("id is required");
+
+    const qs = [
+      "format=json",
+      "tag_id=0",
+      `start=${encodeURIComponent(String((page - 1) * 20))}`,
+      "size=20"
+    ].join("&");
+
+    const resp = await Host.http.request({
+      url: `https://cc.163.com/api/category/${encodeURIComponent(String(id))}?${qs}`,
+      method: "GET",
+      headers: {
+        "User-Agent": __lp_cc_ua
+      },
+      timeout: 20
+    });
+
+    const obj = JSON.parse(resp.bodyText || "{}");
+    const lives = (obj && obj.lives) || [];
+    return lives.map(function (item) {
+      return __lp_cc_roomToLiveModel(item, 0);
+    });
+  },
+
+  async getLiveLastestInfo(payload) {
+    const roomId = String(payload && payload.roomId ? payload.roomId : "");
+    const userId = payload && payload.userId ? String(payload.userId) : null;
+    if (!roomId) throw new Error("roomId is required");
+
+    const detail = await __lp_cc_fetchRoomDetail(roomId, userId);
+    return __lp_cc_roomToLiveModel(detail.room, detail.roomId);
+  },
+
+  async getPlayArgs(payload) {
+    const roomId = String(payload && payload.roomId ? payload.roomId : "");
+    const userId = payload && payload.userId ? String(payload.userId) : null;
+    if (!roomId) throw new Error("roomId is required");
+    return await __lp_cc_getPlayArgs(roomId, userId);
+  },
+
+  async searchRooms(payload) {
+    const keyword = String(payload && payload.keyword ? payload.keyword : "");
+    const page = payload && payload.page ? Number(payload.page) : 1;
+    if (!keyword) throw new Error("keyword is required");
+    return await __lp_cc_search(keyword, page);
+  },
+
+  async getLiveState(payload) {
+    const roomId = String(payload && payload.roomId ? payload.roomId : "");
+    const userId = payload && payload.userId ? String(payload.userId) : null;
+    if (!roomId) throw new Error("roomId is required");
+    const info = await this.getLiveLastestInfo({ roomId, userId });
+    return {
+      liveState: String(info && info.liveState ? info.liveState : "3")
+    };
+  },
+
+  async getRoomInfoFromShareCode(payload) {
+    const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
+    if (!shareCode) throw new Error("shareCode is required");
+
+    const ids = __lp_cc_extractShareIds(shareCode);
+    if (ids) {
+      return await this.getLiveLastestInfo({
+        roomId: String(ids.roomId),
+        userId: ids.channelId ? String(ids.channelId) : null
+      });
+    }
+
+    const resolved = __lp_cc_formatId(shareCode);
+    if (!resolved || !/^\d+$/.test(resolved)) {
+      throw new Error(`cannot parse shareCode: ${shareCode}`);
+    }
+    return await this.getLiveLastestInfo({ roomId: resolved, userId: null });
+  },
+
+  async getDanmukuArgs(payload) {
+    const roomId = String(payload && payload.roomId ? payload.roomId : "");
+    if (!roomId) throw new Error("roomId is required");
+    return await __lp_cc_getDanmukuArgs(roomId);
+  }
+};

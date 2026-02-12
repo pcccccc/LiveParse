@@ -110,6 +110,23 @@ public struct NeteaseCC: LiveParse {
     private static let defaultHeaders: HTTPHeaders = [HTTPHeader(name: "User-Agent", value: userAgent)]
 
     public static func getCategoryList() async throws -> [LiveMainListModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "cc",
+                    function: "getCategoryList",
+                    payload: [:]
+                )
+                logInfo("NeteaseCC.getCategoryList 使用 JS 插件返回 \(result.count) 个主分类")
+                return result
+            } catch {
+                logWarning("NeteaseCC.getCategoryList JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取 CC 分类列表")
 
         let categories: [(String, String)] = [
@@ -153,6 +170,50 @@ public struct NeteaseCC: LiveParse {
     }
     
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "cc",
+                    function: "getRoomList",
+                    payload: [
+                        "id": id,
+                        "parentId": parentId as Any,
+                        "page": page
+                    ]
+                )
+                logInfo("NeteaseCC.getRoomList 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .cc,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("NeteaseCC.getRoomList JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let url = String(format: roomListURLTemplate, id)
         let parameters: Parameters = [
             "format": "json",
@@ -199,6 +260,48 @@ public struct NeteaseCC: LiveParse {
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveInfo: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveType: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "cc",
+                    function: "getLiveLastestInfo",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+                logInfo("NeteaseCC.getLiveLastestInfo 使用 JS 插件成功")
+                return LiveModel(
+                    userName: info.userName,
+                    roomTitle: info.roomTitle,
+                    roomCover: info.roomCover,
+                    userHeadImg: info.userHeadImg,
+                    liveType: .cc,
+                    liveState: info.liveState,
+                    userId: info.userId,
+                    roomId: info.roomId,
+                    liveWatchedCount: info.liveWatchedCount
+                )
+            } catch {
+                logWarning("NeteaseCC.getLiveLastestInfo JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let (room, channelId, resolvedRoomId) = try await fetchRoomDetail(roomId: roomId, userId: userId)
         let isLive = (room.cuteid ?? 0) > 0
 
@@ -216,6 +319,26 @@ public struct NeteaseCC: LiveParse {
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "cc",
+                    function: "getPlayArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+                logInfo("NeteaseCC.getPlayArgs 使用 JS 插件返回 \(result.count) 组线路")
+                return result
+            } catch {
+                logWarning("NeteaseCC.getPlayArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let (room, channelId, resolvedRoomId) = try await fetchRoomDetail(roomId: roomId, userId: userId)
 
         guard let resolution = room.quickplay?.resolution else {
@@ -252,6 +375,49 @@ public struct NeteaseCC: LiveParse {
     }
 
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "cc",
+                    function: "searchRooms",
+                    payload: [
+                        "keyword": keyword,
+                        "page": page
+                    ]
+                )
+                logInfo("NeteaseCC.searchRooms 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .cc,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("NeteaseCC.searchRooms JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始搜索 CC 直播间，关键词: \(keyword)，页码: \(page)")
 
         let parameters: Parameters = [
@@ -295,6 +461,41 @@ public struct NeteaseCC: LiveParse {
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveState: Decodable {
+                let liveState: String
+            }
+
+            do {
+                let result: PluginLiveState = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "cc",
+                    function: "getLiveState",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+
+                if let state = LiveState(rawValue: result.liveState) {
+                    logInfo("NeteaseCC.getLiveState 使用 JS 插件成功")
+                    return state
+                }
+
+                logWarning("NeteaseCC.getLiveState JS 插件返回无效状态：\(result.liveState)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw LiveParseError.liveStateParseError(
+                        "CC 直播状态获取失败",
+                        "插件返回未知状态值: \(result.liveState)"
+                    )
+                }
+            } catch {
+                logWarning("NeteaseCC.getLiveState JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取 CC 直播状态，roomId: \(roomId)")
         let info = try await getLiveLastestInfo(roomId: roomId, userId: userId)
         guard let stateValue = info.liveState, let state = LiveState(rawValue: stateValue) else {
@@ -308,6 +509,47 @@ public struct NeteaseCC: LiveParse {
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveInfo: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveType: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "cc",
+                    function: "getRoomInfoFromShareCode",
+                    payload: [
+                        "shareCode": shareCode
+                    ]
+                )
+                logInfo("NeteaseCC.getRoomInfoFromShareCode 使用 JS 插件成功")
+                return LiveModel(
+                    userName: info.userName,
+                    roomTitle: info.roomTitle,
+                    roomCover: info.roomCover,
+                    userHeadImg: info.userHeadImg,
+                    liveType: .cc,
+                    liveState: info.liveState,
+                    userId: info.userId,
+                    roomId: info.roomId,
+                    liveWatchedCount: info.liveWatchedCount
+                )
+            } catch {
+                logWarning("NeteaseCC.getRoomInfoFromShareCode JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let trimmed = shareCode.trimmingCharacters(in: .whitespacesAndNewlines)
         logDebug("开始解析 CC 分享码: \(trimmed)")
 
@@ -327,6 +569,31 @@ public struct NeteaseCC: LiveParse {
     }
     
     public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginResult: Decodable {
+                let args: [String: String]
+                let headers: [String: String]?
+            }
+
+            do {
+                let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "cc",
+                    function: "getDanmukuArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any
+                    ]
+                )
+                logInfo("NeteaseCC.getDanmukuArgs 使用 JS 插件成功")
+                return (result.args, result.headers)
+            } catch {
+                logWarning("NeteaseCC.getDanmukuArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取 CC 弹幕参数，roomId: \(roomId)")
 
         let parameters: Parameters = ["anchor_ccid": roomId]

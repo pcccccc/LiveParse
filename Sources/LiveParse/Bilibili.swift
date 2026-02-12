@@ -295,6 +295,26 @@ struct BilibiliRoomAnchorBaseInfo: Codable {
 public struct Bilibili: LiveParse {
 
     public static func getCategoryList() async throws -> [LiveMainListModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "bilibili",
+                    function: "getCategoryList",
+                    payload: [
+                        "cookie": BiliBiliCookie.cookie,
+                        "uid": BiliBiliCookie.uid
+                    ]
+                )
+                logInfo("Bilibili.getCategoryList 使用 JS 插件返回 \(result.count) 个主分类")
+                return result
+            } catch {
+                logWarning("Bilibili.getCategoryList JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取B站分类列表")
 
         let dataReq: BilibiliMainData<[BilibiliMainListModel]> = try await LiveParseRequest.get(
@@ -319,6 +339,52 @@ public struct Bilibili: LiveParse {
 
 
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "bilibili",
+                    function: "getRoomList",
+                    payload: [
+                        "id": id,
+                        "parentId": parentId as Any,
+                        "page": page,
+                        "cookie": BiliBiliCookie.cookie,
+                        "uid": BiliBiliCookie.uid
+                    ]
+                )
+                logInfo("Bilibili.getRoomList 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .bilibili,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("Bilibili.getRoomList JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取B站直播间列表，分类ID: \(id), 页码: \(page)")
 
         let headers = try await getHeaders()
@@ -376,6 +442,28 @@ public struct Bilibili: LiveParse {
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "bilibili",
+                    function: "getPlayArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any,
+                        "cookie": BiliBiliCookie.cookie,
+                        "uid": BiliBiliCookie.uid
+                    ]
+                )
+                logInfo("Bilibili.getPlayArgs 使用 JS 插件返回 \(result.count) 组线路")
+                return result
+            } catch {
+                logWarning("Bilibili.getPlayArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取B站直播流地址，房间ID: \(roomId)")
 
         let headers = try await getHeaders()
@@ -493,6 +581,50 @@ public struct Bilibili: LiveParse {
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveInfo: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveType: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "bilibili",
+                    function: "getLiveLastestInfo",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any,
+                        "cookie": BiliBiliCookie.cookie,
+                        "uid": BiliBiliCookie.uid
+                    ]
+                )
+                logInfo("Bilibili.getLiveLastestInfo 使用 JS 插件成功")
+                return LiveModel(
+                    userName: info.userName,
+                    roomTitle: info.roomTitle,
+                    roomCover: info.roomCover,
+                    userHeadImg: info.userHeadImg,
+                    liveType: .bilibili,
+                    liveState: info.liveState,
+                    userId: info.userId,
+                    roomId: info.roomId,
+                    liveWatchedCount: info.liveWatchedCount
+                )
+            } catch {
+                logWarning("Bilibili.getLiveLastestInfo JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取B站房间信息，房间ID: \(roomId)")
 
         let headers = try await getHeaders()
@@ -540,6 +672,51 @@ public struct Bilibili: LiveParse {
     }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "bilibili",
+                    function: "searchRooms",
+                    payload: [
+                        "keyword": keyword,
+                        "page": page,
+                        "cookie": BiliBiliCookie.cookie,
+                        "uid": BiliBiliCookie.uid
+                    ]
+                )
+                logInfo("Bilibili.searchRooms 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .bilibili,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("Bilibili.searchRooms JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始搜索B站直播间，关键词: \(keyword), 页码: \(page)")
 
         let headers = try await getHeaders()
@@ -600,6 +777,43 @@ public struct Bilibili: LiveParse {
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveState: Decodable {
+                let liveState: String
+            }
+
+            do {
+                let result: PluginLiveState = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "bilibili",
+                    function: "getLiveState",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any,
+                        "cookie": BiliBiliCookie.cookie,
+                        "uid": BiliBiliCookie.uid
+                    ]
+                )
+
+                if let state = LiveState(rawValue: result.liveState) {
+                    logInfo("Bilibili.getLiveState 使用 JS 插件成功")
+                    return state
+                }
+
+                logWarning("Bilibili.getLiveState JS 插件返回无效状态：\(result.liveState)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw LiveParseError.liveStateParseError(
+                        "B站直播状态获取失败",
+                        "插件返回未知状态值: \(result.liveState)"
+                    )
+                }
+            } catch {
+                logWarning("Bilibili.getLiveState JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("获取B站直播状态，房间ID: \(roomId)")
 
         let headers = try await getHeaders()
@@ -633,6 +847,49 @@ public struct Bilibili: LiveParse {
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveInfo: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveType: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "bilibili",
+                    function: "getRoomInfoFromShareCode",
+                    payload: [
+                        "shareCode": shareCode,
+                        "cookie": BiliBiliCookie.cookie,
+                        "uid": BiliBiliCookie.uid
+                    ]
+                )
+                logInfo("Bilibili.getRoomInfoFromShareCode 使用 JS 插件成功")
+                return LiveModel(
+                    userName: info.userName,
+                    roomTitle: info.roomTitle,
+                    roomCover: info.roomCover,
+                    userHeadImg: info.userHeadImg,
+                    liveType: .bilibili,
+                    liveState: info.liveState,
+                    userId: info.userId,
+                    roomId: info.roomId,
+                    liveWatchedCount: info.liveWatchedCount
+                )
+            } catch {
+                logWarning("Bilibili.getRoomInfoFromShareCode JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始解析B站分享码: \(shareCode)")
 
         var roomId = ""
@@ -781,6 +1038,33 @@ public struct Bilibili: LiveParse {
     }
     
     public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginResult: Decodable {
+                let args: [String: String]
+                let headers: [String: String]?
+            }
+
+            do {
+                let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "bilibili",
+                    function: "getDanmukuArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any,
+                        "cookie": BiliBiliCookie.cookie,
+                        "uid": BiliBiliCookie.uid
+                    ]
+                )
+                logInfo("Bilibili.getDanmukuArgs 使用 JS 插件成功")
+                return (result.args, result.headers)
+            } catch {
+                logWarning("Bilibili.getDanmukuArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("获取B站弹幕参数，房间ID: \(roomId)")
 
         var buvid = ""

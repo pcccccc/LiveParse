@@ -572,6 +572,25 @@ extension Douyin {
 
 
     public static func getCategoryList() async throws -> [LiveMainListModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyin",
+                    function: "getCategoryList",
+                    payload: [
+                        "cookie": try await ensureCookie(for: fakeRoomId)
+                    ]
+                )
+                logInfo("Douyin.getCategoryList 使用 JS 插件返回 \(result.count) 个主分类")
+                return result
+            } catch {
+                logWarning("Douyin.getCategoryList JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取抖音分类列表（从本地数据）")
 
         // 从 Bundle 加载本地分类数据
@@ -707,6 +726,51 @@ extension Douyin {
     }
 
     public static func getRoomList(id: String, parentId: String?, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyin",
+                    function: "getRoomList",
+                    payload: [
+                        "id": id,
+                        "parentId": parentId as Any,
+                        "page": page,
+                        "cookie": try await ensureCookie(for: fakeRoomId)
+                    ]
+                )
+                logInfo("Douyin.getRoomList 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .douyin,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("Douyin.getRoomList JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取抖音直播间列表，分类ID: \(id), 页码: \(page)")
 
         let parameters: [String: String] = [
@@ -787,6 +851,27 @@ extension Douyin {
     }
     
     public static func getPlayArgs(roomId: String, userId: String?) async throws -> [LiveQualityModel] {
+        if LiveParseConfig.enableJSPlugins {
+            do {
+                let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyin",
+                    function: "getPlayArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any,
+                        "cookie": try await ensureCookie(for: roomId)
+                    ]
+                )
+                logInfo("Douyin.getPlayArgs 使用 JS 插件返回 \(result.count) 条线路")
+                return result
+            } catch {
+                logWarning("Douyin.getPlayArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         let liveData = try await Douyin.getDouyinRoomDetail(roomId: roomId, userId: userId ?? "")
         var tempArray: [LiveQualityDetail] = []
         var multiCamResults: [LiveQualityModel] = []
@@ -975,6 +1060,50 @@ extension Douyin {
         }
     
     public static func searchRooms(keyword: String, page: Int) async throws -> [LiveModel] {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginRoom: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyin",
+                    function: "searchRooms",
+                    payload: [
+                        "keyword": keyword,
+                        "page": page,
+                        "cookie": try await ensureCookie(for: fakeRoomId)
+                    ]
+                )
+                logInfo("Douyin.searchRooms 使用 JS 插件返回 \(rooms.count) 个房间")
+                return rooms.map {
+                    LiveModel(
+                        userName: $0.userName,
+                        roomTitle: $0.roomTitle,
+                        roomCover: $0.roomCover,
+                        userHeadImg: $0.userHeadImg,
+                        liveType: .douyin,
+                        liveState: $0.liveState,
+                        userId: $0.userId,
+                        roomId: $0.roomId,
+                        liveWatchedCount: $0.liveWatchedCount
+                    )
+                }
+            } catch {
+                logWarning("Douyin.searchRooms JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始搜索抖音直播间，关键词: \(keyword), 页码: \(page)")
 
         let serverUrl = "https://www.douyin.com/aweme/v1/web/live/search/"
@@ -1099,6 +1228,49 @@ extension Douyin {
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveInfo: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveType: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyin",
+                    function: "getLiveLastestInfo",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any,
+                        "cookie": try await ensureCookie(for: roomId)
+                    ]
+                )
+                logInfo("Douyin.getLiveLastestInfo 使用 JS 插件成功")
+                return LiveModel(
+                    userName: info.userName,
+                    roomTitle: info.roomTitle,
+                    roomCover: info.roomCover,
+                    userHeadImg: info.userHeadImg,
+                    liveType: .douyin,
+                    liveState: info.liveState,
+                    userId: info.userId,
+                    roomId: info.roomId,
+                    liveWatchedCount: info.liveWatchedCount
+                )
+            } catch {
+                logWarning("Douyin.getLiveLastestInfo JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取抖音房间最新信息，房间ID: \(roomId)")
 
         let detail = try await getDouyinRoomDetail(roomId: roomId, userId: userId ?? "")
@@ -1140,6 +1312,42 @@ extension Douyin {
     }
     
     public static func getLiveState(roomId: String, userId: String?) async throws -> LiveState {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveState: Decodable {
+                let liveState: String
+            }
+
+            do {
+                let result: PluginLiveState = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyin",
+                    function: "getLiveState",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any,
+                        "cookie": try await ensureCookie(for: roomId)
+                    ]
+                )
+
+                if let state = LiveState(rawValue: result.liveState) {
+                    logInfo("Douyin.getLiveState 使用 JS 插件成功")
+                    return state
+                }
+
+                logWarning("Douyin.getLiveState JS 插件返回无效状态：\(result.liveState)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw LiveParseError.liveStateParseError(
+                        "抖音房间状态获取失败",
+                        "插件返回未知状态值: \(result.liveState)"
+                    )
+                }
+            } catch {
+                logWarning("Douyin.getLiveState JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始获取抖音房间状态，房间ID: \(roomId)")
 
         let detail = try await Douyin.getDouyinRoomDetail(roomId: roomId, userId: userId ?? "")
@@ -1264,6 +1472,48 @@ extension Douyin {
     }
     
     public static func getRoomInfoFromShareCode(shareCode: String) async throws -> LiveModel {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginLiveInfo: Decodable {
+                let userName: String
+                let roomTitle: String
+                let roomCover: String
+                let userHeadImg: String
+                let liveType: String
+                let liveState: String?
+                let userId: String
+                let roomId: String
+                let liveWatchedCount: String?
+            }
+
+            do {
+                let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyin",
+                    function: "getRoomInfoFromShareCode",
+                    payload: [
+                        "shareCode": shareCode,
+                        "cookie": try await ensureCookie(for: fakeRoomId)
+                    ]
+                )
+                logInfo("Douyin.getRoomInfoFromShareCode 使用 JS 插件成功")
+                return LiveModel(
+                    userName: info.userName,
+                    roomTitle: info.roomTitle,
+                    roomCover: info.roomCover,
+                    userHeadImg: info.userHeadImg,
+                    liveType: .douyin,
+                    liveState: info.liveState,
+                    userId: info.userId,
+                    roomId: info.roomId,
+                    liveWatchedCount: info.liveWatchedCount
+                )
+            } catch {
+                logWarning("Douyin.getRoomInfoFromShareCode JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始解析抖音分享链接: \(shareCode)")
 
         if shareCode.contains("v.douyin.com") {
@@ -1366,6 +1616,32 @@ extension Douyin {
     }
     
     public static func getDanmukuArgs(roomId: String, userId: String?) async throws -> ([String : String], [String : String]?) {
+        if LiveParseConfig.enableJSPlugins {
+            struct PluginResult: Decodable {
+                let args: [String: String]
+                let headers: [String: String]?
+            }
+
+            do {
+                let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: "douyin",
+                    function: "getDanmukuArgs",
+                    payload: [
+                        "roomId": roomId,
+                        "userId": userId as Any,
+                        "cookie": try await ensureCookie(for: roomId)
+                    ]
+                )
+                logInfo("Douyin.getDanmukuArgs 使用 JS 插件成功")
+                return (result.args, result.headers)
+            } catch {
+                logWarning("Douyin.getDanmukuArgs JS 插件失败：\(error)")
+                if !LiveParseConfig.pluginFallbackToSwiftImplementation {
+                    throw error
+                }
+            }
+        }
+
         logDebug("开始生成抖音弹幕参数，房间ID: \(roomId)")
 
         do {

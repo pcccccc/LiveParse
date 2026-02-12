@@ -1,0 +1,8 @@
+{
+  "pluginId": "bilibili",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayName": "Bilibili (JS PoC)",
+  "liveTypes": ["0"],
+  "entry": "lp_plugin_bilibili_0.1.0_index.js"
+}

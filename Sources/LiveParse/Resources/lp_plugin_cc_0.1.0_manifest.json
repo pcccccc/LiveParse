@@ -1,0 +1,8 @@
+{
+  "pluginId": "cc",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayName": "Netease CC (JS PoC)",
+  "liveTypes": ["4"],
+  "entry": "lp_plugin_cc_0.1.0_index.js"
+}

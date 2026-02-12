@@ -1,0 +1,8 @@
+{
+  "pluginId": "ks",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayName": "KuaiShou (JS PoC)",
+  "liveTypes": ["5"],
+  "entry": "lp_plugin_ks_0.1.0_index.js"
+}

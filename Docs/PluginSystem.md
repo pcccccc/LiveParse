@@ -162,3 +162,32 @@ globalThis.LiveParsePlugin = {
 
 - JS 运行时错误：应携带 stack、行号、插件版本等信息。
 - 插件加载事件：安装成功/失败、回滚原因、当前选中版本。
+
+## 当前迁移进度（2026-02-12）
+
+当前仓库已落地“内置插件 + 插件优先调用 + Swift fallback”模式。
+
+### 已完成平台
+
+- `huya`
+- `douyu`
+- `cc`（NeteaseCC）
+- `yy`
+- `ks`（KuaiShou）
+- `bilibili`
+- `douyin`
+
+以上平台均已：
+- 提供内置插件资源（`lp_plugin_<id>_<ver>_manifest.json/index.js`）
+- 在 Swift 8 大核心方法中接入插件优先逻辑
+- 通过 `LiveParseConfig.pluginFallbackToSwiftImplementation` 控制失败回退
+
+### 待完成平台
+
+- `youtube`
+
+### 最终目标（项目既定方向）
+
+1. 全平台完成 JS 插件化（8 大方法）。
+2. 回归稳定后切换到“仅插件模式”（关闭 Swift fallback）。
+3. 删除平台 Swift 解析实现，仅保留宿主能力：`Host.http`、`Host.crypto`、`Host.storage`（及必要扩展）。
