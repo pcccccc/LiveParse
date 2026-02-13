@@ -92,4 +92,11 @@ struct PluginSystemTests {
         #expect(plugin.manifest.pluginId == "douyin")
         try await plugin.load()
     }
+    @Test
+    func builtInYoutubePluginResolvable() async throws {
+        let manager = try LiveParsePluginManager()
+        let plugin = try manager.resolve(pluginId: "youtube")
+        #expect(plugin.manifest.pluginId == "youtube")
+        try await plugin.load()
+    }
 }

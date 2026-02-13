@@ -515,10 +515,10 @@ public class LiveParseConfig {
     public static var customLogHandler: ((LogLevel, String) -> Void)?
 
     /// 是否启用 JS 插件系统（JavaScriptCore）
-    public static var enableJSPlugins: Bool = true
+    public static let enableJSPlugins: Bool = true
 
     /// 当插件执行失败时，是否回退到 Swift 内置实现
-    public static var pluginFallbackToSwiftImplementation: Bool = true
+    public static let pluginFallbackToSwiftImplementation: Bool = false
 }
 
 // MARK: - 日志辅助函数

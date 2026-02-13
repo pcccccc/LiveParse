@@ -19,7 +19,7 @@ let package = Package(
         .package(url: "https://github.com/daltoniam/Starscream", .upToNextMajor(from: "4.0.6")),
         .package(url: "https://github.com/tsolomko/SWCompression", .upToNextMajor(from: "4.8.6")),
         .package(url: "https://github.com/apple/swift-protobuf.git", .upToNextMajor(from: "1.25.1")),
-        .package(url: "https://github.com/pcccccc/YouTubeKit", .upToNextMajor(from: "0.0.3")),
+        .package(url: "https://github.com/alexeichhorn/YouTubeKit", .upToNextMajor(from: "0.4.3")),
         .package(url: "https://github.com/pcccccc/TarsKit", .upToNextMajor(from: "1.3.0")),
         .package(url: "https://github.com/pcccccc/GMObjC", .upToNextMajor(from: "1.1.0"))
     ],
