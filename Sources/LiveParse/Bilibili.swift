@@ -380,7 +380,19 @@ public struct Bilibili: LiveParse {
             } catch {
                 logWarning("Bilibili.getRoomList JS 插件失败：\(error)")
                 if !LiveParseConfig.pluginFallbackToSwiftImplementation {
-                    throw error
+                    throw mapPluginError(
+                        error,
+                        location: "Bilibili.getRoomList",
+                        request: buildRequestDetail(
+                            url: "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList",
+                            method: .get,
+                            parameters: [
+                                "area_id": id,
+                                "parent_area_id": parentId as Any,
+                                "page": page
+                            ]
+                        )
+                    )
                 }
             }
         }
@@ -620,7 +632,17 @@ public struct Bilibili: LiveParse {
             } catch {
                 logWarning("Bilibili.getLiveLastestInfo JS 插件失败：\(error)")
                 if !LiveParseConfig.pluginFallbackToSwiftImplementation {
-                    throw error
+                    throw mapPluginError(
+                        error,
+                        location: "Bilibili.getLiveLastestInfo",
+                        request: buildRequestDetail(
+                            url: "https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom",
+                            method: .get,
+                            parameters: [
+                                "room_id": roomId
+                            ]
+                        )
+                    )
                 }
             }
         }
@@ -885,7 +907,7 @@ public struct Bilibili: LiveParse {
             } catch {
                 logWarning("Bilibili.getRoomInfoFromShareCode JS 插件失败：\(error)")
                 if !LiveParseConfig.pluginFallbackToSwiftImplementation {
-                    throw error
+                    throw mapPluginError(error, location: "Bilibili.getRoomInfoFromShareCode")
                 }
             }
         }
@@ -1324,6 +1346,72 @@ public struct Bilibili: LiveParse {
             method: method.rawValue,
             headers: headers?.dictionary,
             parameters: parameters
+        )
+    }
+
+    private static func mapPluginError(
+        _ error: Error,
+        location: String,
+        request: NetworkRequestDetail? = nil
+    ) -> LiveParseError {
+        if let liveParseError = error as? LiveParseError {
+            return liveParseError
+        }
+
+        let message = String(describing: error)
+
+        if location == "Bilibili.getRoomInfoFromShareCode",
+           message.contains("invalid room id from share code") || message.contains("shareCode is required") {
+            return .shareCodeParseError("分享码解析失败", message)
+        }
+
+        if let apiError = parsePluginAPIError(
+            message,
+            location: location,
+            request: request
+        ) {
+            return apiError
+        }
+
+        if message.contains("empty room info") {
+            return .business(.emptyResult(location: location, request: request))
+        }
+
+        if message.contains("roomId is required") {
+            return .business(.roomNotFound(roomId: ""))
+        }
+
+        return .business(.permissionDenied(reason: message))
+    }
+
+    private static func parsePluginAPIError(
+        _ message: String,
+        location: String,
+        request: NetworkRequestDetail?
+    ) -> LiveParseError? {
+        let pattern = "apiError\\\\s+code=([-]?[0-9]+)\\\\s+msg=(.*)$"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+
+        let messageRange = NSRange(message.startIndex..<message.endIndex, in: message)
+        guard let match = regex.firstMatch(in: message, range: messageRange),
+              let codeRange = Range(match.range(at: 1), in: message),
+              let code = Int(message[codeRange]),
+              let msgRange = Range(match.range(at: 2), in: message) else {
+            return nil
+        }
+
+        let apiMessage = String(message[msgRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return .business(
+            .apiError(
+                code: code,
+                message: apiMessage,
+                platform: "Bilibili",
+                location: location,
+                request: request,
+                response: nil
+            )
         )
     }
 }

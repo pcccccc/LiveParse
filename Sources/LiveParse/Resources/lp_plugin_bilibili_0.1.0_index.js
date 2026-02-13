@@ -201,8 +201,11 @@ async function __lp_bili_getRoomList(id, parentId, page, headers) {
     timeout: 20
   });
   const obj = JSON.parse(resp.bodyText || "{}");
-  if (Number(obj.code || -1) !== 0) {
-    throw new Error(`apiError code=${obj.code} msg=${obj.message || ""}`);
+  const code = obj && Object.prototype.hasOwnProperty.call(obj, "code")
+    ? Number(obj.code)
+    : -1;
+  if (code !== 0) {
+    throw new Error(`apiError code=${obj && obj.code} msg=${(obj && (obj.message || obj.msg)) || ""}`);
   }
 
   const listModelArray = (((obj || {}).data || {}).list) || [];

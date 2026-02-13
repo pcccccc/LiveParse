@@ -35,6 +35,87 @@ function __lp_dy_firstArrayValue(v) {
   return "";
 }
 
+function __lp_dy_extractFirstJSONObjectText(text) {
+  const source = __lp_dy_toString(text);
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+
+    if (start < 0) {
+      if (ch === "{") {
+        start = i;
+        depth = 1;
+      }
+      continue;
+    }
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === "\\") {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{") {
+      depth += 1;
+      continue;
+    }
+    if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, i + 1);
+      }
+    }
+  }
+
+  return "";
+}
+
+function __lp_dy_parseEscapedStateFromScript(html) {
+  const marker = '\\"state\\":{';
+  const markerPos = html.indexOf(marker);
+  if (markerPos < 0) return null;
+
+  const scriptStart = html.lastIndexOf("<script", markerPos);
+  const scriptTagEnd = scriptStart >= 0 ? html.indexOf(">", scriptStart) : -1;
+  const scriptEnd = html.indexOf("</script>", markerPos);
+
+  let scriptText = "";
+  if (scriptTagEnd >= 0 && scriptEnd > scriptTagEnd) {
+    scriptText = html.slice(scriptTagEnd + 1, scriptEnd);
+  } else {
+    const start = Math.max(0, markerPos - 128);
+    const end = Math.min(html.length, markerPos + 350000);
+    scriptText = html.slice(start, end);
+  }
+
+  const normalized = __lp_dy_toString(scriptText)
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\")
+    .replace(/\\n/g, "");
+
+  const jsonText = __lp_dy_extractFirstJSONObjectText(normalized);
+  if (!jsonText) return null;
+
+  try {
+    return JSON.parse(jsonText);
+  } catch (e) {
+    return null;
+  }
+}
+
 function __lp_dy_pickHeaders(payload) {
   const out = {
     "User-Agent": __lp_dy_ua,
@@ -209,14 +290,15 @@ async function __lp_dy_getRoomDataByHtml(roomId, payload) {
 
   let payloadObj = null;
 
-  const escapedMatch = html.match(/(\{\\"state\\":\{\\"appStore[\s\S]*?\]\\n)/);
+  const escapedMatch = html.match(/(\{\\"state\\":\{[\s\S]*?\]\\n)/);
   if (escapedMatch && escapedMatch[1]) {
     const normalized = String(escapedMatch[1])
       .replace(/\\"/g, '"')
       .replace(/\\\\/g, "\\")
       .replace(/\]\\n/g, "]");
     try {
-      payloadObj = JSON.parse(normalized);
+      const jsonText = __lp_dy_extractFirstJSONObjectText(normalized);
+      payloadObj = jsonText ? JSON.parse(jsonText) : null;
     } catch (e) {
       payloadObj = null;
     }
@@ -246,6 +328,10 @@ async function __lp_dy_getRoomDataByHtml(roomId, payload) {
   }
 
   if (!payloadObj) {
+    payloadObj = __lp_dy_parseEscapedStateFromScript(html);
+  }
+
+  if (!payloadObj) {
     throw new Error("cannot parse douyin state payload from html");
   }
 
@@ -253,7 +339,24 @@ async function __lp_dy_getRoomDataByHtml(roomId, payload) {
   const roomStore = (state && state.roomStore) || {};
   const streamStore = (state && state.streamStore) || {};
   const roomInfo = (roomStore && roomStore.roomInfo) || {};
-  const room = (roomInfo && roomInfo.room) || {};
+  let room = (roomInfo && roomInfo.room) || {};
+
+  if ((!room || !room.id_str) && roomInfo) {
+    const statusRaw = __lp_dy_toString(roomInfo.status || roomStore.liveStatus || "").toLowerCase();
+    let status = 0;
+    if (statusRaw === "normal" || statusRaw === "2") status = 2;
+    else if (statusRaw === "end" || statusRaw === "close" || statusRaw === "4") status = 4;
+
+    room = {
+      id_str: __lp_dy_toString(roomInfo.roomId || roomInfo.web_rid || roomId),
+      status,
+      title: __lp_dy_toString(roomInfo.title || ""),
+      owner: roomInfo.anchor || {},
+      cover: roomInfo.cover || {},
+      room_view_stats: roomInfo.room_view_stats || {},
+      stream_url: roomInfo.web_stream_url || {}
+    };
+  }
 
   if (!room || !room.id_str) {
     throw new Error("room info missing from html payload");
@@ -306,6 +409,7 @@ async function __lp_dy_getRoomList(id, parentId, page, payload) {
     const owner = room.owner || item.owner || {};
     const avatar = owner.avatar_thumb || {};
     const cover = room.cover || {};
+    const webRid = __lp_dy_toString(owner.web_rid || room.id_str || owner.id_str || "");
     return {
       userName: __lp_dy_toString(owner.nickname || ""),
       roomTitle: __lp_dy_toString(room.title || ""),
@@ -314,7 +418,7 @@ async function __lp_dy_getRoomList(id, parentId, page, payload) {
       liveType: "2",
       liveState: __lp_dy_statusToLiveState(Number(room.status || 0), true),
       userId: __lp_dy_toString(room.id_str || owner.id_str || ""),
-      roomId: __lp_dy_toString(owner.web_rid || ""),
+      roomId: webRid,
       liveWatchedCount: __lp_dy_toString(room.user_count_str || "")
     };
   });

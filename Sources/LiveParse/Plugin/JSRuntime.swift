@@ -81,7 +81,7 @@ public final class JSRuntime: @unchecked Sendable {
                     }
 
                     let jsPayload = JSValue(object: payload, in: self.context) as Any
-                    guard let result = fn.call(withArguments: [jsPayload]) else {
+                    guard let result = pluginObject.invokeMethod(name, withArguments: [jsPayload]) else {
                         if let exception = self.context.exception {
                             throw LiveParsePluginError.jsException(exception.toString() ?? "<unknown>")
                         }

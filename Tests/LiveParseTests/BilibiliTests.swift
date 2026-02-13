@@ -411,7 +411,21 @@ func bilibiliPerformance_BatchRequests() async throws {
     print("📋 性能测试：批量请求")
 
     let startTime = Date()
-    let roomIds = ["6", "7", "8"]
+    let categories = try await Bilibili.getCategoryList()
+    guard let category = categories.first,
+          let subCategory = category.subList.first else {
+        Issue.record("没有可用的分类")
+        return
+    }
+
+    let rooms = try await Bilibili.getRoomList(
+        id: subCategory.id,
+        parentId: category.id,
+        page: 1
+    )
+    let roomIds = Array(rooms.prefix(3).map(\.roomId)).filter { !$0.isEmpty }
+
+    #expect(!roomIds.isEmpty, "应该获取到至少一个可用房间ID")
 
     try await withThrowingTaskGroup(of: LiveModel.self) { group in
         for roomId in roomIds {
