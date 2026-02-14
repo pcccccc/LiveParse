@@ -202,8 +202,8 @@ async function __lp_douyu_getSign(roomId) {
   const did = Host.crypto.md5(tt);
   const rb = Host.crypto.md5(`${String(roomId)}${did}${tt}${signV}`);
 
-  signFun = signFun.replace(/;+$/g, "").replace("CryptoJS.MD5(cb).toString()", `\"${rb}\"");
-  signFun += `(\"${String(roomId)}\",\"${did}\",\"${tt}\");`;
+  signFun = signFun.replace(/;+$/g, "").replace("CryptoJS.MD5(cb).toString()", `"${rb}"`);
+  signFun += `("${String(roomId)}","${did}","${tt}");`;
 
   let paramsString = "";
   try {
@@ -343,9 +343,9 @@ async function __lp_douyu_resolveRoomIdFromShareCode(shareCode) {
 
     const html = String(resp.bodyText || "");
     const patterns = [
-      /\"room_id\":\s*(\d+)/,
-      /\"rid\":\s*\"?(\d+)/,
-      /roomId\s*[:=]\s*\"?(\d+)/
+      /"room_id":\s*(\d+)/,
+      /"rid":\s*"?(\d+)/,
+      /roomId\s*[:=]\s*"?(\d+)/
     ];
 
     for (const p of patterns) {
