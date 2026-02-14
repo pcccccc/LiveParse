@@ -36,3 +36,9 @@ func printEnhancedError(_ error: LiveParseError, title: String = "错误详情")
 
     print("\n" + String(repeating: "═", count: 60))
 }
+
+/// 断言当前测试运行在“纯插件模式”，禁止走原生 fallback。
+func assertPurePluginMode(platform: String) {
+    #expect(LiveParseConfig.enableJSPlugins, "\(platform) 测试要求开启 JS 插件")
+    #expect(!LiveParseConfig.pluginFallbackToSwiftImplementation, "\(platform) 测试要求关闭原生 fallback")
+}

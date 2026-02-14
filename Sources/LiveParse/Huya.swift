@@ -574,7 +574,13 @@ public struct Huya: LiveParse {
             } catch {
                 logWarning("Huya.getLiveLastestInfo JS 插件失败：\(error)")
                 if !LiveParseConfig.pluginFallbackToSwiftImplementation {
-                    throw error
+                    if let liveParseError = error as? LiveParseError {
+                        throw liveParseError
+                    }
+                    throw LiveParseError.liveParseError(
+                        "虎牙房间详情解析失败",
+                        "Huya.getLiveLastestInfo 插件执行失败\nroomId: \(roomId)\nerror: \(error)"
+                    )
                 }
             }
         }
@@ -934,7 +940,13 @@ public struct Huya: LiveParse {
             } catch {
                 logWarning("Huya.getRoomInfoFromShareCode JS 插件失败：\(error)")
                 if !LiveParseConfig.pluginFallbackToSwiftImplementation {
-                    throw error
+                    if let liveParseError = error as? LiveParseError {
+                        throw liveParseError
+                    }
+                    throw LiveParseError.shareCodeParseError(
+                        "虎牙分享码解析失败",
+                        "Huya.getRoomInfoFromShareCode 插件执行失败\nshareCode: \(shareCode)\nerror: \(error)"
+                    )
                 }
             }
         }

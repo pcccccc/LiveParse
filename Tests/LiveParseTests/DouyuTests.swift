@@ -4,10 +4,15 @@ import Testing
 
 // MARK: - Douyu Core Function Tests
 
-@Test("获取斗鱼分类列表")
-func douyuGetCategoryList() async throws {
+private func prepareDouyuTestEnvironment() {
     LiveParseConfig.logLevel = .debug
     LiveParseConfig.includeDetailedNetworkInfo = true
+    assertPurePluginMode(platform: "Douyu")
+}
+
+@Test("获取斗鱼分类列表")
+func douyuGetCategoryList() async throws {
+    prepareDouyuTestEnvironment()
 
     print("📋 斗鱼测试 1: 获取分类列表")
 
@@ -24,8 +29,7 @@ func douyuGetCategoryList() async throws {
 
 @Test("获取斗鱼房间列表")
 func douyuGetRoomList() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareDouyuTestEnvironment()
 
     print("📋 斗鱼测试 2: 获取房间列表")
 
@@ -51,8 +55,7 @@ func douyuGetRoomList() async throws {
 
 @Test("获取斗鱼播放地址")
 func douyuGetPlayArgs() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareDouyuTestEnvironment()
 
     print("📋 斗鱼测试 3: 获取播放地址")
 
@@ -84,8 +87,7 @@ func douyuGetPlayArgs() async throws {
 
 @Test("获取斗鱼房间状态")
 func douyuGetLiveState() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareDouyuTestEnvironment()
 
     print("📋 斗鱼测试 4: 获取房间状态")
 
@@ -115,8 +117,7 @@ func douyuGetLiveState() async throws {
 
 @Test("获取斗鱼房间详情")
 func douyuGetLiveLastestInfo() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareDouyuTestEnvironment()
 
     print("📋 斗鱼测试 5: 获取房间详情")
 
@@ -148,8 +149,7 @@ func douyuGetLiveLastestInfo() async throws {
 
 @Test("斗鱼直播搜索")
 func douyuSearchRooms() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareDouyuTestEnvironment()
 
     print("📋 斗鱼测试 6: 搜索房间")
 
@@ -162,8 +162,7 @@ func douyuSearchRooms() async throws {
 
 @Test("斗鱼分享码解析")
 func douyuGetRoomInfoFromShareCode() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareDouyuTestEnvironment()
 
     print("📋 斗鱼测试 7: 分享码解析")
 
@@ -193,8 +192,7 @@ func douyuGetRoomInfoFromShareCode() async throws {
 
 @Test("获取斗鱼弹幕参数")
 func douyuGetDanmukuArgs() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareDouyuTestEnvironment()
 
     print("📋 斗鱼测试 8: 获取弹幕参数")
 
@@ -207,8 +205,7 @@ func douyuGetDanmukuArgs() async throws {
 
 @Test("斗鱼完整集成测试")
 func douyuFullIntegration() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareDouyuTestEnvironment()
 
     print("📋 斗鱼完整流程测试")
 

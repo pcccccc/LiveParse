@@ -4,10 +4,15 @@ import Testing
 
 // MARK: - Huya Core Function Tests
 
-@Test("获取虎牙分类列表")
-func huyaGetCategoryList() async throws {
+private func prepareHuyaTestEnvironment() {
     LiveParseConfig.logLevel = .debug
     LiveParseConfig.includeDetailedNetworkInfo = true
+    assertPurePluginMode(platform: "Huya")
+}
+
+@Test("获取虎牙分类列表")
+func huyaGetCategoryList() async throws {
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 1: 分类列表")
 
@@ -24,8 +29,7 @@ func huyaGetCategoryList() async throws {
 
 @Test("获取虎牙房间列表")
 func huyaGetRoomList() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 2: 房间列表")
 
@@ -51,8 +55,7 @@ func huyaGetRoomList() async throws {
 
 @Test("获取虎牙播放地址")
 func huyaGetPlayArgs() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 3: 播放地址")
 
@@ -84,8 +87,7 @@ func huyaGetPlayArgs() async throws {
 
 @Test("获取虎牙房间状态")
 func huyaGetLiveState() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 4: 房间状态")
 
@@ -115,8 +117,7 @@ func huyaGetLiveState() async throws {
 
 @Test("获取虎牙房间详情")
 func huyaGetLiveLastestInfo() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 5: 房间详情")
 
@@ -148,8 +149,7 @@ func huyaGetLiveLastestInfo() async throws {
 
 @Test("虎牙搜索房间")
 func huyaSearchRooms() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 6: 搜索房间")
 
@@ -162,8 +162,7 @@ func huyaSearchRooms() async throws {
 
 @Test("虎牙分享码解析")
 func huyaGetRoomInfoFromShareCode() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 7: 分享码解析")
 
@@ -193,8 +192,7 @@ func huyaGetRoomInfoFromShareCode() async throws {
 
 @Test("获取虎牙弹幕参数")
 func huyaGetDanmukuArgs() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 8: 弹幕参数")
 
@@ -224,8 +222,7 @@ func huyaGetDanmukuArgs() async throws {
 
 @Test("虎牙完整流程")
 func huyaFullIntegration() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 9: 最小完整流程")
 
@@ -273,8 +270,7 @@ func huyaFullIntegration() async throws {
 
 @Test("虎牙错误处理 - 无效房间号")
 func huyaErrorHandling_InvalidRoomId() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 10: 错误处理 (无效房间号)")
 
@@ -293,8 +289,7 @@ func huyaErrorHandling_InvalidRoomId() async throws {
 
 @Test("虎牙错误处理 - 无效分享码")
 func huyaErrorHandling_InvalidShareCode() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareHuyaTestEnvironment()
 
     print("📋 虎牙测试 11: 错误处理 (无效分享码)")
 
