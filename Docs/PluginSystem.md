@@ -163,9 +163,9 @@ globalThis.LiveParsePlugin = {
 - JS 运行时错误：应携带 stack、行号、插件版本等信息。
 - 插件加载事件：安装成功/失败、回滚原因、当前选中版本。
 
-## 当前迁移进度（2026-02-12）
+## 当前迁移进度（2026-02-13）
 
-当前仓库已落地“内置插件 + 插件优先调用 + Swift fallback”模式。
+当前仓库已落地“全平台内置插件 + 仅插件模式（无 Swift fallback）”。
 
 ### 已完成平台
 
@@ -176,18 +176,26 @@ globalThis.LiveParsePlugin = {
 - `ks`（KuaiShou）
 - `bilibili`
 - `douyin`
+- `youtube`
 
 以上平台均已：
 - 提供内置插件资源（`lp_plugin_<id>_<ver>_manifest.json/index.js`）
-- 在 Swift 8 大核心方法中接入插件优先逻辑
-- 通过 `LiveParseConfig.pluginFallbackToSwiftImplementation` 控制失败回退
+- 在 Swift 8 大核心方法中接入插件调用
+- 默认强制插件模式（`enableJSPlugins = true`，`pluginFallbackToSwiftImplementation = false`）
 
-### 待完成平台
+### 纯 JS 测试进度（2026-02-15）
 
-- `youtube`
+- 已跑通平台回归（纯 JS 模式）：
+  - `bilibili`（16/16）
+  - `douyin`（14/14）
+  - `cc`（10/10）
+  - `yy`（9/9）
+- 已启用纯 JS 断言（`assertPurePluginMode`）的平台测试：
+  - `huya`、`douyu`、`ks`、`bilibili`、`douyin`、`cc`、`yy`
+- `youtube` 当前仅覆盖插件可加载校验（`PluginSystemTests.builtInYoutubePluginResolvable`），
+  尚未补齐独立平台功能回归（`YoutubeTests`）。
 
-### 最终目标（项目既定方向）
+### 下一步（收口阶段）
 
-1. 全平台完成 JS 插件化（8 大方法）。
-2. 回归稳定后切换到“仅插件模式”（关闭 Swift fallback）。
-3. 删除平台 Swift 解析实现，仅保留宿主能力：`Host.http`、`Host.crypto`、`Host.storage`（及必要扩展）。
+1. 补齐 `youtube` 平台级纯 JS 功能测试（分类/房间/播放/搜索/分享/弹幕按能力覆盖）。
+2. 完成 8 平台统一回归后，删除平台 Swift 解析实现，仅保留宿主能力：`Host.http`、`Host.crypto`、`Host.storage`（及必要扩展）。

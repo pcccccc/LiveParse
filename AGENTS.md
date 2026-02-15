@@ -29,18 +29,18 @@
   - `lp_plugin_<pluginId>_<version>_index.js`
 
 ## 平台插件化迁移路径（必须遵守）
-目标路径已确定：**所有平台解析完成后，移除 Swift 平台实现，统一使用 JS 插件**。
+当前状态：**仓库已切换为仅插件模式（纯 JS）**。
 
-1. 每个平台先补齐 `LiveParse` 8 大方法的插件实现。
-2. Swift 侧先保持“插件优先 + Swift fallback”。
-3. 插件稳定后切到“仅插件”模式并完成回归。
-4. 最后删除对应平台 Swift 解析文件，仅保留宿主能力（`Host.http`、`Host.crypto`、`Host.storage`）。
+1. 全平台按 `LiveParse` 8 大方法维护 JS 插件实现。
+2. 默认配置为插件强制：`enableJSPlugins = true`、`pluginFallbackToSwiftImplementation = false`。
+3. 禁止新增或恢复“平台级 Swift fallback”逻辑。
+4. 下一阶段是删除对应平台 Swift 解析文件，仅保留宿主能力（`Host.http`、`Host.crypto`、`Host.storage`）。
 
 ## 测试与提交流程
 - 测试框架：Swift Testing（`import Testing`、`@Test`）。
 - 新增/修改插件时，至少覆盖 `PluginSystemTests` + 对应平台测试。
 - 提交信息遵循历史约定：`feat:`、`fix:`、`refactor:`（可带 scope，如 `feat(douyin): ...`）。
-- PR 需写明：影响平台、影响方法、测试命令与结果、关键请求/响应变化。
+- 当前仓库默认单人维护：直接 `commit + push` 到 `main`；如改为多人协作，再补充 PR 模板与要求。
 
 ## 安全与配置提示
 - 禁止提交 Cookie、Token、本地调试敏感数据。

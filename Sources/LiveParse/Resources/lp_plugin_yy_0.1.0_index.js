@@ -13,6 +13,13 @@ const __lp_yy_playHeaders = {
 
 const __lp_yy_sidQueryKeys = ["sid", "ssid", "roomId"];
 
+function __lp_yy_parseCode(value, fallback) {
+  const raw = String(value === undefined || value === null ? "" : value).trim();
+  if (!raw) return fallback;
+  const parsed = parseInt(raw, 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
 function __lp_yy_isValidRoomId(value) {
   return /^\d{3,}$/.test(String(value || ""));
 }
@@ -267,7 +274,7 @@ globalThis.LiveParsePlugin = {
     });
 
     const response = JSON.parse(resp.bodyText || "{}");
-    if (Number(response.code || -1) !== 0) {
+    if (__lp_yy_parseCode(response.code, -1) !== 0) {
       throw new Error(`YY category error: ${response.code} - ${response.message || ""}`);
     }
 
@@ -325,7 +332,7 @@ globalThis.LiveParsePlugin = {
     });
 
     const response = JSON.parse(resp.bodyText || "{}");
-    if (response.code !== undefined && Number(response.code) !== 0) {
+    if (response.code !== undefined && __lp_yy_parseCode(response.code, -1) !== 0) {
       throw new Error(`YY room list error: ${response.code} - ${response.message || ""}`);
     }
 
@@ -363,7 +370,7 @@ globalThis.LiveParsePlugin = {
     });
 
     const response = JSON.parse(resp.bodyText || "{}");
-    if (Number(response.resultCode || -1) !== 0 || !response.data) {
+    if (__lp_yy_parseCode(response.resultCode, -1) !== 0 || !response.data) {
       throw new Error(`YY room detail not found: ${roomId}`);
     }
 

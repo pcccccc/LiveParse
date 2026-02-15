@@ -4,6 +4,12 @@ import Testing
 
 // MARK: - Helpers
 
+private func prepareCCTestEnvironment() {
+    LiveParseConfig.logLevel = .debug
+    LiveParseConfig.includeDetailedNetworkInfo = true
+    assertPurePluginMode(platform: "NeteaseCC")
+}
+
 private func fetchCCRoomContext() async throws -> LiveModel {
     let categories = try await NeteaseCC.getCategoryList()
     guard let category = categories.first,
@@ -24,13 +30,14 @@ private func fetchCCRoomContext() async throws -> LiveModel {
 
 @Test("获取 CC 分类列表")
 func ccGetCategoryList() async throws {
-    LiveParseConfig.logLevel = .debug
+    prepareCCTestEnvironment()
     let categories = try await NeteaseCC.getCategoryList()
     #expect(!categories.isEmpty, "CC 分类列表不应为空")
 }
 
 @Test("获取 CC 子分类")
 func ccGetCategorySubList() async throws {
+    prepareCCTestEnvironment()
     let categories = try await NeteaseCC.getCategoryList()
     guard let first = categories.first else {
         Issue.record("没有可用的 CC 分类")
@@ -42,7 +49,7 @@ func ccGetCategorySubList() async throws {
 
 @Test("获取 CC 房间列表")
 func ccGetRoomList() async throws {
-    LiveParseConfig.logLevel = .debug
+    prepareCCTestEnvironment()
     let categories = try await NeteaseCC.getCategoryList()
     guard let category = categories.first,
           let subCategory = category.subList.first else {
@@ -55,7 +62,7 @@ func ccGetRoomList() async throws {
 
 @Test("获取 CC 房间详情")
 func ccGetLiveInfo() async throws {
-    LiveParseConfig.logLevel = .debug
+    prepareCCTestEnvironment()
     do {
         let room = try await fetchCCRoomContext()
         let info = try await NeteaseCC.getLiveLastestInfo(roomId: room.roomId, userId: room.userId)
@@ -67,7 +74,7 @@ func ccGetLiveInfo() async throws {
 
 @Test("获取 CC 播放参数")
 func ccGetPlayArgs() async throws {
-    LiveParseConfig.logLevel = .debug
+    prepareCCTestEnvironment()
     do {
         let room = try await fetchCCRoomContext()
         let playArgs = try await NeteaseCC.getPlayArgs(roomId: room.roomId, userId: room.userId)
@@ -79,7 +86,7 @@ func ccGetPlayArgs() async throws {
 
 @Test("获取 CC 直播状态")
 func ccGetLiveState() async throws {
-    LiveParseConfig.logLevel = .debug
+    prepareCCTestEnvironment()
     do {
         let room = try await fetchCCRoomContext()
         let state = try await NeteaseCC.getLiveState(roomId: room.roomId, userId: room.userId)
@@ -91,14 +98,14 @@ func ccGetLiveState() async throws {
 
 @Test("CC 搜索房间")
 func ccSearchRooms() async throws {
-    LiveParseConfig.logLevel = .debug
+    prepareCCTestEnvironment()
     let rooms = try await NeteaseCC.searchRooms(keyword: "游戏", page: 1)
     #expect(!rooms.isEmpty, "CC 搜索结果不应为空")
 }
 
 @Test("CC 分享码解析")
 func ccShareCodeParse() async throws {
-    LiveParseConfig.logLevel = .debug
+    prepareCCTestEnvironment()
     do {
         let room = try await fetchCCRoomContext()
         let info = try await NeteaseCC.getRoomInfoFromShareCode(shareCode: room.roomId)
@@ -110,7 +117,7 @@ func ccShareCodeParse() async throws {
 
 @Test("CC 弹幕参数")
 func ccDanmakuArgs() async throws {
-    LiveParseConfig.logLevel = .debug
+    prepareCCTestEnvironment()
     do {
         let room = try await fetchCCRoomContext()
         let args = try await NeteaseCC.getDanmukuArgs(roomId: room.roomId, userId: room.userId)
@@ -122,8 +129,7 @@ func ccDanmakuArgs() async throws {
 
 @Test("CC 最小完整流程")
 func ccFullIntegration() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareCCTestEnvironment()
 
     let categories = try await NeteaseCC.getCategoryList()
     #expect(!categories.isEmpty, "CC 分类列表不应为空")

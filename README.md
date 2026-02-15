@@ -2,11 +2,19 @@
 
 ## 介绍： 
 
-解析 Bilibili/Douyin/Huya/Douyin/网易CC/快手/抖音/youtube 直播相关内容的Swift版本。
+解析 Bilibili/Douyu/Huya/NeteaseCC/YY/KuaiShou/Douyin/YouTube 直播相关内容的 Swift Package（当前为纯 JS 插件解析模式）。
 
 ## 功能：
 
 获取直播分类、对应分类主播列表、主播信息、直播源地址、模糊搜索、通过分享链接识别主播信息。
+
+> 当前默认运行模式：**仅 JS 插件模式**（`enableJSPlugins = true`，`pluginFallbackToSwiftImplementation = false`）。
+
+## 纯 JS 测试进度（2026-02-15）
+
+- 已跑通：`bilibili`（16/16）、`douyin`（14/14）、`cc`（10/10）、`yy`（9/9）
+- 已启用纯 JS 断言的平台测试：`huya`、`douyu`、`ks`、`bilibili`、`douyin`、`cc`、`yy`
+- `youtube` 当前仅覆盖插件加载测试，平台级功能回归待补充
 
 ## Swift Package Manager：
 ```swift

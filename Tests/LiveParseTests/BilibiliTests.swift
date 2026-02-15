@@ -4,10 +4,15 @@ import Testing
 
 // MARK: - Bilibili Core Functions Tests
 
-@Test("获取B站分类列表")
-func bilibiliGetCategoryList() async throws {
+private func prepareBilibiliTestEnvironment() {
     LiveParseConfig.logLevel = .debug
     LiveParseConfig.includeDetailedNetworkInfo = true
+    assertPurePluginMode(platform: "Bilibili")
+}
+
+@Test("获取B站分类列表")
+func bilibiliGetCategoryList() async throws {
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试 1: 获取分类列表")
 
@@ -31,8 +36,7 @@ func bilibiliGetCategoryList() async throws {
 
 @Test("获取B站房间列表")
 func bilibiliGetRoomList() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试 2: 获取房间列表")
 
@@ -62,8 +66,7 @@ func bilibiliGetRoomList() async throws {
 
 @Test("获取B站直播状态")
 func bilibiliGetLiveState() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试 3: 获取直播状态")
 
@@ -83,8 +86,7 @@ func bilibiliGetLiveState() async throws {
 
 @Test("获取B站直播间详细信息")
 func bilibiliGetLiveLastestInfo() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试 4: 获取直播间详细信息")
 
@@ -104,8 +106,7 @@ func bilibiliGetLiveLastestInfo() async throws {
 
 @Test("从分享码获取房间信息")
 func bilibiliGetRoomInfoFromShareCode() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试 5: 从分享码获取房间信息")
 
@@ -127,8 +128,7 @@ func bilibiliGetRoomInfoFromShareCode() async throws {
 
 @Test("获取B站弹幕参数")
 func bilibiliGetDanmukuArgs() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试 6: 获取弹幕参数")
 
@@ -148,8 +148,7 @@ func bilibiliGetDanmukuArgs() async throws {
 
 @Test("获取B站播放地址")
 func bilibiliGetPlayArgs() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试 7: 获取播放地址 ⭐")
 
@@ -181,8 +180,7 @@ func bilibiliGetPlayArgs() async throws {
 
 @Test("搜索B站直播间")
 func bilibiliSearchRooms() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试 8: 搜索直播间 ⭐")
 
@@ -210,8 +208,7 @@ func bilibiliSearchRooms() async throws {
 
 @Test("获取B站登录二维码")
 func bilibiliGetQRCodeUrl() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试 9: 获取登录二维码")
 
@@ -227,8 +224,7 @@ func bilibiliGetQRCodeUrl() async throws {
 
 @Test("检查B站二维码扫描状态")
 func bilibiliGetQRCodeState() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试 10: 检查二维码扫描状态")
 
@@ -244,8 +240,7 @@ func bilibiliGetQRCodeState() async throws {
 
 @Test("Bilibili完整集成测试")
 func bilibiliFullIntegration() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 完整集成测试：用户使用流程")
 
@@ -307,8 +302,7 @@ func bilibiliFullIntegration() async throws {
 
 @Test("错误处理-无效房间号")
 func bilibiliErrorHandling_InvalidRoomId() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试错误处理：无效房间号")
 
@@ -328,8 +322,7 @@ func bilibiliErrorHandling_InvalidRoomId() async throws {
 
 @Test("错误处理-无效分享码")
 func bilibiliErrorHandling_InvalidShareCode() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试错误处理：无效分享码")
 
@@ -344,8 +337,7 @@ func bilibiliErrorHandling_InvalidShareCode() async throws {
 
 @Test("错误处理-网络请求详情")
 func bilibiliErrorHandling_NetworkDetails() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试错误处理：检查网络请求详情")
 
@@ -367,8 +359,7 @@ func bilibiliErrorHandling_NetworkDetails() async throws {
 
 @Test("错误类型展示-LiveParseError+Enhanced功能")
 func bilibiliErrorHandling_EnhancedErrorDemo() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 测试错误类型展示：LiveParseError+Enhanced 的各项功能")
 
@@ -405,8 +396,7 @@ func bilibiliErrorHandling_EnhancedErrorDemo() async throws {
 
 @Test("性能测试-批量请求")
 func bilibiliPerformance_BatchRequests() async throws {
-    LiveParseConfig.logLevel = .debug
-    LiveParseConfig.includeDetailedNetworkInfo = true
+    prepareBilibiliTestEnvironment()
 
     print("📋 性能测试：批量请求")
 
