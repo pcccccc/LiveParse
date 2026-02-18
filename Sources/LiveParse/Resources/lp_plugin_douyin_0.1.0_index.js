@@ -1,4 +1,7 @@
 const __lp_dy_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
+const __lp_dy_runtime = {
+  cookie: ""
+};
 
 function __lp_dy_tryDecodeURIComponent(text) {
   try {
@@ -10,6 +13,30 @@ function __lp_dy_tryDecodeURIComponent(text) {
 
 function __lp_dy_toString(v) {
   return v === undefined || v === null ? "" : String(v);
+}
+
+function __lp_dy_normalizeCookie(cookie) {
+  return __lp_dy_toString(cookie).trim();
+}
+
+function __lp_dy_setRuntimeCookie(cookie) {
+  __lp_dy_runtime.cookie = __lp_dy_normalizeCookie(cookie);
+}
+
+function __lp_dy_getRuntimeCookie(payload) {
+  const payloadCookie = __lp_dy_normalizeCookie(payload && payload.cookie);
+  if (payloadCookie) {
+    __lp_dy_setRuntimeCookie(payloadCookie);
+    return payloadCookie;
+  }
+  return __lp_dy_runtime.cookie;
+}
+
+function __lp_dy_withRuntimeCookie(payload) {
+  const safePayload = payload && typeof payload === "object" ? Object.assign({}, payload) : {};
+  const cookie = __lp_dy_getRuntimeCookie(safePayload);
+  if (cookie) safePayload.cookie = cookie;
+  return safePayload;
 }
 
 function __lp_dy_firstURL(text) {
@@ -117,11 +144,12 @@ function __lp_dy_parseEscapedStateFromScript(html) {
 }
 
 function __lp_dy_pickHeaders(payload) {
+  const payloadWithCookie = __lp_dy_withRuntimeCookie(payload || {});
   const out = {
     "User-Agent": __lp_dy_ua,
     "Referer": "https://live.douyin.com/"
   };
-  const cookie = payload && payload.cookie ? __lp_dy_toString(payload.cookie) : "";
+  const cookie = payloadWithCookie.cookie ? __lp_dy_toString(payloadWithCookie.cookie) : "";
   if (cookie) out.Cookie = cookie;
   return out;
 }
@@ -522,36 +550,51 @@ async function __lp_dy_resolveRoomIdFromShareCode(shareCode, payload) {
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
 
+  async setCookie(payload) {
+    const cookie = __lp_dy_normalizeCookie(payload && payload.cookie);
+    __lp_dy_setRuntimeCookie(cookie);
+    return { ok: true, hasCookie: cookie.length > 0 };
+  },
+
+  async clearCookie() {
+    __lp_dy_setRuntimeCookie("");
+    return { ok: true, hasCookie: false };
+  },
+
   async getCategoryList() {
     return __lp_dy_defaultCategories();
   },
 
   async getRoomList(payload) {
-    const id = __lp_dy_toString(payload && payload.id);
-    const parentId = __lp_dy_toString(payload && payload.parentId);
-    const page = Number((payload && payload.page) || 1);
+    const runtimePayload = __lp_dy_withRuntimeCookie(payload || {});
+    const id = __lp_dy_toString(runtimePayload.id);
+    const parentId = __lp_dy_toString(runtimePayload.parentId);
+    const page = Number(runtimePayload.page || 1);
     if (!id) throw new Error("id is required");
-    return await __lp_dy_getRoomList(id, parentId, page, payload || {});
+    return await __lp_dy_getRoomList(id, parentId, page, runtimePayload);
   },
 
   async getPlayArgs(payload) {
-    const roomId = __lp_dy_toString(payload && payload.roomId);
+    const runtimePayload = __lp_dy_withRuntimeCookie(payload || {});
+    const roomId = __lp_dy_toString(runtimePayload.roomId);
     if (!roomId) throw new Error("roomId is required");
-    const data = await __lp_dy_getRoomDataByHtml(roomId, payload || {});
+    const data = await __lp_dy_getRoomDataByHtml(roomId, runtimePayload);
     return __lp_dy_extractPlayArgs(data, roomId);
   },
 
   async searchRooms(payload) {
-    const keyword = __lp_dy_toString(payload && payload.keyword);
-    const page = Number((payload && payload.page) || 1);
+    const runtimePayload = __lp_dy_withRuntimeCookie(payload || {});
+    const keyword = __lp_dy_toString(runtimePayload.keyword);
+    const page = Number(runtimePayload.page || 1);
     if (!keyword) throw new Error("keyword is required");
-    return await __lp_dy_searchRooms(keyword, page, payload || {});
+    return await __lp_dy_searchRooms(keyword, page, runtimePayload);
   },
 
   async getLiveLastestInfo(payload) {
-    const roomId = __lp_dy_toString(payload && payload.roomId);
+    const runtimePayload = __lp_dy_withRuntimeCookie(payload || {});
+    const roomId = __lp_dy_toString(runtimePayload.roomId);
     if (!roomId) throw new Error("roomId is required");
-    const data = await __lp_dy_getRoomDataByHtml(roomId, payload || {});
+    const data = await __lp_dy_getRoomDataByHtml(roomId, runtimePayload);
     return __lp_dy_buildLiveModel(data, roomId);
   },
 
@@ -561,19 +604,21 @@ globalThis.LiveParsePlugin = {
   },
 
   async getRoomInfoFromShareCode(payload) {
-    const shareCode = __lp_dy_toString(payload && payload.shareCode);
+    const runtimePayload = __lp_dy_withRuntimeCookie(payload || {});
+    const shareCode = __lp_dy_toString(runtimePayload.shareCode);
     if (!shareCode) throw new Error("shareCode is required");
-    const roomId = await __lp_dy_resolveRoomIdFromShareCode(shareCode, payload || {});
-    return await this.getLiveLastestInfo({ roomId, userId: roomId, cookie: __lp_dy_toString(payload && payload.cookie) });
+    const roomId = await __lp_dy_resolveRoomIdFromShareCode(shareCode, runtimePayload);
+    return await this.getLiveLastestInfo({ roomId, userId: roomId, cookie: runtimePayload.cookie });
   },
 
   async getDanmukuArgs(payload) {
-    const roomId = __lp_dy_toString(payload && payload.roomId);
+    const runtimePayload = __lp_dy_withRuntimeCookie(payload || {});
+    const roomId = __lp_dy_toString(runtimePayload.roomId);
     if (!roomId) throw new Error("roomId is required");
 
-    const live = await this.getLiveLastestInfo(payload || {});
+    const live = await this.getLiveLastestInfo(runtimePayload);
     const finalRoomId = __lp_dy_toString((live && live.userId) || roomId);
-    const cookie = __lp_dy_toString(payload && payload.cookie);
+    const cookie = __lp_dy_toString(runtimePayload.cookie);
 
     return {
       args: {

@@ -1,13 +1,23 @@
 # Cookie/Session 改造方向与阶段任务拆解（面向 AngelLive + LiveParse）
 
+更新时间：2026-02-18
+
 ## 背景
 
 当前能力以 Bilibili 为主，Cookie 获取、保存、同步、校验已可用，但链路分散在多个组件。  
 后续目标是支持“登录后导入平台关注列表”，并逐步扩展到多平台。
 
+## 当前进度同步（2026-02-18）
+
+- 抖音插件已新增 cookie 入口：`setCookie` / `clearCookie`，插件内维护 runtime cookie。
+- 抖音插件调用路径已去除 `Douyin.swift` 对 `payload.cookie = ensureCookie(...)` 的注入依赖。
+- 现阶段链路改为：宿主会话层写入后调用插件入口同步 cookie，插件侧独立消费该 cookie 发起请求。
+- 已完成 iOS 真机构建链路验证（`generic/platform=iOS` + `CODE_SIGNING_ALLOWED=NO`，构建成功）。
+- 后续要求：其余涉及登录态的插件也统一采用该方式进行 cookie 交互。
+
 ## 核心结论
 
-不建议把“Cookie 获取链路”放在插件内。  
+不建议把“Cookie 获取链路”放在插件内（插件不负责登录抓取）。  
 建议采用：
 
 - 宿主管理会话（登录、存储、同步、续期、失效）
@@ -41,8 +51,8 @@
   - 自动注入 Cookie/Header
   - 接收 `Set-Cookie` 并回写 SessionStore
 - 插件
-  - 不接触明文 cookie
-  - 通过 `sessionScope` 请求业务接口
+  - 不负责会话生成/存储
+  - 仅通过宿主注入的 cookie（或后续 `sessionScope`）请求业务接口
 
 ## 里程碑与阶段任务
 
@@ -105,6 +115,10 @@
 
 ## M3 Host.http 鉴权注入（1~2 天）
 
+### 当前状态
+
+- 进行中（抖音一期已先落地插件入口注入）
+
 ### 任务
 
 - 为宿主请求层增加：
@@ -118,11 +132,14 @@
 
 - Host.http 新接口与适配代码
 - 请求链路单测（注入/回写/失效）
+- 抖音插件 `setCookie/clearCookie` 与 runtime cookie 能力（已落地）
+- 其余平台插件（至少 `bilibili`、`ks`）同模式改造方案与落地清单
 
 ### 验收标准
 
 - 插件侧不再需要 `payload.cookie`/`payload.uid`。
 - 鉴权失败可被上层统一识别并引导登录。
+- 所有涉及登录态 cookie 的插件都具备统一 cookie 交互入口（`setCookie` / `clearCookie`）。
 
 ## M4 Bilibili 关注列表导入（1~1.5 天）
 
@@ -193,4 +210,3 @@
 4. M3 Host.http 注入  
 5. M4 关注导入  
 6. M5 多平台扩展
-

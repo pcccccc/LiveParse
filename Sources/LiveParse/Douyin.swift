@@ -577,9 +577,7 @@ extension Douyin {
                 let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "douyin",
                     function: "getCategoryList",
-                    payload: [
-                        "cookie": try await ensureCookie(for: fakeRoomId)
-                    ]
+                    payload: [:]
                 )
                 logInfo("Douyin.getCategoryList 使用 JS 插件返回 \(result.count) 个主分类")
                 return result
@@ -745,8 +743,7 @@ extension Douyin {
                     payload: [
                         "id": id,
                         "parentId": parentId as Any,
-                        "page": page,
-                        "cookie": try await ensureCookie(for: fakeRoomId)
+                        "page": page
                     ]
                 )
                 logInfo("Douyin.getRoomList 使用 JS 插件返回 \(rooms.count) 个房间")
@@ -858,8 +855,7 @@ extension Douyin {
                     function: "getPlayArgs",
                     payload: [
                         "roomId": roomId,
-                        "userId": userId as Any,
-                        "cookie": try await ensureCookie(for: roomId)
+                        "userId": userId as Any
                     ]
                 )
                 logInfo("Douyin.getPlayArgs 使用 JS 插件返回 \(result.count) 条线路")
@@ -1078,8 +1074,7 @@ extension Douyin {
                     function: "searchRooms",
                     payload: [
                         "keyword": keyword,
-                        "page": page,
-                        "cookie": try await ensureCookie(for: fakeRoomId)
+                        "page": page
                     ]
                 )
                 logInfo("Douyin.searchRooms 使用 JS 插件返回 \(rooms.count) 个房间")
@@ -1247,8 +1242,7 @@ extension Douyin {
                     function: "getLiveLastestInfo",
                     payload: [
                         "roomId": roomId,
-                        "userId": userId as Any,
-                        "cookie": try await ensureCookie(for: roomId)
+                        "userId": userId as Any
                     ]
                 )
                 logInfo("Douyin.getLiveLastestInfo 使用 JS 插件成功")
@@ -1323,8 +1317,7 @@ extension Douyin {
                     function: "getLiveState",
                     payload: [
                         "roomId": roomId,
-                        "userId": userId as Any,
-                        "cookie": try await ensureCookie(for: roomId)
+                        "userId": userId as Any
                     ]
                 )
 
@@ -1490,8 +1483,7 @@ extension Douyin {
                     pluginId: "douyin",
                     function: "getRoomInfoFromShareCode",
                     payload: [
-                        "shareCode": shareCode,
-                        "cookie": try await ensureCookie(for: fakeRoomId)
+                        "shareCode": shareCode
                     ]
                 )
                 logInfo("Douyin.getRoomInfoFromShareCode 使用 JS 插件成功")
@@ -1628,8 +1620,7 @@ extension Douyin {
                     function: "getDanmukuArgs",
                     payload: [
                         "roomId": roomId,
-                        "userId": userId as Any,
-                        "cookie": try await ensureCookie(for: roomId)
+                        "userId": userId as Any
                     ]
                 )
                 logInfo("Douyin.getDanmukuArgs 使用 JS 插件成功")
