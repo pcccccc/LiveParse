@@ -1,6 +1,10 @@
 const __lp_ks_categoryURL = "https://live.kuaishou.com/live_api/category/data";
 const __lp_ks_gameListURL = "https://live.kuaishou.com/live_api/gameboard/list";
 const __lp_ks_nonGameListURL = "https://live.kuaishou.com/live_api/non-gameboard/list";
+const __lp_ks_searchOverviewURL = "https://live.kuaishou.com/live_api/search/overview";
+const __lp_ks_searchAuthorURL = "https://live.kuaishou.com/live_api/search/author";
+const __lp_ks_searchLiveStreamURL = "https://live.kuaishou.com/live_api/search/liveStream";
+const __lp_ks_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 
 function __lp_ks_firstMatch(text, re) {
   const m = String(text || "").match(re);
@@ -57,6 +61,70 @@ function __lp_ks_makeQualityDetails(playUrl, roomId) {
       liveType: "5"
     };
   }).filter(function (item) { return !!item.url; });
+}
+
+function __lp_ks_searchItemToLiveModel(item) {
+  const source = item && typeof item === "object" ? item : {};
+  const author = source.author && typeof source.author === "object" ? source.author : {};
+  const roomId = String(source.id || source.liveStreamId || source.roomId || "");
+  const userId = String(author.id || source.userId || source.ownerId || roomId);
+  const roomCover = String(source.poster || source.coverUrl || source.cover || "");
+  const userHeadImg = String(author.avatar || author.headerUrl || source.userHeadImg || "");
+  const roomTitle = String(source.caption || source.title || `${String(author.name || "")}的直播间`);
+  const stateFromItem = source.isLiving !== undefined ? !!source.isLiving : (source.living !== undefined ? !!source.living : true);
+  const liveState = stateFromItem ? "1" : "0";
+  if (!roomId || !userId) return null;
+  return {
+    userName: String(author.name || source.userName || ""),
+    roomTitle,
+    roomCover,
+    userHeadImg,
+    liveType: "5",
+    liveState,
+    userId,
+    roomId,
+    liveWatchedCount: String(source.watchingCount || source.displayWatchingCount || "")
+  };
+}
+
+function __lp_ks_pickHeaders(cookie, referer) {
+  const out = {
+    "User-Agent": __lp_ks_ua,
+    "Accept": "application/json, text/plain, */*",
+    "Referer": String(referer || "https://live.kuaishou.com/")
+  };
+  const normalizedCookie = String(cookie || "").trim();
+  if (normalizedCookie) out.Cookie = normalizedCookie;
+  return out;
+}
+
+function __lp_ks_toQueryString(params) {
+  const parts = [];
+  const source = params && typeof params === "object" ? params : {};
+  for (const key of Object.keys(source)) {
+    const value = source[key];
+    if (value === undefined || value === null) continue;
+    parts.push(`${encodeURIComponent(String(key))}=${encodeURIComponent(String(value))}`);
+  }
+  return parts.join("&");
+}
+
+async function __lp_ks_getSearchData(url, params, cookie, referer) {
+  const qs = __lp_ks_toQueryString(params);
+  const reqURL = qs ? `${url}?${qs}` : url;
+  const resp = await Host.http.request({
+    url: reqURL,
+    method: "GET",
+    headers: __lp_ks_pickHeaders(cookie, referer),
+    timeout: 20
+  });
+  const obj = JSON.parse(resp.bodyText || "{}");
+  const data = obj && obj.data ? obj.data : {};
+  const resultCode = Number(data && data.result !== undefined ? data.result : 0);
+  if (resultCode !== 1) {
+    throw new Error(`kuaishou search api failed: result=${resultCode}, url=${reqURL}`);
+  }
+  return data;
 }
 
 async function __lp_ks_getKSLiveRoom(roomId) {
@@ -142,6 +210,65 @@ async function __lp_ks_getRoomList(id, page) {
   const obj = JSON.parse(resp.bodyText || "{}");
   const list = obj && obj.data && obj.data.list ? obj.data.list : [];
   return list.map(__lp_ks_roomListItemToLiveModel);
+}
+
+async function __lp_ks_searchRooms(keyword, page, cookie) {
+  const keywordText = String(keyword || "").trim();
+  if (!keywordText) return [];
+  const pageNo = Number(page) > 0 ? Number(page) : 1;
+  const normalizedCookie = String(cookie || "").trim();
+  const searchReferer = `https://live.kuaishou.com/search/${encodeURIComponent(keywordText)}`;
+
+  // 先打 overview，让站点侧建立搜索会话。
+  await __lp_ks_getSearchData(
+    __lp_ks_searchOverviewURL,
+    { keyword: keywordText, ussid: "" },
+    normalizedCookie,
+    searchReferer
+  );
+
+  const authorData = await __lp_ks_getSearchData(
+    __lp_ks_searchAuthorURL,
+    {
+      key: keywordText,
+      keyword: keywordText,
+      page: pageNo,
+      ussid: "",
+      lssid: "",
+      count: 15
+    },
+    normalizedCookie,
+    searchReferer
+  );
+
+  const ussid = String(authorData.ussid || "");
+  const liveData = await __lp_ks_getSearchData(
+    __lp_ks_searchLiveStreamURL,
+    {
+      keyword: keywordText,
+      page: pageNo,
+      ussid
+    },
+    normalizedCookie,
+    searchReferer
+  );
+
+  const out = [];
+  const seenRoomIds = new Set();
+  const pushModel = (model) => {
+    const roomId = String(model && model.roomId ? model.roomId : "");
+    if (!roomId || seenRoomIds.has(roomId)) return;
+    seenRoomIds.add(roomId);
+    out.push(model);
+  };
+
+  const liveList = Array.isArray(liveData.list) ? liveData.list : [];
+  for (const item of liveList) {
+    const model = __lp_ks_searchItemToLiveModel(item);
+    if (model) pushModel(model);
+  }
+
+  return out;
 }
 
 async function __lp_ks_getLiveLatestInfo(roomId) {
@@ -281,7 +408,9 @@ globalThis.LiveParsePlugin = {
 
   async searchRooms(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
-    return [];
+    const page = payload && payload.page ? Number(payload.page) : 1;
+    const cookie = String(payload && payload.cookie ? payload.cookie : "");
+    return await __lp_ks_searchRooms(keyword, page, cookie);
   },
 
   async getLiveLastestInfo(payload) {
