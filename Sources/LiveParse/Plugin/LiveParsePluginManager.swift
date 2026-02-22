@@ -93,9 +93,17 @@ public final class LiveParsePluginManager: @unchecked Sendable {
         payload: [String: Any] = [:],
         decoder: JSONDecoder = JSONDecoder()
     ) async throws -> T {
-        let value = try await call(pluginId: pluginId, function: function, payload: payload)
-        let data = try JSONSerialization.data(withJSONObject: value)
-        return try decoder.decode(T.self, from: data)
+        do {
+            let value = try await call(pluginId: pluginId, function: function, payload: payload)
+            let data = try JSONSerialization.data(withJSONObject: value)
+            return try decoder.decode(T.self, from: data)
+        } catch let error as LiveParsePluginError {
+            throw error
+        } catch {
+            throw LiveParsePluginError.invalidReturnValue(
+                "Decoding \(String(describing: T.self)) failed in \(pluginId).\(function): \(error.localizedDescription)"
+            )
+        }
     }
 }
 

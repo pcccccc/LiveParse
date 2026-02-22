@@ -5,6 +5,16 @@ const __lp_dy_runtime = {
   searchKeyword: ""
 };
 
+function __lp_dy_throw(code, message, context) {
+  if (globalThis.Host && typeof Host.raise === "function") {
+    Host.raise(code, message, context || {});
+  }
+  if (globalThis.Host && typeof Host.makeError === "function") {
+    throw Host.makeError(code || "UNKNOWN", message || "", context || {});
+  }
+  throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
+}
+
 function __lp_dy_tryDecodeURIComponent(text) {
   try {
     return decodeURIComponent(String(text || ""));
@@ -159,7 +169,7 @@ function __lp_dy_requireCookie(payload, apiName) {
   const runtimePayload = __lp_dy_withRuntimeCookie(payload || {});
   const cookie = __lp_dy_normalizeCookie(runtimePayload.cookie);
   if (!cookie) {
-    throw new Error(`${apiName} requires cookie`);
+    __lp_dy_throw("AUTH_REQUIRED", `${apiName} requires cookie`, { api: String(apiName || "") });
   }
   runtimePayload.cookie = cookie;
   return runtimePayload;
@@ -316,9 +326,9 @@ function __lp_dy_extractLiveModelsFromUserList(item) {
 
 function __lp_dy_signDetail(queryString) {
   const query = __lp_dy_toString(queryString);
-  if (!query) throw new Error("queryString is empty");
+  if (!query) __lp_dy_throw("INVALID_ARGS", "queryString is empty", { field: "queryString" });
   if (typeof sign_datail !== "function") {
-    throw new Error("sign_datail is not available in douyin plugin");
+    __lp_dy_throw("PARSE", "sign_datail is not available in douyin plugin");
   }
   return __lp_dy_toString(sign_datail(query, __lp_dy_ua));
 }
@@ -454,7 +464,7 @@ function __lp_dy_extractPlayArgs(roomData, roomId) {
   }
 
   if (qualitys.length === 0) {
-    throw new Error(`empty quality list for roomId=${roomId}`);
+    __lp_dy_throw("INVALID_RESPONSE", `empty quality list for roomId=${roomId}`, { roomId: String(roomId || "") });
   }
 
   return [{ cdn: "线路 1", qualitys }];
@@ -462,7 +472,7 @@ function __lp_dy_extractPlayArgs(roomData, roomId) {
 
 async function __lp_dy_getRoomDataByHtml(roomId, cookie) {
   const webRid = __lp_dy_toString(roomId).trim();
-  if (!webRid) throw new Error("roomId is empty");
+  if (!webRid) __lp_dy_throw("INVALID_ARGS", "roomId is empty", { field: "roomId" });
 
   const resp = await Host.http.request({
     url: `https://live.douyin.com/${encodeURIComponent(webRid)}`,
@@ -473,7 +483,7 @@ async function __lp_dy_getRoomDataByHtml(roomId, cookie) {
 
   const html = __lp_dy_toString(resp && resp.bodyText);
   if (!html) {
-    throw new Error("empty room html");
+    __lp_dy_throw("INVALID_RESPONSE", "empty room html", { roomId: String(roomId || "") });
   }
 
   let payloadObj = null;
@@ -520,7 +530,7 @@ async function __lp_dy_getRoomDataByHtml(roomId, cookie) {
   }
 
   if (!payloadObj) {
-    throw new Error("cannot parse douyin state payload from html");
+    __lp_dy_throw("PARSE", "cannot parse douyin state payload from html", { roomId: String(roomId || "") });
   }
 
   const state = payloadObj.state || payloadObj;
@@ -547,7 +557,7 @@ async function __lp_dy_getRoomDataByHtml(roomId, cookie) {
   }
 
   if (!room || !room.id_str) {
-    throw new Error("room info missing from html payload");
+    __lp_dy_throw("INVALID_RESPONSE", "room info missing from html payload", { roomId: String(roomId || "") });
   }
 
   return { room, roomInfo, roomStore, streamStore, state };
@@ -589,7 +599,7 @@ async function __lp_dy_getRoomList(id, parentId, page, cookie) {
   const obj = JSON.parse(__lp_dy_toString(resp && resp.bodyText) || "{}");
   const list = (((obj || {}).data || {}).data) || [];
   if (!Array.isArray(list) || list.length === 0) {
-    throw new Error("douyin room list empty or blocked");
+    __lp_dy_throw("BLOCKED", "douyin room list empty or blocked", { id: String(id || ""), parentId: String(parentId || ""), page: Number(page || 1) });
   }
 
   return list.map(function (item) {
@@ -703,9 +713,11 @@ async function __lp_dy_searchRooms(keyword, page, cookie) {
   try {
     obj = JSON.parse(bodyText || "{}");
   } catch (e) {
-    throw new Error(
-      `douyin search json parse failed (http=${__lp_dy_toString(resp && resp.status)}, cookie_len=${normalizedCookie.length}, url=${requestURL})`
-    );
+    __lp_dy_throw("PARSE", "douyin search json parse failed", {
+      http: __lp_dy_toString(resp && resp.status),
+      cookie_len: String(normalizedCookie.length),
+      url: requestURL
+    });
   }
 
   const list = (obj && obj.data) || [];
@@ -715,9 +727,16 @@ async function __lp_dy_searchRooms(keyword, page, cookie) {
     __lp_dy_runtime.searchId = logId;
   }
   if (!Array.isArray(list)) {
-    throw new Error(
-      `douyin search response invalid (http=${__lp_dy_toString(resp && resp.status)}, status_code=${__lp_dy_toString(obj && obj.status_code)}, search_nil_type=${searchNilType}, logid=${logId}, cookie_len=${normalizedCookie.length}, generated_msToken=${generatedMsToken}, generated_verifyFp=${generatedVerifyFp}, url=${requestURL})`
-    );
+    __lp_dy_throw("INVALID_RESPONSE", "douyin search response invalid", {
+      http: __lp_dy_toString(resp && resp.status),
+      status_code: __lp_dy_toString(obj && obj.status_code),
+      search_nil_type: searchNilType,
+      logid: logId,
+      cookie_len: String(normalizedCookie.length),
+      generated_msToken: String(generatedMsToken),
+      generated_verifyFp: String(generatedVerifyFp),
+      url: requestURL
+    });
   }
 
   const out = [];
@@ -808,9 +827,31 @@ async function __lp_dy_searchRooms(keyword, page, cookie) {
   }
 
   if (out.length === 0) {
-    throw new Error(
-      `douyin search parse empty (http=${__lp_dy_toString(resp && resp.status)}, status_code=${__lp_dy_toString(obj && obj.status_code)}, search_nil_type=${searchNilType}, logid=${logId}, cookie_len=${normalizedCookie.length}, has_msToken=${msTokenFromCookie ? "1" : "0"}, has_verifyFp=${verifyFpFromCookie ? "1" : "0"}, generated_msToken=${generatedMsToken}, generated_verifyFp=${generatedVerifyFp}, list_count=${list.length}, raw_parsed=${rawParsedCount}, user_list_users=${userListUserCount}, user_list_models=${userListModelCount}, first_item_type=${firstItemType}, first_item_keys=${firstItemKeys}, first_user_keys=${firstUserKeys}, first_user_info_keys=${firstUserInfoKeys}, first_user_room_id=${firstUserRoomId}, first_user_info_room_id=${firstUserInfoRoomId}, first_user_info_room_id_str=${firstUserInfoRoomIdStr}, first_user_info_uid=${firstUserInfoUID}, first_room_data_keys=${firstRoomDataKeys}, url=${requestURL})`
-    );
+    __lp_dy_throw("BLOCKED", "douyin search parse empty", {
+      http: __lp_dy_toString(resp && resp.status),
+      status_code: __lp_dy_toString(obj && obj.status_code),
+      search_nil_type: searchNilType,
+      logid: logId,
+      cookie_len: String(normalizedCookie.length),
+      has_msToken: msTokenFromCookie ? "1" : "0",
+      has_verifyFp: verifyFpFromCookie ? "1" : "0",
+      generated_msToken: String(generatedMsToken),
+      generated_verifyFp: String(generatedVerifyFp),
+      list_count: String(list.length),
+      raw_parsed: String(rawParsedCount),
+      user_list_users: String(userListUserCount),
+      user_list_models: String(userListModelCount),
+      first_item_type: firstItemType,
+      first_item_keys: firstItemKeys,
+      first_user_keys: firstUserKeys,
+      first_user_info_keys: firstUserInfoKeys,
+      first_user_room_id: firstUserRoomId,
+      first_user_info_room_id: firstUserInfoRoomId,
+      first_user_info_room_id_str: firstUserInfoRoomIdStr,
+      first_user_info_uid: firstUserInfoUID,
+      first_room_data_keys: firstRoomDataKeys,
+      url: requestURL
+    });
   }
 
   return out;
@@ -818,7 +859,7 @@ async function __lp_dy_searchRooms(keyword, page, cookie) {
 
 async function __lp_dy_resolveRoomIdFromShareCode(shareCode, cookie) {
   const text = __lp_dy_toString(shareCode).trim();
-  if (!text) throw new Error("shareCode is empty");
+  if (!text) __lp_dy_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
   if (__lp_dy_isNumericId(text)) return text;
 
   let roomId = __lp_dy_firstMatch(text, /live\.douyin\.com\/(\d+)/);
@@ -848,7 +889,7 @@ async function __lp_dy_resolveRoomIdFromShareCode(shareCode, cookie) {
     if (__lp_dy_isNumericId(roomId)) return roomId;
   }
 
-  throw new Error(`cannot resolve douyin roomId from shareCode: ${shareCode}`);
+  __lp_dy_throw("NOT_FOUND", `cannot resolve douyin roomId from shareCode: ${shareCode}`, { shareCode: String(shareCode || "") });
 }
 
 globalThis.LiveParsePlugin = {
@@ -880,14 +921,14 @@ globalThis.LiveParsePlugin = {
     const id = __lp_dy_toString(runtimePayload.id);
     const parentId = __lp_dy_toString(runtimePayload.parentId);
     const page = Number(runtimePayload.page || 1);
-    if (!id) throw new Error("id is required");
+    if (!id) __lp_dy_throw("INVALID_ARGS", "id is required", { field: "id" });
     return await __lp_dy_getRoomList(id, parentId, page, runtimePayload.cookie);
   },
 
   async getPlayArgs(payload) {
     const runtimePayload = __lp_dy_requireCookie(payload, "getPlayArgs");
     const roomId = __lp_dy_toString(runtimePayload.roomId);
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_dy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     const data = await __lp_dy_getRoomDataByHtml(roomId, runtimePayload.cookie);
     return __lp_dy_extractPlayArgs(data, roomId);
   },
@@ -896,14 +937,14 @@ globalThis.LiveParsePlugin = {
     const runtimePayload = __lp_dy_requireCookie(payload, "searchRooms");
     const keyword = __lp_dy_toString(runtimePayload.keyword);
     const page = Number(runtimePayload.page || 1);
-    if (!keyword) throw new Error("keyword is required");
+    if (!keyword) __lp_dy_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
     return await __lp_dy_searchRooms(keyword, page, runtimePayload.cookie);
   },
 
   async getLiveLastestInfo(payload) {
     const runtimePayload = __lp_dy_requireCookie(payload, "getLiveLastestInfo");
     const roomId = __lp_dy_toString(runtimePayload.roomId);
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_dy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     const data = await __lp_dy_getRoomDataByHtml(roomId, runtimePayload.cookie);
     return __lp_dy_buildLiveModel(data, roomId);
   },
@@ -917,7 +958,7 @@ globalThis.LiveParsePlugin = {
   async getRoomInfoFromShareCode(payload) {
     const runtimePayload = __lp_dy_requireCookie(payload, "getRoomInfoFromShareCode");
     const shareCode = __lp_dy_toString(runtimePayload.shareCode);
-    if (!shareCode) throw new Error("shareCode is required");
+    if (!shareCode) __lp_dy_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
     const roomId = await __lp_dy_resolveRoomIdFromShareCode(shareCode, runtimePayload.cookie);
     return await this.getLiveLastestInfo({ roomId, userId: roomId, cookie: runtimePayload.cookie });
   },
@@ -925,7 +966,7 @@ globalThis.LiveParsePlugin = {
   async getDanmukuArgs(payload) {
     const runtimePayload = __lp_dy_requireCookie(payload, "getDanmukuArgs");
     const roomId = __lp_dy_toString(runtimePayload.roomId);
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_dy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
     const live = await this.getLiveLastestInfo(runtimePayload);
     const finalRoomId = __lp_dy_toString((live && live.userId) || roomId);

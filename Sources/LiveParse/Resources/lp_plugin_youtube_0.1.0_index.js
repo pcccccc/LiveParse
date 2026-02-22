@@ -1,5 +1,15 @@
 const __lp_yt_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 
+function __lp_yt_throw(code, message, context) {
+  if (globalThis.Host && typeof Host.raise === "function") {
+    Host.raise(code, message, context || {});
+  }
+  if (globalThis.Host && typeof Host.makeError === "function") {
+    throw Host.makeError(code || "UNKNOWN", message || "", context || {});
+  }
+  throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
+}
+
 function __lp_yt_toString(v) {
   return v === undefined || v === null ? "" : String(v);
 }
@@ -97,7 +107,7 @@ async function __lp_yt_fetchWatchHTML(videoId) {
 
   const html = __lp_yt_toString(resp && resp.bodyText);
   if (!html) {
-    throw new Error("empty youtube watch html");
+    __lp_yt_throw("INVALID_RESPONSE", "empty youtube watch html", { videoId: String(videoId || "") });
   }
 
   return { html, finalURL: __lp_yt_toString(resp && resp.url) || watchURL };
@@ -126,7 +136,7 @@ async function __lp_yt_getPlayArgs(videoId) {
   const { html } = await __lp_yt_fetchWatchHTML(videoId);
   const hlsURL = __lp_yt_extractHlsManifestURL(html);
   if (!hlsURL) {
-    throw new Error(`youtube livestream hlsManifestUrl not found: ${videoId}`);
+    __lp_yt_throw("NOT_FOUND", `youtube livestream hlsManifestUrl not found: ${videoId}`, { videoId: String(videoId || "") });
   }
 
   return [{
@@ -155,7 +165,7 @@ globalThis.LiveParsePlugin = {
 
   async getPlayArgs(payload) {
     const roomId = __lp_yt_toString(payload && payload.roomId);
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_yt_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return await __lp_yt_getPlayArgs(roomId);
   },
 
@@ -165,7 +175,7 @@ globalThis.LiveParsePlugin = {
 
   async getLiveLastestInfo(payload) {
     const roomId = __lp_yt_toString(payload && payload.roomId);
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_yt_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return await __lp_yt_getLiveLatestInfo(roomId);
   },
 
@@ -176,7 +186,7 @@ globalThis.LiveParsePlugin = {
 
   async getRoomInfoFromShareCode(payload) {
     const shareCode = __lp_yt_toString(payload && payload.shareCode);
-    if (!shareCode) throw new Error("shareCode is required");
+    if (!shareCode) __lp_yt_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
 
     let roomId = __lp_yt_extractVideoIdFromText(shareCode);
     if (!roomId) {
@@ -194,7 +204,7 @@ globalThis.LiveParsePlugin = {
     }
 
     if (!roomId) {
-      throw new Error(`invalid youtube share code: ${shareCode}`);
+      __lp_yt_throw("NOT_FOUND", `invalid youtube share code: ${shareCode}`, { shareCode: String(shareCode || "") });
     }
 
     return await __lp_yt_getLiveLatestInfo(roomId);

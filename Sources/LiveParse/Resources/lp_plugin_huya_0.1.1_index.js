@@ -6,6 +6,16 @@ function __lp_tryDecodePercent(s) {
   }
 }
 
+function __lp_huya_throw(code, message, context) {
+  if (globalThis.Host && typeof Host.raise === "function") {
+    Host.raise(code, message, context || {});
+  }
+  if (globalThis.Host && typeof Host.makeError === "function") {
+    throw Host.makeError(code || "UNKNOWN", message || "", context || {});
+  }
+  throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
+}
+
 function __lp_urlQueryAllowedEncode(s) {
   // 近似 iOS 的 urlQueryAllowed：尽量保留 + / =
   return encodeURIComponent(s)
@@ -120,7 +130,7 @@ function __lp_removeIncludeFunctionValue(input) {
 function __lp_extractHNFGlobalInit(html) {
   const re = /window\.HNF_GLOBAL_INIT\s*=\s*(.*?)<\/script>/s;
   const m = String(html).match(re);
-  if (!m) throw new Error("HNF_GLOBAL_INIT not found");
+  if (!m) __lp_huya_throw("PARSE", "HNF_GLOBAL_INIT not found");
 
   let jsonString = m[1];
   jsonString = jsonString.replace(/\n/g, "").trim();
@@ -170,7 +180,7 @@ function __lp_extractRoomIdFromHtml(html) {
 
 async function __lp_huya_resolveRoomIdFromShareCode(shareCode) {
   const input = String(shareCode || "").trim();
-  if (!input) throw new Error("shareCode is empty");
+  if (!input) __lp_huya_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
 
   if (__lp_isValidRoomId(input)) return input;
 
@@ -201,7 +211,7 @@ async function __lp_huya_resolveRoomIdFromShareCode(shareCode) {
     if (__lp_isValidRoomId(roomId)) return roomId;
   }
 
-  throw new Error("roomId not found");
+  __lp_huya_throw("NOT_FOUND", "roomId not found", { shareCode: String(shareCode || "") });
 }
 
 function __lp_rotl64(t) {
@@ -274,7 +284,7 @@ globalThis.LiveParsePlugin = {
   apiVersion: 1,
   async getRoomInfoFromShareCode(payload) {
     const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
-    if (!shareCode) throw new Error("shareCode is required");
+    if (!shareCode) __lp_huya_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
     const roomId = await __lp_huya_resolveRoomIdFromShareCode(shareCode);
     return await this.getLiveLastestInfo({ roomId, userId: null });
   },
@@ -296,20 +306,20 @@ globalThis.LiveParsePlugin = {
   async getRoomList(payload) {
     const id = String(payload && payload.id ? payload.id : "");
     const page = (payload && payload.page) ? Number(payload.page) : 1;
-    if (!id) throw new Error("id is required");
+    if (!id) __lp_huya_throw("INVALID_ARGS", "id is required", { field: "id" });
     return await __lp_huya_getRoomList(id, page);
   },
 
   async searchRooms(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
     const page = (payload && payload.page) ? Number(payload.page) : 1;
-    if (!keyword) throw new Error("keyword is required");
+    if (!keyword) __lp_huya_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
     return await __lp_huya_searchRooms(keyword, page);
   },
 
   async getLiveLastestInfo(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
     const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69";
     const resp = await Host.http.request({
@@ -344,7 +354,7 @@ globalThis.LiveParsePlugin = {
     }
 
     if (!liveInfo) {
-      throw new Error("missing liveInfo");
+      __lp_huya_throw("INVALID_RESPONSE", "missing liveInfo", { roomId: String(roomId || "") });
     }
 
     // liveInfo 结构与 Swift 侧 HuyaRoomTLiveInfo 对齐
@@ -363,7 +373,7 @@ globalThis.LiveParsePlugin = {
 
   async getLiveState(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
     const info = await this.getLiveLastestInfo({
       roomId,
@@ -377,7 +387,7 @@ globalThis.LiveParsePlugin = {
 
   async getDanmukuArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
     const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69";
     const resp = await Host.http.request({
@@ -393,7 +403,7 @@ globalThis.LiveParsePlugin = {
     const streamInfo = liveInfo && liveInfo.tLiveStreamInfo && liveInfo.tLiveStreamInfo.vStreamInfo;
     const firstStream = streamInfo && streamInfo.value ? streamInfo.value[0] : null;
     if (!liveInfo || !firstStream) {
-      throw new Error("missing stream info");
+      __lp_huya_throw("INVALID_RESPONSE", "missing stream info", { roomId: String(roomId || "") });
     }
 
     return {
@@ -407,7 +417,7 @@ globalThis.LiveParsePlugin = {
   },
   async getPlayArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
     const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Mobile/15E148 Safari/604.1";
     const resp = await Host.http.request({
@@ -467,6 +477,6 @@ globalThis.LiveParsePlugin = {
       }];
     }
 
-    throw new Error("empty result");
+    __lp_huya_throw("INVALID_RESPONSE", "empty result", { roomId: String(roomId || "") });
   }
 };

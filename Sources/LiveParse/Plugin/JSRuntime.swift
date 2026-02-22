@@ -39,7 +39,7 @@ public final class JSRuntime: @unchecked Sendable {
                     self.context.evaluateScript(script)
                 }
                 if let exception = self.context.exception {
-                    continuation.resume(throwing: LiveParsePluginError.jsException(exception.toString() ?? "<unknown>"))
+                    continuation.resume(throwing: LiveParsePluginError.fromJSException(exception.toString() ?? "<unknown>"))
                 } else {
                     continuation.resume(returning: ())
                 }
@@ -83,7 +83,7 @@ public final class JSRuntime: @unchecked Sendable {
                     let jsPayload = JSValue(object: payload, in: self.context) as Any
                     guard let result = pluginObject.invokeMethod(name, withArguments: [jsPayload]) else {
                         if let exception = self.context.exception {
-                            throw LiveParsePluginError.jsException(exception.toString() ?? "<unknown>")
+                            throw LiveParsePluginError.fromJSException(exception.toString() ?? "<unknown>")
                         }
                         throw LiveParsePluginError.invalidReturnValue("Function returned nil")
                     }
@@ -124,13 +124,35 @@ private extension JSRuntime {
         let script = """
         (function () {
           globalThis.Host = globalThis.Host || {};
+          Host.makeError = function (code, message, context) {
+            var normalizedContext = {};
+            if (context && typeof context === "object" && !Array.isArray(context)) {
+              Object.keys(context).forEach(function (key) {
+                var value = context[key];
+                if (value === undefined || value === null) return;
+                normalizedContext[String(key)] = String(value);
+              });
+            }
+            var payload = {
+              code: String(code || "UNKNOWN"),
+              message: String(message || ""),
+              context: normalizedContext
+            };
+            return new Error("LP_PLUGIN_ERROR:" + JSON.stringify(payload));
+          };
+          Host.raise = function (code, message, context) {
+            throw Host.makeError(code, message, context);
+          };
+
           Host.http = Host.http || {};
           Host.http.request = function (options) {
             return new Promise(function (resolve, reject) {
               __lp_host_http_request(
                 JSON.stringify(options || {}),
                 function (resultJSON) { resolve(JSON.parse(resultJSON)); },
-                function (err) { reject(err); }
+                function (err) {
+                  reject(Host.makeError("NETWORK", String(err || "host http request failed"), { url: (options && options.url) || "" }));
+                }
               );
             });
           };
@@ -271,7 +293,7 @@ private extension JSRuntime {
             }
         }
         let reject: @convention(block) (JSValue) -> Void = { value in
-            continuation.resume(throwing: LiveParsePluginError.jsException(value.toString() ?? "<unknown>"))
+            continuation.resume(throwing: LiveParsePluginError.fromJSException(value.toString() ?? "<unknown>"))
         }
         promise.invokeMethod("then", withArguments: [resolve, reject])
     }

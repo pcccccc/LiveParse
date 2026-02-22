@@ -6,6 +6,16 @@ function __lp_tryDecodePercent(s) {
   }
 }
 
+function __lp_douyu_throw(code, message, context) {
+  if (globalThis.Host && typeof Host.raise === "function") {
+    Host.raise(code, message, context || {});
+  }
+  if (globalThis.Host && typeof Host.makeError === "function") {
+    throw Host.makeError(code || "UNKNOWN", message || "", context || {});
+  }
+  throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
+}
+
 function __lp_parseQueryString(qs) {
   const out = {};
   if (!qs) return out;
@@ -56,7 +66,7 @@ async function __lp_douyu_getCategoryList() {
   });
   const obj = JSON.parse(resp.bodyText || "{}");
   if ((obj && obj.code) !== 0) {
-    throw new Error(`category code invalid: ${obj && obj.code}`);
+    __lp_douyu_throw("UPSTREAM", `category code invalid: ${obj && obj.code}`, { code: String((obj && obj.code) || "") });
   }
 
   const cate1Info = (obj && obj.data && obj.data.cate1Info) || [];
@@ -94,7 +104,7 @@ async function __lp_douyu_getRoomList(id, page) {
   });
   const obj = JSON.parse(resp.bodyText || "{}");
   if ((obj && obj.code) !== 0) {
-    throw new Error(`room list code invalid: ${obj && obj.code}`);
+    __lp_douyu_throw("UPSTREAM", `room list code invalid: ${obj && obj.code}`, { code: String((obj && obj.code) || "") });
   }
 
   const list = (obj && obj.data && obj.data.rl) || [];
@@ -131,7 +141,7 @@ async function __lp_douyu_getLiveLatestInfo(roomId) {
 
   const obj = JSON.parse(resp.bodyText || "{}");
   const room = (obj && obj.room) || null;
-  if (!room) throw new Error("missing room field");
+  if (!room) __lp_douyu_throw("INVALID_RESPONSE", "missing room field", { roomId: String(roomId || "") });
 
   const showStatus = Number(room.show_status || -1);
   const videoLoop = Number(room.videoLoop || -1);
@@ -171,11 +181,11 @@ async function __lp_douyu_getSign(roomId) {
   });
   const encObj = JSON.parse(encResp.bodyText || "{}");
   const jsEnc = encObj && encObj.data && encObj.data[`room${String(roomId)}`];
-  if (!jsEnc) throw new Error("missing js encryption code");
+  if (!jsEnc) __lp_douyu_throw("INVALID_RESPONSE", "missing js encryption code", { roomId: String(roomId || "") });
 
   let jsCode = String(jsEnc).replace(/return\s+eval/g, "return [strc, vdwdae325w_64we];");
   const m = jsCode.match(/(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function/);
-  if (!m || !m[1]) throw new Error("sign function not found");
+  if (!m || !m[1]) __lp_douyu_throw("PARSE", "sign function not found", { roomId: String(roomId || "") });
 
   let encFunction = String(m[1]);
   encFunction = encFunction.replace(/eval.*?;\}/i, "strc;}");
@@ -185,17 +195,17 @@ async function __lp_douyu_getSign(roomId) {
   try {
     fnPair = eval(`${encFunction};ub98484234();`);
   } catch (e) {
-    throw new Error("execute encryption js failed");
+    __lp_douyu_throw("PARSE", "execute encryption js failed", { roomId: String(roomId || "") });
   }
 
   if (!fnPair || !Array.isArray(fnPair) || fnPair.length < 2) {
-    throw new Error("invalid encryption function result");
+    __lp_douyu_throw("INVALID_RESPONSE", "invalid encryption function result", { roomId: String(roomId || "") });
   }
 
   let signFun = String(fnPair[0] || "");
   const signV = String(fnPair[1] || "");
   if (!signFun || !signV) {
-    throw new Error("sign function empty");
+    __lp_douyu_throw("INVALID_RESPONSE", "sign function empty", { roomId: String(roomId || "") });
   }
 
   const tt = String(Math.floor(Date.now() / 1000));
@@ -209,7 +219,7 @@ async function __lp_douyu_getSign(roomId) {
   try {
     paramsString = String(eval(signFun) || "");
   } catch (e) {
-    throw new Error("execute sign function failed");
+    __lp_douyu_throw("PARSE", "execute sign function failed", { roomId: String(roomId || "") });
   }
 
   const params = __lp_parseQueryString(paramsString);
@@ -239,7 +249,7 @@ async function __lp_douyu_getRealPlayArgs(roomId, rate, cdn) {
 
   const obj = JSON.parse(resp.bodyText || "{}");
   const data = obj && obj.data;
-  if (!data) throw new Error("missing play data");
+  if (!data) __lp_douyu_throw("INVALID_RESPONSE", "missing play data", { roomId: String(roomId || "") });
 
   const multirates = data.multirates || [];
   const cdns = data.cdnsWithName || [];
@@ -310,7 +320,7 @@ async function __lp_douyu_search(keyword, page) {
 
 async function __lp_douyu_resolveRoomIdFromShareCode(shareCode) {
   const input = String(shareCode || "").trim();
-  if (!input) throw new Error("shareCode is empty");
+  if (!input) __lp_douyu_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
 
   if (__lp_isValidRoomId(input)) return input;
 
@@ -354,7 +364,7 @@ async function __lp_douyu_resolveRoomIdFromShareCode(shareCode) {
     }
   }
 
-  throw new Error("roomId not found");
+  __lp_douyu_throw("NOT_FOUND", "roomId not found", { shareCode: String(shareCode || "") });
 }
 
 globalThis.LiveParsePlugin = {
@@ -367,25 +377,25 @@ globalThis.LiveParsePlugin = {
   async getRoomList(payload) {
     const id = String(payload && payload.id ? payload.id : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!id) throw new Error("id is required");
+    if (!id) __lp_douyu_throw("INVALID_ARGS", "id is required", { field: "id" });
     return await __lp_douyu_getRoomList(id, page);
   },
 
   async getPlayArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return await __lp_douyu_getRealPlayArgs(roomId, 0, null);
   },
 
   async getLiveLastestInfo(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return await __lp_douyu_getLiveLatestInfo(roomId);
   },
 
   async getLiveState(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     const info = await __lp_douyu_getLiveLatestInfo(roomId);
     return {
       liveState: String(info && info.liveState ? info.liveState : "3")
@@ -395,20 +405,20 @@ globalThis.LiveParsePlugin = {
   async searchRooms(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!keyword) throw new Error("keyword is required");
+    if (!keyword) __lp_douyu_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
     return await __lp_douyu_search(keyword, page);
   },
 
   async getRoomInfoFromShareCode(payload) {
     const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
-    if (!shareCode) throw new Error("shareCode is required");
+    if (!shareCode) __lp_douyu_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
     const roomId = await __lp_douyu_resolveRoomIdFromShareCode(shareCode);
     return await __lp_douyu_getLiveLatestInfo(roomId);
   },
 
   async getDanmukuArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return {
       args: {
         roomId: String(roomId)

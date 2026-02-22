@@ -1,6 +1,16 @@
 const __lp_bili_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 const __lp_bili_referer = "https://live.bilibili.com/";
 
+function __lp_bili_throw(code, message, context) {
+  if (globalThis.Host && typeof Host.raise === "function") {
+    Host.raise(code, message, context || {});
+  }
+  if (globalThis.Host && typeof Host.makeError === "function") {
+    throw Host.makeError(code || "UNKNOWN", message || "", context || {});
+  }
+  throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
+}
+
 function __lp_bili_md5(input) {
   return Host.crypto.md5(String(input || ""));
 }
@@ -152,7 +162,7 @@ async function __lp_bili_getRoomDanmuDetail(roomId, headers) {
   });
   const obj = JSON.parse(resp.bodyText || "{}");
   const data = obj && obj.data;
-  if (!data) throw new Error("danmu detail is empty");
+  if (!data) __lp_bili_throw("INVALID_RESPONSE", "danmu detail is empty");
   return data;
 }
 
@@ -205,7 +215,10 @@ async function __lp_bili_getRoomList(id, parentId, page, headers) {
     ? Number(obj.code)
     : -1;
   if (code !== 0) {
-    throw new Error(`apiError code=${obj && obj.code} msg=${(obj && (obj.message || obj.msg)) || ""}`);
+    __lp_bili_throw("UPSTREAM", `apiError code=${obj && obj.code} msg=${(obj && (obj.message || obj.msg)) || ""}`, {
+      code: String((obj && obj.code) || ""),
+      message: String((obj && (obj.message || obj.msg)) || "")
+    });
   }
 
   const listModelArray = (((obj || {}).data || {}).list) || [];
@@ -315,7 +328,7 @@ async function __lp_bili_getLiveLatestInfo(roomId, headers) {
   });
   const obj = JSON.parse(resp.bodyText || "{}");
   const data = obj && obj.data ? obj.data : null;
-  if (!data) throw new Error("empty room info");
+  if (!data) __lp_bili_throw("INVALID_RESPONSE", "empty room info", { roomId: String(roomId || "") });
 
   let liveStatus = "3";
   const status = Number((data.room_info && data.room_info.live_status) || -1);
@@ -450,7 +463,7 @@ async function __lp_bili_getRoomInfoFromShareCode(shareCode, headers) {
   }
 
   if (!roomId || !(parseInt(roomId, 10) > 0)) {
-    throw new Error(`invalid room id from share code: ${shareCode}`);
+    __lp_bili_throw("NOT_FOUND", `invalid room id from share code: ${shareCode}`, { shareCode: String(shareCode || "") });
   }
 
   return await __lp_bili_getLiveLatestInfo(roomId, headers);
@@ -502,21 +515,21 @@ globalThis.LiveParsePlugin = {
     const id = String(payload && payload.id ? payload.id : "");
     const parentId = String(payload && payload.parentId ? payload.parentId : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!id) throw new Error("id is required");
+    if (!id) __lp_bili_throw("INVALID_ARGS", "id is required", { field: "id" });
     const headers = await __lp_bili_getHeaders(payload || {});
     return await __lp_bili_getRoomList(id, parentId, page, headers);
   },
 
   async getPlayArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_bili_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     const headers = await __lp_bili_getHeaders(payload || {});
     return await __lp_bili_getPlayArgs(roomId, headers);
   },
 
   async getLiveLastestInfo(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_bili_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     const headers = await __lp_bili_getHeaders(payload || {});
     return await __lp_bili_getLiveLatestInfo(roomId, headers);
   },
@@ -524,28 +537,28 @@ globalThis.LiveParsePlugin = {
   async searchRooms(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!keyword) throw new Error("keyword is required");
+    if (!keyword) __lp_bili_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
     const headers = await __lp_bili_getHeaders(payload || {});
     return await __lp_bili_search(keyword, page, headers);
   },
 
   async getLiveState(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_bili_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     const headers = await __lp_bili_getHeaders(payload || {});
     return await __lp_bili_getLiveState(roomId, headers);
   },
 
   async getRoomInfoFromShareCode(payload) {
     const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
-    if (!shareCode) throw new Error("shareCode is required");
+    if (!shareCode) __lp_bili_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
     const headers = await __lp_bili_getHeaders(payload || {});
     return await __lp_bili_getRoomInfoFromShareCode(shareCode, headers);
   },
 
   async getDanmukuArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_bili_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     const headers = await __lp_bili_getHeaders(payload || {});
     return await __lp_bili_getDanmukuArgs(roomId, headers);
   }

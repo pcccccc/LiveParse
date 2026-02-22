@@ -5,6 +5,15 @@ const __lp_ks_searchOverviewURL = "https://live.kuaishou.com/live_api/search/ove
 const __lp_ks_searchAuthorURL = "https://live.kuaishou.com/live_api/search/author";
 const __lp_ks_searchLiveStreamURL = "https://live.kuaishou.com/live_api/search/liveStream";
 const __lp_ks_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
+function __lp_ks_throw(code, message, context) {
+  if (globalThis.Host && typeof Host.raise === "function") {
+    Host.raise(code, message, context || {});
+  }
+  if (globalThis.Host && typeof Host.makeError === "function") {
+    throw Host.makeError(code || "UNKNOWN", message || "", context || {});
+  }
+  throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
+}
 
 function __lp_ks_firstMatch(text, re) {
   const m = String(text || "").match(re);
@@ -122,7 +131,7 @@ async function __lp_ks_getSearchData(url, params, cookie, referer) {
   const data = obj && obj.data ? obj.data : {};
   const resultCode = Number(data && data.result !== undefined ? data.result : 0);
   if (resultCode !== 1) {
-    throw new Error(`kuaishou search api failed: result=${resultCode}, url=${reqURL}`);
+    __lp_ks_throw("UPSTREAM", `kuaishou search api failed: result=${resultCode}`, { url: reqURL, result: String(resultCode) });
   }
   return data;
 }
@@ -141,7 +150,7 @@ async function __lp_ks_getKSLiveRoom(roomId) {
   const html = String(resp.bodyText || "");
   const m = html.match(/<script>window\.__INITIAL_STATE__=\s*(.*?)\;/s);
   if (!m || !m[1]) {
-    throw new Error("__INITIAL_STATE__ not found");
+    __lp_ks_throw("PARSE", "__INITIAL_STATE__ not found");
   }
 
   let jsonText = String(m[1]);
@@ -276,7 +285,7 @@ async function __lp_ks_getLiveLatestInfo(roomId) {
   const playList = liveData && liveData.liveroom && liveData.liveroom.playList;
   const current = Array.isArray(playList) && playList.length > 0 ? playList[0] : null;
   if (!current) {
-    throw new Error(`room not found: ${roomId}`);
+    __lp_ks_throw("NOT_FOUND", `room not found: ${roomId}`, { roomId: String(roomId) });
   }
 
   const author = current.author || {};
@@ -309,12 +318,12 @@ async function __lp_ks_getPlayArgs(roomId) {
   const playList = liveData && liveData.liveroom && liveData.liveroom.playList;
   const current = Array.isArray(playList) && playList.length > 0 ? playList[0] : null;
   if (!current) {
-    throw new Error("room not live or verification needed");
+    __lp_ks_throw("BLOCKED", "room not live or verification needed", { roomId: String(roomId) });
   }
 
   const playUrls = current.liveStream && current.liveStream.playUrls;
   if (!playUrls) {
-    throw new Error("playUrls is empty");
+    __lp_ks_throw("INVALID_RESPONSE", "playUrls is empty", { roomId: String(roomId) });
   }
 
   let qualityDetails = [];
@@ -326,14 +335,14 @@ async function __lp_ks_getPlayArgs(roomId) {
   }
 
   if (qualityDetails.length === 0) {
-    throw new Error("empty quality details");
+    __lp_ks_throw("INVALID_RESPONSE", "empty quality details", { roomId: String(roomId) });
   }
   return [{ cdn: "线路1", qualitys: qualityDetails }];
 }
 
 async function __lp_ks_resolveRoomInfoFromShareCode(shareCode) {
   const trimmed = String(shareCode || "").trim();
-  if (!trimmed) throw new Error("shareCode is empty");
+  if (!trimmed) __lp_ks_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
 
   const shortUrl = __lp_ks_extractShortLink(trimmed);
   if (shortUrl) {
@@ -350,7 +359,7 @@ async function __lp_ks_resolveRoomInfoFromShareCode(shareCode) {
     const userId = __lp_ks_extractUserId(finalUrl);
     if (userId) return await __lp_ks_getLiveLatestInfo(userId);
 
-    throw new Error(`cannot resolve room id from short link: ${finalUrl}`);
+    __lp_ks_throw("NOT_FOUND", "cannot resolve room id from short link", { finalUrl: String(finalUrl) });
   }
 
   if (trimmed.includes("live.kuaishou.com")) {
@@ -365,7 +374,7 @@ async function __lp_ks_resolveRoomInfoFromShareCode(shareCode) {
     return await __lp_ks_getLiveLatestInfo(trimmed);
   }
 
-  throw new Error("cannot resolve room id from shareCode");
+  __lp_ks_throw("NOT_FOUND", "cannot resolve room id from shareCode", { shareCode: String(shareCode || "") });
 }
 
 globalThis.LiveParsePlugin = {
@@ -396,13 +405,13 @@ globalThis.LiveParsePlugin = {
   async getRoomList(payload) {
     const id = String(payload && payload.id ? payload.id : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!id) throw new Error("id is required");
+    if (!id) __lp_ks_throw("INVALID_ARGS", "id is required", { field: "id" });
     return await __lp_ks_getRoomList(id, page);
   },
 
   async getPlayArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return await __lp_ks_getPlayArgs(roomId);
   },
 
@@ -415,27 +424,27 @@ globalThis.LiveParsePlugin = {
 
   async getLiveLastestInfo(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return await __lp_ks_getLiveLatestInfo(roomId);
   },
 
   async getLiveState(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     const userId = String(payload && payload.userId ? payload.userId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     const info = await this.getLiveLastestInfo({ roomId, userId });
     return { liveState: String(info && info.liveState ? info.liveState : "3") };
   },
 
   async getRoomInfoFromShareCode(payload) {
     const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
-    if (!shareCode) throw new Error("shareCode is required");
+    if (!shareCode) __lp_ks_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
     return await __lp_ks_resolveRoomInfoFromShareCode(shareCode);
   },
 
   async getDanmukuArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return {
       args: {},
       headers: null

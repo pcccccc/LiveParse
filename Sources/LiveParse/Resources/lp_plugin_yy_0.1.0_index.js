@@ -13,6 +13,16 @@ const __lp_yy_playHeaders = {
 
 const __lp_yy_sidQueryKeys = ["sid", "ssid", "roomId"];
 
+function __lp_yy_throw(code, message, context) {
+  if (globalThis.Host && typeof Host.raise === "function") {
+    Host.raise(code, message, context || {});
+  }
+  if (globalThis.Host && typeof Host.makeError === "function") {
+    throw Host.makeError(code || "UNKNOWN", message || "", context || {});
+  }
+  throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
+}
+
 function __lp_yy_parseCode(value, fallback) {
   const raw = String(value === undefined || value === null ? "" : value).trim();
   if (!raw) return fallback;
@@ -77,7 +87,7 @@ function __lp_yy_parseQualityDetails(jsonObject, defaultURL, roomId) {
   const channelInfo = jsonObject && jsonObject.channel_stream_info;
   const streams = channelInfo && channelInfo.streams;
   if (!Array.isArray(streams)) {
-    throw new Error("missing channel_stream_info.streams");
+    __lp_yy_throw("INVALID_RESPONSE", "missing channel_stream_info.streams", { roomId: String(roomId || "") });
   }
 
   const details = [];
@@ -113,7 +123,7 @@ function __lp_yy_parseQualityDetails(jsonObject, defaultURL, roomId) {
   }
 
   if (details.length === 0) {
-    throw new Error("missing gear_info");
+    __lp_yy_throw("INVALID_RESPONSE", "missing gear_info", { roomId: String(roomId || "") });
   }
   return details;
 }
@@ -179,11 +189,11 @@ async function __lp_yy_getRealPlayArgs(roomId, lineSeq, gear) {
 
   const obj = JSON.parse(resp.bodyText || "{}");
   const avpInfo = obj && obj.avp_info_res;
-  if (!avpInfo) throw new Error("missing avp_info_res");
+  if (!avpInfo) __lp_yy_throw("INVALID_RESPONSE", "missing avp_info_res", { roomId: String(roomId || "") });
 
   const lineInfos = __lp_yy_parseLineInfos(avpInfo);
   const playURL = __lp_yy_extractPlayURL(avpInfo);
-  if (!playURL) throw new Error("missing play url");
+  if (!playURL) __lp_yy_throw("NOT_FOUND", "missing play url", { roomId: String(roomId || "") });
 
   const qualityDetails = __lp_yy_parseQualityDetails(obj, playURL, roomId);
 
@@ -229,7 +239,7 @@ function __lp_yy_searchDocToLiveModel(doc) {
 
 function __lp_yy_resolveRoomIdFromShareCode(shareCode) {
   const trimmed = String(shareCode || "").trim();
-  if (!trimmed) throw new Error("shareCode is empty");
+  if (!trimmed) __lp_yy_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
 
   const urlText = __lp_yy_firstURL(trimmed);
   if (urlText) {
@@ -259,7 +269,7 @@ function __lp_yy_resolveRoomIdFromShareCode(shareCode) {
 
   if (__lp_yy_isValidRoomId(trimmed)) return trimmed;
 
-  throw new Error("cannot resolve roomId from shareCode");
+  __lp_yy_throw("NOT_FOUND", "cannot resolve roomId from shareCode", { shareCode: String(shareCode || "") });
 }
 
 globalThis.LiveParsePlugin = {
@@ -275,7 +285,10 @@ globalThis.LiveParsePlugin = {
 
     const response = JSON.parse(resp.bodyText || "{}");
     if (__lp_yy_parseCode(response.code, -1) !== 0) {
-      throw new Error(`YY category error: ${response.code} - ${response.message || ""}`);
+      __lp_yy_throw("UPSTREAM", `YY category error: ${response.code} - ${response.message || ""}`, {
+        code: String(response.code || ""),
+        message: String(response.message || "")
+      });
     }
 
     const lists = response.data || [];
@@ -321,7 +334,7 @@ globalThis.LiveParsePlugin = {
   async getRoomList(payload) {
     const id = String(payload && payload.id ? payload.id : "");
     const parentId = String(payload && payload.parentId ? payload.parentId : "");
-    if (!id) throw new Error("id is required");
+    if (!id) __lp_yy_throw("INVALID_ARGS", "id is required", { field: "id" });
 
     const url = __lp_yy_buildRoomListURL(id, parentId);
     const resp = await Host.http.request({
@@ -333,7 +346,10 @@ globalThis.LiveParsePlugin = {
 
     const response = JSON.parse(resp.bodyText || "{}");
     if (response.code !== undefined && __lp_yy_parseCode(response.code, -1) !== 0) {
-      throw new Error(`YY room list error: ${response.code} - ${response.message || ""}`);
+      __lp_yy_throw("UPSTREAM", `YY room list error: ${response.code} - ${response.message || ""}`, {
+        code: String(response.code || ""),
+        message: String(response.message || "")
+      });
     }
 
     const sections = response.data || [];
@@ -354,13 +370,13 @@ globalThis.LiveParsePlugin = {
 
   async getPlayArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return await __lp_yy_getRealPlayArgs(roomId, -1, 4);
   },
 
   async getLiveLastestInfo(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
     const url = `https://www.yy.com/api/liveInfoDetail/${encodeURIComponent(String(roomId))}/${encodeURIComponent(String(roomId))}/0`;
     const resp = await Host.http.request({
@@ -371,7 +387,7 @@ globalThis.LiveParsePlugin = {
 
     const response = JSON.parse(resp.bodyText || "{}");
     if (__lp_yy_parseCode(response.resultCode, -1) !== 0 || !response.data) {
-      throw new Error(`YY room detail not found: ${roomId}`);
+      __lp_yy_throw("NOT_FOUND", `YY room detail not found: ${roomId}`, { roomId: String(roomId || "") });
     }
 
     const info = response.data;
@@ -390,7 +406,7 @@ globalThis.LiveParsePlugin = {
 
   async getLiveState(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     const latest = await this.getLiveLastestInfo(payload || {});
     return {
       liveState: String((latest && latest.liveState) || "3")
@@ -400,7 +416,7 @@ globalThis.LiveParsePlugin = {
   async searchRooms(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!keyword) throw new Error("keyword is required");
+    if (!keyword) __lp_yy_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
 
     const qs = [
       `q=${encodeURIComponent(String(keyword))}`,
@@ -416,7 +432,7 @@ globalThis.LiveParsePlugin = {
 
     const response = JSON.parse(resp.bodyText || "{}");
     if (!response.success) {
-      throw new Error(`YY search error: ${response.message || ""}`);
+      __lp_yy_throw("UPSTREAM", `YY search error: ${response.message || ""}`, { message: String(response.message || "") });
     }
 
     const docs = (((response || {}).data || {}).searchResult || {}).response;
@@ -428,14 +444,14 @@ globalThis.LiveParsePlugin = {
 
   async getRoomInfoFromShareCode(payload) {
     const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
-    if (!shareCode) throw new Error("shareCode is required");
+    if (!shareCode) __lp_yy_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
     const roomId = __lp_yy_resolveRoomIdFromShareCode(shareCode);
     return await this.getLiveLastestInfo({ roomId, userId: null });
   },
 
   async getDanmukuArgs(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) throw new Error("roomId is required");
+    if (!roomId) __lp_yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return {
       args: {},
       headers: null
