@@ -38,6 +38,234 @@ function __lp_parseQueryString(qs) {
   return out;
 }
 
+const __lp_huya_wup_base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+function __lp_huya_bytesToBase64(bytes) {
+  let out = "";
+  let i = 0;
+  while (i < bytes.length) {
+    const b0 = bytes[i++] & 0xff;
+    const hasB1 = i < bytes.length;
+    const b1 = hasB1 ? (bytes[i++] & 0xff) : 0;
+    const hasB2 = i < bytes.length;
+    const b2 = hasB2 ? (bytes[i++] & 0xff) : 0;
+
+    out += __lp_huya_wup_base64_chars[b0 >> 2];
+    out += __lp_huya_wup_base64_chars[((b0 & 0x03) << 4) | (b1 >> 4)];
+    out += hasB1 ? __lp_huya_wup_base64_chars[((b1 & 0x0f) << 2) | (b2 >> 6)] : "=";
+    out += hasB2 ? __lp_huya_wup_base64_chars[b2 & 0x3f] : "=";
+  }
+  return out;
+}
+
+function __lp_huya_base64ToBytes(base64) {
+  const text = String(base64 || "").replace(/[\r\n\s]/g, "");
+  if (!text) return [];
+
+  const map = {};
+  for (let i = 0; i < __lp_huya_wup_base64_chars.length; i++) {
+    map[__lp_huya_wup_base64_chars[i]] = i;
+  }
+
+  const out = [];
+  let i = 0;
+  while (i < text.length) {
+    const c0 = text[i++];
+    const c1 = text[i++];
+    const c2 = text[i++];
+    const c3 = text[i++];
+
+    if (c0 === undefined || c1 === undefined) break;
+    const e0 = map[c0];
+    const e1 = map[c1];
+    if (e0 === undefined || e1 === undefined) break;
+
+    const e2 = c2 === "=" || c2 === undefined ? 0 : map[c2];
+    const e3 = c3 === "=" || c3 === undefined ? 0 : map[c3];
+    if ((c2 !== "=" && c2 !== undefined && e2 === undefined) || (c3 !== "=" && c3 !== undefined && e3 === undefined)) {
+      break;
+    }
+
+    const b0 = (e0 << 2) | (e1 >> 4);
+    out.push(b0 & 0xff);
+
+    if (c2 !== "=" && c2 !== undefined) {
+      const b1 = ((e1 & 0x0f) << 4) | (e2 >> 2);
+      out.push(b1 & 0xff);
+    }
+    if (c3 !== "=" && c3 !== undefined) {
+      const b2 = ((e2 & 0x03) << 6) | e3;
+      out.push(b2 & 0xff);
+    }
+  }
+  return out;
+}
+
+function __LP_HUYA_UserIdEx() {
+  this.lUid = 0;
+  this.sGuid = "";
+  this.sToken = "";
+  this.sHuYaUA = "";
+  this.sCookie = "";
+  this.iTokenType = 0;
+  this.sDeviceInfo = "";
+  this.sQIMEI = "";
+}
+__LP_HUYA_UserIdEx.prototype._clone = function () { return new __LP_HUYA_UserIdEx(); };
+__LP_HUYA_UserIdEx.prototype._write = function (os, tag, value) { os.writeStruct(tag, value); };
+__LP_HUYA_UserIdEx.prototype._read = function (is, tag, def) { return is.readStruct(tag, true, def); };
+__LP_HUYA_UserIdEx.prototype.writeTo = function (os) {
+  os.writeInt64(0, this.lUid);
+  os.writeString(1, this.sGuid);
+  os.writeString(2, this.sToken);
+  os.writeString(3, this.sHuYaUA);
+  os.writeString(4, this.sCookie);
+  os.writeInt32(5, this.iTokenType);
+  os.writeString(6, this.sDeviceInfo);
+  os.writeString(7, this.sQIMEI);
+};
+__LP_HUYA_UserIdEx.prototype.readFrom = function (is) {
+  this.lUid = is.readInt64(0, false, this.lUid);
+  this.sGuid = is.readString(1, false, this.sGuid);
+  this.sToken = is.readString(2, false, this.sToken);
+  this.sHuYaUA = is.readString(3, false, this.sHuYaUA);
+  this.sCookie = is.readString(4, false, this.sCookie);
+  this.iTokenType = is.readInt32(5, false, this.iTokenType);
+  this.sDeviceInfo = is.readString(6, false, this.sDeviceInfo);
+  this.sQIMEI = is.readString(7, false, this.sQIMEI);
+};
+
+function __LP_HUYA_GetCdnTokenExReq() {
+  this.sFlvUrl = "";
+  this.sStreamName = "";
+  this.iLoopTime = 0;
+  this.tId = new __LP_HUYA_UserIdEx();
+  this.iAppId = 66;
+}
+__LP_HUYA_GetCdnTokenExReq.prototype._clone = function () { return new __LP_HUYA_GetCdnTokenExReq(); };
+__LP_HUYA_GetCdnTokenExReq.prototype._write = function (os, tag, value) { os.writeStruct(tag, value); };
+__LP_HUYA_GetCdnTokenExReq.prototype._read = function (is, tag, def) { return is.readStruct(tag, true, def); };
+__LP_HUYA_GetCdnTokenExReq.prototype.writeTo = function (os) {
+  os.writeString(0, this.sFlvUrl);
+  os.writeString(1, this.sStreamName);
+  os.writeInt32(2, this.iLoopTime);
+  os.writeStruct(3, this.tId);
+  os.writeInt32(4, this.iAppId);
+};
+__LP_HUYA_GetCdnTokenExReq.prototype.readFrom = function (is) {
+  this.sFlvUrl = is.readString(0, false, this.sFlvUrl);
+  this.sStreamName = is.readString(1, false, this.sStreamName);
+  this.iLoopTime = is.readInt32(2, false, this.iLoopTime);
+  this.tId = is.readStruct(3, false, this.tId);
+  this.iAppId = is.readInt32(4, false, this.iAppId);
+};
+
+function __LP_HUYA_GetCdnTokenExResp() {
+  this.sFlvToken = "";
+  this.iExpireTime = 0;
+}
+__LP_HUYA_GetCdnTokenExResp.prototype._clone = function () { return new __LP_HUYA_GetCdnTokenExResp(); };
+__LP_HUYA_GetCdnTokenExResp.prototype._write = function (os, tag, value) { os.writeStruct(tag, value); };
+__LP_HUYA_GetCdnTokenExResp.prototype._read = function (is, tag, def) { return is.readStruct(tag, true, def); };
+__LP_HUYA_GetCdnTokenExResp.prototype.writeTo = function (os) {
+  os.writeString(0, this.sFlvToken);
+  os.writeInt32(1, this.iExpireTime);
+};
+__LP_HUYA_GetCdnTokenExResp.prototype.readFrom = function (is) {
+  this.sFlvToken = is.readString(0, false, this.sFlvToken);
+  this.iExpireTime = is.readInt32(1, false, this.iExpireTime);
+};
+
+const __lp_huya_tokenCache = {};
+
+async function __lp_huya_getCdnTokenInfoEx(streamName) {
+  const name = String(streamName || "");
+  if (!name) return "";
+
+  if ((typeof Taf === "undefined" || typeof HUYA === "undefined") &&
+      globalThis.Host && Host.runtime && typeof Host.runtime.loadBuiltinScript === "function") {
+    Host.runtime.loadBuiltinScript("huya.js");
+  }
+  if (typeof Taf === "undefined" || typeof HUYA === "undefined") {
+    __lp_huya_throw("INVALID_RESPONSE", "huya.js runtime not available", { streamName: name });
+  }
+
+  const now = Date.now();
+  const cached = __lp_huya_tokenCache[name];
+  if (cached && cached.token && cached.expiresAt > now) {
+    return cached.token;
+  }
+
+  const req = new __LP_HUYA_GetCdnTokenExReq();
+  req.sFlvUrl = "";
+  req.sStreamName = name;
+  req.iLoopTime = 0;
+  req.iAppId = 66;
+  req.tId.lUid = 0;
+  req.tId.sGuid = "";
+  req.tId.sToken = "";
+  req.tId.sHuYaUA = "pc_exe&7060000&official";
+  req.tId.sCookie = "";
+  req.tId.iTokenType = 0;
+  req.tId.sDeviceInfo = "";
+  req.tId.sQIMEI = "";
+
+  const wup = new Taf.Wup();
+  wup.setVersion(3);
+  wup.setServant("liveui");
+  wup.setFunc("getCdnTokenInfoEx");
+  wup.setRequestId(0);
+  wup.writeStruct("tReq", req);
+
+  const encoded = wup.encode();
+  const encodedBytes = Array.from(new Uint8Array(encoded.getBuffer()));
+  const requestBodyBase64 = __lp_huya_bytesToBase64(encodedBytes);
+
+  const response = await Host.http.request({
+    url: "http://wup.huya.com",
+    method: "POST",
+    headers: {
+      "Origin": "https://m.huya.com/",
+      "Referer": "https://m.huya.com/",
+      "User-Agent": "HYSDK(Windows, 30000002)_APP(pc_exe&7060000&official)_SDK(trans&2.32.3.5646)",
+      "Content-Type": "application/x-wup"
+    },
+    bodyBase64: requestBodyBase64,
+    timeout: 20
+  });
+
+  const responseBase64 = String((response && response.bodyBase64) || "");
+  if (!responseBase64) {
+    __lp_huya_throw("INVALID_RESPONSE", "empty wup response", { streamName: name });
+  }
+
+  const responseBytes = __lp_huya_base64ToBytes(responseBase64);
+  if (responseBytes.length === 0) {
+    __lp_huya_throw("INVALID_RESPONSE", "invalid wup response bytes", { streamName: name });
+  }
+
+  const respWup = new Taf.Wup();
+  respWup.decode(new Uint8Array(responseBytes).buffer);
+  const code = Number(respWup.readInt32("", 0));
+  if (code !== 0) {
+    __lp_huya_throw("UPSTREAM", `getCdnTokenInfoEx code=${code}`, { streamName: name, code: String(code) });
+  }
+
+  const rsp = respWup.readStruct("tRsp", new __LP_HUYA_GetCdnTokenExResp());
+  const token = String((rsp && rsp.sFlvToken) || "");
+  if (!token) {
+    __lp_huya_throw("INVALID_RESPONSE", "empty sFlvToken", { streamName: name });
+  }
+
+  const expire = Number((rsp && rsp.iExpireTime) || 0);
+  const safeTTL = expire > 0 ? Math.max(15, Math.min(60, expire - 5)) : 30;
+  __lp_huya_tokenCache[name] = {
+    token,
+    expiresAt: now + safeTTL * 1000
+  };
+  return token;
+}
+
 async function __lp_huya_getCategorySubList(bussType) {
   const resp = await Host.http.request({
     url: `https://live.cdn.huya.com/liveconfig/game/bussLive?bussType=${encodeURIComponent(String(bussType))}`,
@@ -271,9 +499,35 @@ function __lp_buildAntiCode(streamName, presenterUid, antiCode) {
 }
 
 async function __lp_getPlayURL(stream, presenterUid, bitRate) {
-  const token = await Host.huya.getCdnTokenInfoEx(stream.sStreamName);
-  const antiCode = __lp_buildAntiCode(stream.sStreamName, presenterUid, token);
+  let antiCodeSource = "";
+  try {
+    antiCodeSource = await __lp_huya_getCdnTokenInfoEx(stream.sStreamName);
+  } catch (_) {
+    antiCodeSource = String(stream.sFlvAntiCode || "");
+  }
+  if (!antiCodeSource) {
+    return "";
+  }
+  const antiCode = __lp_buildAntiCode(stream.sStreamName, presenterUid, antiCodeSource);
   let url = `${stream.sFlvUrl}/${stream.sStreamName}.flv?${antiCode}&codec=264`;
+  if (bitRate > 0) {
+    url += `&ratio=${bitRate}`;
+  }
+  return url;
+}
+
+async function __lp_getHlsPlayURL(stream, presenterUid, bitRate) {
+  const base = String(stream.sHlsUrl || "");
+  const streamName = String(stream.sStreamName || "");
+  if (!base || !streamName) return "";
+
+  const antiCodeSource = String(stream.sHlsAntiCode || stream.sFlvAntiCode || "");
+  if (!antiCodeSource) return "";
+
+  const antiCode = __lp_buildAntiCode(streamName, presenterUid, antiCodeSource);
+  const suffix = String(stream.sHlsUrlSuffix || "m3u8");
+
+  let url = `${base}/${streamName}.${suffix}?${antiCode}`;
   if (bitRate > 0) {
     url += `&ratio=${bitRate}`;
   }
@@ -442,15 +696,32 @@ globalThis.LiveParsePlugin = {
         const qualities = [];
         for (const br of bitRates) {
           if (!br || (br.sDisplayName || "").includes("HDR")) continue;
-          const playUrl = await __lp_getPlayURL(s, topSid, br.iBitRate || 0);
-          qualities.push({
-            roomId,
-            title: br.sDisplayName || "",
-            qn: br.iBitRate || 0,
-            url: playUrl,
-            liveCodeType: "flv",
-            liveType: "1"
-          });
+          const bitRate = br.iBitRate || 0;
+          const title = br.sDisplayName || "";
+
+          const flvURL = await __lp_getPlayURL(s, topSid, bitRate);
+          if (flvURL) {
+            qualities.push({
+              roomId,
+              title,
+              qn: bitRate,
+              url: flvURL,
+              liveCodeType: "flv",
+              liveType: "1"
+            });
+          }
+
+          const hlsURL = await __lp_getHlsPlayURL(s, topSid, bitRate);
+          if (hlsURL) {
+            qualities.push({
+              roomId,
+              title: `${title}_HLS`,
+              qn: bitRate,
+              url: hlsURL,
+              liveCodeType: "m3u8",
+              liveType: "1"
+            });
+          }
         }
         if (qualities.length > 0) {
           results.push({ cdn: `线路 ${s.sCdnType}`, qualitys: qualities });

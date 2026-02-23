@@ -8,7 +8,6 @@
 import Foundation
 import Starscream
 import Alamofire
-import TarsKit
 
 protocol WebSocketDataParser {
     func performHandshake(connection: WebSocketConnection)

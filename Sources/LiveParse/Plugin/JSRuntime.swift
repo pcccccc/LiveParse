@@ -25,7 +25,7 @@ public final class JSRuntime: @unchecked Sendable {
             Self.configureExceptionHandler(in: context)
             Self.configureHostHTTP(in: context, queue: queue, session: session)
             Self.configureHostCrypto(in: context)
-            Self.configureHostHuya(in: context, queue: queue)
+            Self.configureHostRuntime(in: context)
             Self.configureHostBootstrap(in: context)
         }
     }
@@ -165,15 +165,34 @@ private extension JSRuntime {
             return __lp_crypto_base64_decode(String(input));
           };
 
-          Host.huya = Host.huya || {};
-          Host.huya.getCdnTokenInfoEx = function (streamName) {
-            return new Promise(function (resolve, reject) {
-              __lp_host_huya_get_cdn_token_info_ex(String(streamName), resolve, reject);
-            });
+          Host.runtime = Host.runtime || {};
+          Host.runtime.loadBuiltinScript = function (name) {
+            return !!__lp_host_load_builtin_script(String(name || ""));
           };
+
         })();
         """
         context.evaluateScript(script)
+    }
+
+    static func configureHostRuntime(in context: JSContext) {
+        let loadBuiltinScript: @convention(block) (String) -> Bool = { scriptName in
+            let raw = scriptName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !raw.isEmpty else { return false }
+
+            let fileName = (raw as NSString).deletingPathExtension
+            let ext = (raw as NSString).pathExtension.isEmpty ? "js" : (raw as NSString).pathExtension
+            guard let url = Bundle.module.url(forResource: fileName, withExtension: ext) else {
+                return false
+            }
+            guard let script = try? String(contentsOf: url, encoding: .utf8) else {
+                return false
+            }
+
+            context.evaluateScript(script, withSourceURL: url)
+            return context.exception == nil
+        }
+        context.setObject(loadBuiltinScript, forKeyedSubscript: "__lp_host_load_builtin_script" as NSString)
     }
 
     static func configureHostHTTP(in context: JSContext, queue: DispatchQueue, session: URLSession) {
@@ -200,7 +219,10 @@ private extension JSRuntime {
                 }
             }
 
-            if let body = options["body"] as? String {
+            if let bodyBase64 = options["bodyBase64"] as? String,
+               let bodyData = Data(base64Encoded: bodyBase64) {
+                request.httpBody = bodyData
+            } else if let body = options["body"] as? String {
                 request.httpBody = body.data(using: .utf8)
             }
 
@@ -228,8 +250,8 @@ private extension JSRuntime {
                         "status": http.statusCode,
                         "headers": headersDict,
                         "url": http.url?.absoluteString ?? urlString,
-                        "bodyText": bodyText as Any,
-                        "bodyBase64": bodyBase64 as Any
+                        "bodyText": bodyText ?? NSNull(),
+                        "bodyBase64": bodyBase64 ?? NSNull()
                     ]
 
                     let jsonData = (try? JSONSerialization.data(withJSONObject: result)) ?? Data("{}".utf8)
@@ -258,24 +280,6 @@ private extension JSRuntime {
         }
         context.setObject(md5Block, forKeyedSubscript: "__lp_crypto_md5" as NSString)
         context.setObject(base64DecodeBlock, forKeyedSubscript: "__lp_crypto_base64_decode" as NSString)
-    }
-
-    static func configureHostHuya(in context: JSContext, queue: DispatchQueue) {
-        let tokenBlock: @convention(block) (String, JSValue, JSValue) -> Void = { streamName, resolve, reject in
-            Task {
-                do {
-                    let token = try await Huya.plugin_getCdnTokenInfoEx(streamName: streamName)
-                    queue.async {
-                        resolve.call(withArguments: [token])
-                    }
-                } catch {
-                    queue.async {
-                        reject.call(withArguments: [String(describing: error)])
-                    }
-                }
-            }
-        }
-        context.setObject(tokenBlock, forKeyedSubscript: "__lp_host_huya_get_cdn_token_info_ex" as NSString)
     }
 
     static func isPromise(_ value: JSValue) -> Bool {

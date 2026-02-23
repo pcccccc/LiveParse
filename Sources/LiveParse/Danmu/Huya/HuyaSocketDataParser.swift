@@ -6,101 +6,210 @@
 //
 
 import Foundation
-import SwiftyJSON
-import TarsKit
+@preconcurrency import JavaScriptCore
 
-public class HuyaSocketDataParser: WebSocketDataParser {
-    
-    
+public final class HuyaSocketDataParser: WebSocketDataParser {
+    private static let codec = HuyaDanmuJSCodec()
+
     func performHandshake(connection: WebSocketConnection) {
-        let data = HuyaSocketDataParser.getJoinData(ayyuid: Int(connection.parameters?["lYyid"] ?? "0") ?? 0, tid: Int(connection.parameters?["lChannelId"] ?? "0") ?? 0, sid: Int(connection.parameters?["lSubChannelId"] ?? "0") ?? 0)
-        connection.socket?.write(data: Data(bytes: data, count: data.count))
-        connection.heartbeatTimer = Timer(timeInterval: TimeInterval(60), repeats: true) {_ in
-            connection.socket?.write(data: "ABQdAAwsNgBM".data(using: .utf8)!)
+        let uid = Int(connection.parameters?["lYyid"] ?? "0") ?? 0
+        let tid = Int(connection.parameters?["lChannelId"] ?? "0") ?? 0
+        let sid = Int(connection.parameters?["lSubChannelId"] ?? "0") ?? 0
+
+        if let joinPacket = Self.codec.makeJoinPacket(uid: uid, tid: tid, sid: sid) {
+            connection.socket?.write(data: joinPacket)
+        }
+
+        connection.heartbeatTimer = Timer(timeInterval: TimeInterval(60), repeats: true) { _ in
+            if let heartbeat = Self.codec.makeHeartbeatPacket() {
+                connection.socket?.write(data: heartbeat)
+            }
         }
         RunLoop.current.add(connection.heartbeatTimer!, forMode: .common)
     }
-    
+
     func parse(data: Data, connection: WebSocketConnection) {
-        deCodeData(data: data, connection: connection)
+        let messages = Self.codec.parseMessages(from: data)
+        for message in messages {
+            connection.delegate?.webSocketDidReceiveMessage(
+                text: message.text,
+                nickname: message.nickname,
+                color: message.color
+            )
+        }
     }
-    
-    private func deCodeData(data: Data, connection: WebSocketConnection) {
-        let bytes = [UInt8](data)
-        var stream = TarsInputStream(bytes)
-        var type = 0
-        do {
-            type = try stream.read(&type, tag: 0, required: false)
-            if type == 7 {
-                stream = TarsInputStream(try stream.readBytes(1, required: false))
-                let wSPushMessage = HYPushMessage()
-                try wSPushMessage.readFrom(stream)
-                if wSPushMessage.uri == 1400 {
-                    var messageNotice = HYMessage()
-                    try messageNotice.readFrom(TarsInputStream(wSPushMessage.msg))
-                    var uname = messageNotice.userInfo.nickName
-                    var content = messageNotice.content
-                    var color: UInt32 = 0
-                    if messageNotice.bulletFormat.fontColor == 255 {
-                        color = 0xFFFFFF
-                    }else {
-                        color = UInt32(messageNotice.bulletFormat.fontColor)
-                    }
-                    print("昵称：\(uname)")
-                    print("弹幕：\(content)")
-                    connection.delegate?.webSocketDidReceiveMessage(text: content, nickname: uname, color: color)
-                }else if type == 8006 {
-                    var online = 0
-                    var s = TarsInputStream(wSPushMessage.msg)
-                    online = try s.read(&online, tag: 0, required: false)
-                    print(online)
+}
+
+private struct HuyaDanmuMessage {
+    let text: String
+    let nickname: String
+    let color: UInt32
+}
+
+private final class HuyaDanmuJSCodec {
+    private let queue = DispatchQueue(label: "liveparse.danmu.huya.js")
+    private let context: JSContext
+
+    init() {
+        self.context = JSContext()!
+
+        queue.sync {
+            context.exceptionHandler = { _, exception in
+                if let exception {
+                    print("HuyaDanmuJSCodec exception: \(exception)")
                 }
             }
-        }catch {
-            print("Error reading type: \(error)")
+
+            if let huyaScriptURL = Bundle.module.url(forResource: "huya", withExtension: "js"),
+               let huyaScript = try? String(contentsOf: huyaScriptURL, encoding: .utf8) {
+                context.evaluateScript(huyaScript, withSourceURL: huyaScriptURL)
+            } else {
+                print("HuyaDanmuJSCodec: missing huya.js resource")
+            }
+
+            context.evaluateScript(Self.bridgeScript)
         }
     }
-    
-    private func getHuyaLiveColor(col: Int) -> Int {
-        switch col {
-        case 1:
-            return 0xccff
-        case 2:
-            return 0xccff
-        case 3:
-            return 0x9AFF02
-        case 4:
-            return 0xFFFF00
-        case 5:
-            return 0xBF3EFF
-        case 6:
-            return 0xFF60AF
-        default:
-            return 0xFFFFFF
+
+    func makeJoinPacket(uid: Int, tid: Int, sid: Int) -> Data? {
+        queue.sync {
+            guard let codec = context.objectForKeyedSubscript("HuyaDanmuCodec"),
+                  let result = codec.invokeMethod("joinPacket", withArguments: [uid, tid, sid]),
+                  let bytes = result.toArray() as? [NSNumber] else {
+                return nil
+            }
+            return Data(bytes.map { $0.uint8Value })
         }
     }
-    
-    // 将Dart的getJoinData函数转换为Swift
-    static func getJoinData(ayyuid: Int, tid: Int, sid: Int) -> [UInt8] {
-       do {
-           let oos = TarsOutputStream()
-           try oos.write(ayyuid, tag: 0)
-           try oos.write(true, tag: 1)
-           try oos.write("", tag: 2)
-           try oos.write("", tag: 3)
-           try oos.write(tid, tag: 4)
-           try oos.write(sid, tag: 5)
-           try oos.write(0, tag: 6)
-           try oos.write(0, tag: 7)
-           let q = oos.writer.buffer as [UInt8]
-           let wscmd = TarsOutputStream()
-           try wscmd.write(1, tag: 0)
-           try wscmd.write(q, tag: 1)
-           
-           return wscmd.toUint8List()
-       } catch {
-           print("Error in getJoinData: \(error)")
-           return []
-       }
+
+    func makeHeartbeatPacket() -> Data? {
+        queue.sync {
+            guard let codec = context.objectForKeyedSubscript("HuyaDanmuCodec"),
+                  let result = codec.invokeMethod("heartbeatPacket", withArguments: []),
+                  let bytes = result.toArray() as? [NSNumber] else {
+                return nil
+            }
+            return Data(bytes.map { $0.uint8Value })
+        }
     }
+
+    func parseMessages(from data: Data) -> [HuyaDanmuMessage] {
+        let bytes = Array(data)
+
+        return queue.sync {
+            guard let codec = context.objectForKeyedSubscript("HuyaDanmuCodec"),
+                  let result = codec.invokeMethod("parseMessages", withArguments: [bytes]),
+                  let items = result.toArray() as? [[String: Any]] else {
+                return []
+            }
+
+            return items.compactMap { item in
+                guard let text = item["text"] as? String,
+                      let nickname = item["nickname"] as? String else {
+                    return nil
+                }
+                let colorValue = (item["color"] as? NSNumber)?.uint32Value ?? 0xFFFFFF
+                return HuyaDanmuMessage(text: text, nickname: nickname, color: colorValue)
+            }
+        }
+    }
+}
+
+private extension HuyaDanmuJSCodec {
+    static let bridgeScript = #"""
+(function () {
+  function asByteArray(buffer) {
+    return Array.from(new Uint8Array(buffer));
+  }
+
+  function buildJoinPacket(uid, tid, sid) {
+    if (typeof sendRegister !== "function" || !globalThis.HUYA || !globalThis.Taf) {
+      return [];
+    }
+
+    var userInfo = new HUYA.WSUserInfo();
+    userInfo.lUid = Number(uid || 0);
+    userInfo.bAnonymous = true;
+    userInfo.sGuid = "";
+    userInfo.sToken = "";
+    userInfo.lTid = Number(tid || 0);
+    userInfo.lSid = Number(sid || 0);
+    userInfo.lGroupId = 0;
+    userInfo.lGroupType = 0;
+
+    return asByteArray(sendRegister(userInfo));
+  }
+
+  function buildHeartbeatPacket() {
+    var raw = "ABQdAAwsNgBM";
+    var out = [];
+    for (var i = 0; i < raw.length; i++) {
+      out.push(raw.charCodeAt(i) & 0xff);
+    }
+    return out;
+  }
+
+  function parseMessages(bytes) {
+    var out = [];
+
+    if (!globalThis.HUYA || !globalThis.Taf) {
+      return out;
+    }
+
+    try {
+      var commandInput = new Taf.JceInputStream(new Uint8Array(bytes || []).buffer);
+      var command = new HUYA.WebSocketCommand();
+      command.readFrom(commandInput);
+
+      if (Number(command.iCmdType) !== HUYA.EWebSocketCommandType.EWSCmdS2C_MsgPushReq) {
+        return out;
+      }
+
+      var pushInput = new Taf.JceInputStream(command.vData.buffer);
+      var pushMessage = new HUYA.WSPushMessage();
+      pushMessage.readFrom(pushInput);
+
+      if (Number(pushMessage.iUri) !== 1400) {
+        return out;
+      }
+
+      var noticeInput = new Taf.JceInputStream(pushMessage.sMsg.buffer);
+      var messageNotice = new HUYA.MessageNotice();
+      messageNotice.readFrom(noticeInput);
+
+      var nickname = messageNotice.tUserInfo && messageNotice.tUserInfo.sNickName
+        ? String(messageNotice.tUserInfo.sNickName)
+        : "";
+      var text = String(messageNotice.sContent || "");
+      var fontColor = messageNotice.tBulletFormat
+        ? Number(messageNotice.tBulletFormat.iFontColor)
+        : -1;
+      var color = (fontColor === 255 || !Number.isFinite(fontColor) || fontColor < 0)
+        ? 0xFFFFFF
+        : (fontColor >>> 0);
+
+      out.push({
+        nickname: nickname,
+        text: text,
+        color: color
+      });
+    } catch (_) {
+    }
+
+    return out;
+  }
+
+  globalThis.HuyaDanmuCodec = {
+    joinPacket: function (uid, tid, sid) {
+      return buildJoinPacket(uid, tid, sid);
+    },
+    heartbeatPacket: function () {
+      return buildHeartbeatPacket();
+    },
+    parseMessages: function (bytes) {
+      return parseMessages(bytes || []);
+    }
+  };
+})();
+"""#
 }

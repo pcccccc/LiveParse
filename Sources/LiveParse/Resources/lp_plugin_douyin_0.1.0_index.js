@@ -333,7 +333,15 @@ function __lp_dy_signDetail(queryString) {
   return __lp_dy_toString(sign_datail(query, __lp_dy_ua));
 }
 
-function __lp_dy_defaultCategories() {
+const __lp_dy_category_cache = {
+  version: "",
+  built: null,
+  builtAt: 0
+};
+
+const __lp_dy_category_source = {"version":"2025-01","description":"抖音直播分类数据（本地缓存）","categoryData":[{"partition":{"id_str":"101","type":4,"title":"聊天"},"sub_partition":[]},{"partition":{"id_str":"102","type":4,"title":"音乐"},"sub_partition":[]},{"partition":{"id_str":"103","type":4,"title":"游戏"},"sub_partition":[{"partition":{"id_str":"1","type":1,"title":"射击游戏"},"sub_partition":[{"partition":{"id_str":"1010032","type":1,"title":"和平精英"},"sub_partition":[]},{"partition":{"id_str":"1010037","type":1,"title":"穿越火线"},"sub_partition":[]},{"partition":{"id_str":"1011032","type":1,"title":"三角洲行动"},"sub_partition":[]},{"partition":{"id_str":"1010213","type":1,"title":"逆战手游"},"sub_partition":[]},{"partition":{"id_str":"1010017","type":1,"title":"无畏契约"},"sub_partition":[]},{"partition":{"id_str":"1010026","type":1,"title":"绝地求生"},"sub_partition":[]},{"partition":{"id_str":"1010003","type":1,"title":"CSGO"},"sub_partition":[]},{"partition":{"id_str":"1011309","type":1,"title":"无畏契约：源能行动"},"sub_partition":[]},{"partition":{"id_str":"1010015","type":1,"title":"穿越火线：枪战王者"},"sub_partition":[]},{"partition":{"id_str":"1011124","type":1,"title":"暗区突围：无限"},"sub_partition":[]},{"partition":{"id_str":"1010018","type":1,"title":"暗区突围"},"sub_partition":[]},{"partition":{"id_str":"1010002","type":1,"title":"Apex英雄"},"sub_partition":[]},{"partition":{"id_str":"1010339","type":1,"title":"守望先锋"},"sub_partition":[]},{"partition":{"id_str":"1010080","type":1,"title":"使命召唤手游"},"sub_partition":[]},{"partition":{"id_str":"1010132","type":1,"title":"逆战"},"sub_partition":[]},{"partition":{"id_str":"1010104","type":1,"title":"逃离塔科夫"},"sub_partition":[]},{"partition":{"id_str":"1010336","type":1,"title":"反恐精英OL"},"sub_partition":[]},{"partition":{"id_str":"1010214","type":1,"title":"萤火突击"},"sub_partition":[]},{"partition":{"id_str":"1010064","type":1,"title":"荒野行动"},"sub_partition":[]},{"partition":{"id_str":"1010329","type":1,"title":"使命召唤"},"sub_partition":[]},{"partition":{"id_str":"1010260","type":1,"title":"解限机"},"sub_partition":[]},{"partition":{"id_str":"1010593","type":1,"title":"The Finals"},"sub_partition":[]},{"partition":{"id_str":"1010409","type":1,"title":"生死狙击"},"sub_partition":[]},{"partition":{"id_str":"1010068","type":1,"title":"生死狙击2"},"sub_partition":[]},{"partition":{"id_str":"1010187","type":1,"title":"远光84"},"sub_partition":[]},{"partition":{"id_str":"1010367","type":1,"title":"战地1"},"sub_partition":[]},{"partition":{"id_str":"1010198","type":1,"title":"高能英雄"},"sub_partition":[]},{"partition":{"id_str":"1010168","type":1,"title":"卡拉彼丘"},"sub_partition":[]},{"partition":{"id_str":"1010402","type":1,"title":"彩虹六号：围攻"},"sub_partition":[]},{"partition":{"id_str":"1010383","type":1,"title":"堡垒之夜"},"sub_partition":[]},{"partition":{"id_str":"1010445","type":1,"title":"战术小队"},"sub_partition":[]},{"partition":{"id_str":"1010144","type":1,"title":"超凡先锋"},"sub_partition":[]}]},{"partition":{"id_str":"2","type":1,"title":"竞技游戏"},"sub_partition":[{"partition":{"id_str":"1010005","type":1,"title":"云顶之弈"},"sub_partition":[]},{"partition":{"id_str":"1010014","type":1,"title":"英雄联盟"},"sub_partition":[]},{"partition":{"id_str":"1010016","type":1,"title":"永劫无间"},"sub_partition":[]},{"partition":{"id_str":"1010041","type":1,"title":"第五人格"},"sub_partition":[]},{"partition":{"id_str":"1010055","type":1,"title":"金铲铲之战"},"sub_partition":[]},{"partition":{"id_str":"1010045","type":1,"title":"王者荣耀"},"sub_partition":[]},{"partition":{"id_str":"1010023","type":1,"title":"英雄联盟手游"},"sub_partition":[]},{"partition":{"id_str":"1010350","type":1,"title":"魔兽争霸3"},"sub_partition":[]},{"partition":{"id_str":"1010007","type":1,"title":"巅峰极速"},"sub_partition":[]},{"partition":{"id_str":"1010146","type":1,"title":"QQ飞车端游"},"sub_partition":[]},{"partition":{"id_str":"1010341","type":1,"title":"DOTA1"},"sub_partition":[]},{"partition":{"id_str":"1010278","type":1,"title":"永劫无间手游"},"sub_partition":[]},{"partition":{"id_str":"1010093","type":1,"title":"DOTA2"},"sub_partition":[]},{"partition":{"id_str":"1010340","type":1,"title":"坦克世界"},"sub_partition":[]},{"partition":{"id_str":"1010397","type":1,"title":"炉石传说"},"sub_partition":[]},{"partition":{"id_str":"1010102","type":1,"title":"红色警戒2"},"sub_partition":[]},{"partition":{"id_str":"1010033","type":1,"title":"QQ飞车手游"},"sub_partition":[]},{"partition":{"id_str":"1010131","type":1,"title":"跑跑卡丁车官方竞速版"},"sub_partition":[]},{"partition":{"id_str":"1010313","type":1,"title":"狼人杀"},"sub_partition":[]},{"partition":{"id_str":"1010170","type":1,"title":"战争雷霆"},"sub_partition":[]},{"partition":{"id_str":"1010292","type":1,"title":"决胜巅峰"},"sub_partition":[]},{"partition":{"id_str":"1010061","type":1,"title":"三国杀"},"sub_partition":[]},{"partition":{"id_str":"1010483","type":1,"title":"星际争霸"},"sub_partition":[]},{"partition":{"id_str":"1010331","type":1,"title":"跑跑卡丁车"},"sub_partition":[]},{"partition":{"id_str":"1010686","type":1,"title":"极品飞车：集结"},"sub_partition":[]},{"partition":{"id_str":"1010235","type":1,"title":"王者万象棋"},"sub_partition":[]},{"partition":{"id_str":"1010435","type":1,"title":"至暗时刻"},"sub_partition":[]},{"partition":{"id_str":"1010418","type":1,"title":"战舰世界"},"sub_partition":[]},{"partition":{"id_str":"1010430","type":1,"title":"恐惧饥荒"},"sub_partition":[]},{"partition":{"id_str":"1010429","type":1,"title":"极限竞速：地平线5"},"sub_partition":[]},{"partition":{"id_str":"1010509","type":1,"title":"星际争霸2"},"sub_partition":[]},{"partition":{"id_str":"1010524","type":1,"title":"王牌竞速"},"sub_partition":[]},{"partition":{"id_str":"1010180","type":1,"title":"全明星街球派对"},"sub_partition":[]},{"partition":{"id_str":"1010230","type":1,"title":"皇室战争"},"sub_partition":[]},{"partition":{"id_str":"1010057","type":1,"title":"决战！平安京"},"sub_partition":[]},{"partition":{"id_str":"1010030","type":1,"title":"实况足球"},"sub_partition":[]},{"partition":{"id_str":"1010327","type":1,"title":"猫和老鼠"},"sub_partition":[]},{"partition":{"id_str":"1010054","type":1,"title":"哈利波特：魔法觉醒"},"sub_partition":[]},{"partition":{"id_str":"1010058","type":1,"title":"逃跑吧！少年"},"sub_partition":[]},{"partition":{"id_str":"1010138","type":1,"title":"荒野乱斗"},"sub_partition":[]},{"partition":{"id_str":"1010395","type":1,"title":"坦克世界：闪电战"},"sub_partition":[]},{"partition":{"id_str":"1010353","type":1,"title":"极限竞速：地平线4"},"sub_partition":[]},{"partition":{"id_str":"1010107","type":1,"title":"最强NBA"},"sub_partition":[]},{"partition":{"id_str":"1010264","type":1,"title":"极品飞车"},"sub_partition":[]},{"partition":{"id_str":"1010381","type":1,"title":"曙光英雄"},"sub_partition":[]},{"partition":{"id_str":"1010510","type":1,"title":"红色警戒3"},"sub_partition":[]}]},{"partition":{"id_str":"3","type":1,"title":"单机游戏"},"sub_partition":[{"partition":{"id_str":"1010324","type":1,"title":"植物大战僵尸"},"sub_partition":[]},{"partition":{"id_str":"1010791","type":1,"title":"星露谷物语"},"sub_partition":[]},{"partition":{"id_str":"1011359","type":1,"title":"流放之路2"},"sub_partition":[]},{"partition":{"id_str":"1010358","type":1,"title":"黑神话：悟空"},"sub_partition":[]},{"partition":{"id_str":"1011048","type":1,"title":"俄罗斯钓鱼4"},"sub_partition":[]},{"partition":{"id_str":"1011393","type":1,"title":"Half Sword"},"sub_partition":[]},{"partition":{"id_str":"1010100","type":1,"title":"方舟"},"sub_partition":[]},{"partition":{"id_str":"1010250","type":1,"title":"星际战甲"},"sub_partition":[]},{"partition":{"id_str":"1010335","type":1,"title":"饥荒"},"sub_partition":[]},{"partition":{"id_str":"1010087","type":1,"title":"艾尔登法环"},"sub_partition":[]},{"partition":{"id_str":"1010038","type":1,"title":"猛兽派对"},"sub_partition":[]},{"partition":{"id_str":"1010593","type":1,"title":"The Finals"},"sub_partition":[]},{"partition":{"id_str":"1010149","type":1,"title":"只狼：影逝二度"},"sub_partition":[]},{"partition":{"id_str":"1010981","type":1,"title":"幻兽帕鲁"},"sub_partition":[]},{"partition":{"id_str":"1010783","type":1,"title":"森林之子"},"sub_partition":[]},{"partition":{"id_str":"1010363","type":1,"title":"荒野大镖客2"},"sub_partition":[]},{"partition":{"id_str":"1010326","type":1,"title":"人渣"},"sub_partition":[]},{"partition":{"id_str":"1010361","type":1,"title":"街头霸王6"},"sub_partition":[]},{"partition":{"id_str":"1010429","type":1,"title":"极限竞速：地平线5"},"sub_partition":[]},{"partition":{"id_str":"1010401","type":1,"title":"骑马与砍杀2：霸主"},"sub_partition":[]},{"partition":{"id_str":"1011136","type":1,"title":"掘地求升"},"sub_partition":[]},{"partition":{"id_str":"1011119","type":1,"title":"英雄无敌3"},"sub_partition":[]},{"partition":{"id_str":"1010396","type":1,"title":"泰拉瑞亚"},"sub_partition":[]},{"partition":{"id_str":"1010779","type":1,"title":"全面战争：三国"},"sub_partition":[]},{"partition":{"id_str":"1010171","type":1,"title":"女神异闻录5"},"sub_partition":[]},{"partition":{"id_str":"1010847","type":1,"title":"宝可梦朱紫"},"sub_partition":[]},{"partition":{"id_str":"1010334","type":1,"title":"拳皇97"},"sub_partition":[]},{"partition":{"id_str":"1010774","type":1,"title":"仁王"},"sub_partition":[]},{"partition":{"id_str":"1010030","type":1,"title":"实况足球"},"sub_partition":[]},{"partition":{"id_str":"1010081","type":1,"title":"塞尔达传说：旷野之息"},"sub_partition":[]},{"partition":{"id_str":"1010514","type":1,"title":"三国志14"},"sub_partition":[]},{"partition":{"id_str":"1010367","type":1,"title":"战地1"},"sub_partition":[]},{"partition":{"id_str":"1011000","type":1,"title":"绝地潜兵2"},"sub_partition":[]},{"partition":{"id_str":"1010436","type":1,"title":"双影奇境"},"sub_partition":[]},{"partition":{"id_str":"1010360","type":1,"title":"空洞骑士：丝之歌"},"sub_partition":[]},{"partition":{"id_str":"1011304","type":1,"title":"怪物猎人：荒野"},"sub_partition":[]},{"partition":{"id_str":"1010142","type":1,"title":"都市：天际线"},"sub_partition":[]},{"partition":{"id_str":"1011170","type":1,"title":"链在一起"},"sub_partition":[]},{"partition":{"id_str":"1010424","type":1,"title":"古墓丽影：暗影"},"sub_partition":[]},{"partition":{"id_str":"1010320","type":1,"title":"匹诺曹的谎言"},"sub_partition":[]},{"partition":{"id_str":"1010128","type":1,"title":"赛博朋克2077"},"sub_partition":[]},{"partition":{"id_str":"1011238","type":1,"title":"超级兔子人"},"sub_partition":[]},{"partition":{"id_str":"1010411","type":1,"title":"流放之路"},"sub_partition":[]},{"partition":{"id_str":"1011399","type":1,"title":"天国拯救2"},"sub_partition":[]},{"partition":{"id_str":"1010626","type":1,"title":"潜水员戴夫"},"sub_partition":[]},{"partition":{"id_str":"1010408","type":1,"title":"木筏求生"},"sub_partition":[]},{"partition":{"id_str":"1010130","type":1,"title":"人类：一败涂地"},"sub_partition":[]},{"partition":{"id_str":"1010485","type":1,"title":"刺客信条：奥德赛"},"sub_partition":[]},{"partition":{"id_str":"1010846","type":1,"title":"致命公司"},"sub_partition":[]},{"partition":{"id_str":"1010353","type":1,"title":"极限竞速：地平线4"},"sub_partition":[]},{"partition":{"id_str":"1010082","type":1,"title":"塞尔达传说：王国之泪"},"sub_partition":[]},{"partition":{"id_str":"1011366","type":1,"title":"去上班"},"sub_partition":[]},{"partition":{"id_str":"1010515","type":1,"title":"三国志11"},"sub_partition":[]}]},{"partition":{"id_str":"4","type":1,"title":"棋牌游戏"},"sub_partition":[{"partition":{"id_str":"1010040","type":1,"title":"指尖四川麻将"},"sub_partition":[]},{"partition":{"id_str":"1010004","type":1,"title":"JJ斗地主"},"sub_partition":[]},{"partition":{"id_str":"1010063","type":1,"title":"JJ象棋"},"sub_partition":[]},{"partition":{"id_str":"1010094","type":1,"title":"JJ麻将"},"sub_partition":[]},{"partition":{"id_str":"1010062","type":1,"title":"欢乐斗地主"},"sub_partition":[]},{"partition":{"id_str":"1010060","type":1,"title":"天天象棋"},"sub_partition":[]},{"partition":{"id_str":"1010012","type":1,"title":"途游斗地主"},"sub_partition":[]},{"partition":{"id_str":"1010714","type":1,"title":"微乐斗地主"},"sub_partition":[]},{"partition":{"id_str":"1010028","type":1,"title":"芒果斗地主"},"sub_partition":[]},{"partition":{"id_str":"1010711","type":1,"title":"开运麻将"},"sub_partition":[]},{"partition":{"id_str":"1010710","type":1,"title":"微乐四川麻将"},"sub_partition":[]},{"partition":{"id_str":"1010721","type":1,"title":"多乐升级"},"sub_partition":[]},{"partition":{"id_str":"1010059","type":1,"title":"腾讯欢乐麻将"},"sub_partition":[]},{"partition":{"id_str":"1010720","type":1,"title":"多乐够级"},"sub_partition":[]},{"partition":{"id_str":"1010098","type":1,"title":"禅游斗地主"},"sub_partition":[]}]},{"partition":{"id_str":"5","type":1,"title":"休闲益智"},"sub_partition":[{"partition":{"id_str":"1010022","type":1,"title":"我的世界"},"sub_partition":[]},{"partition":{"id_str":"1010011","type":1,"title":"蛋仔派对"},"sub_partition":[]},{"partition":{"id_str":"1011640","type":1,"title":"鹅鸭杀（手游）"},"sub_partition":[]},{"partition":{"id_str":"1010806","type":1,"title":"天天台球"},"sub_partition":[]},{"partition":{"id_str":"1010263","type":1,"title":"元梦之星"},"sub_partition":[]},{"partition":{"id_str":"1010010","type":1,"title":"球球大作战"},"sub_partition":[]},{"partition":{"id_str":"1010520","type":1,"title":"开心消消乐"},"sub_partition":[]},{"partition":{"id_str":"1010895","type":1,"title":"群雄逐鹿"},"sub_partition":[]},{"partition":{"id_str":"1010129","type":1,"title":"忍者必须死3"},"sub_partition":[]},{"partition":{"id_str":"1010046","type":1,"title":"迷你世界"},"sub_partition":[]},{"partition":{"id_str":"1010056","type":1,"title":"贪吃蛇大作战"},"sub_partition":[]},{"partition":{"id_str":"1010921","type":1,"title":"台球帝国"},"sub_partition":[]},{"partition":{"id_str":"1010099","type":1,"title":"地铁跑酷"},"sub_partition":[]},{"partition":{"id_str":"1010410","type":1,"title":"天天酷跑"},"sub_partition":[]}]},{"partition":{"id_str":"6","type":1,"title":"角色扮演"},"sub_partition":[{"partition":{"id_str":"1010053","type":1,"title":"梦幻西游"},"sub_partition":[]},{"partition":{"id_str":"1010051","type":1,"title":"梦幻西游手游"},"sub_partition":[]},{"partition":{"id_str":"1010039","type":1,"title":"原神"},"sub_partition":[]},{"partition":{"id_str":"1010150","type":1,"title":"魔兽世界"},"sub_partition":[]},{"partition":{"id_str":"1010190","type":1,"title":"明日方舟：终末地"},"sub_partition":[]},{"partition":{"id_str":"1010271","type":1,"title":"燕云十六声"},"sub_partition":[]},{"partition":{"id_str":"1010205","type":1,"title":"大话西游2"},"sub_partition":[]},{"partition":{"id_str":"1010092","type":1,"title":"地下城与勇士"},"sub_partition":[]},{"partition":{"id_str":"1010042","type":1,"title":"火影忍者手游"},"sub_partition":[]},{"partition":{"id_str":"1010241","type":1,"title":"火炬之光：无限"},"sub_partition":[]},{"partition":{"id_str":"1010159","type":1,"title":"鸣潮"},"sub_partition":[]},{"partition":{"id_str":"1010083","type":1,"title":"逆水寒手游"},"sub_partition":[]},{"partition":{"id_str":"1010234","type":1,"title":"地下城与勇士：起源"},"sub_partition":[]},{"partition":{"id_str":"1010035","type":1,"title":"光遇"},"sub_partition":[]},{"partition":{"id_str":"1010249","type":1,"title":"剑网3"},"sub_partition":[]},{"partition":{"id_str":"1010006","type":1,"title":"明日之后"},"sub_partition":[]},{"partition":{"id_str":"1010116","type":1,"title":"问道"},"sub_partition":[]},{"partition":{"id_str":"1010558","type":1,"title":"七日世界"},"sub_partition":[]},{"partition":{"id_str":"1010151","type":1,"title":"诛仙世界"},"sub_partition":[]},{"partition":{"id_str":"1010143","type":1,"title":"大话西游"},"sub_partition":[]},{"partition":{"id_str":"1010233","type":1,"title":"命运方舟"},"sub_partition":[]},{"partition":{"id_str":"1010155","type":1,"title":"绝区零"},"sub_partition":[]},{"partition":{"id_str":"1010364","type":1,"title":"逆水寒"},"sub_partition":[]},{"partition":{"id_str":"1010250","type":1,"title":"星际战甲"},"sub_partition":[]},{"partition":{"id_str":"1010203","type":1,"title":"洛克王国"},"sub_partition":[]},{"partition":{"id_str":"1010253","type":1,"title":"无限暖暖"},"sub_partition":[]},{"partition":{"id_str":"1010049","type":1,"title":"梦幻西游网页版"},"sub_partition":[]},{"partition":{"id_str":"1010149","type":1,"title":"只狼：影逝二度"},"sub_partition":[]},{"partition":{"id_str":"1010119","type":1,"title":"天涯明月刀"},"sub_partition":[]},{"partition":{"id_str":"1010568","type":1,"title":"新大话西游3"},"sub_partition":[]},{"partition":{"id_str":"1011139","type":1,"title":"航海王：壮志雄心"},"sub_partition":[]},{"partition":{"id_str":"1010533","type":1,"title":"妄想山海"},"sub_partition":[]},{"partition":{"id_str":"1010096","type":1,"title":"暗黑破坏神：不朽"},"sub_partition":[]},{"partition":{"id_str":"1010024","type":1,"title":"月圆之夜"},"sub_partition":[]},{"partition":{"id_str":"1010311","type":1,"title":"冒险岛：枫之传说"},"sub_partition":[]},{"partition":{"id_str":"1010256","type":1,"title":"诛仙2"},"sub_partition":[]},{"partition":{"id_str":"1010097","type":1,"title":"长安幻想"},"sub_partition":[]},{"partition":{"id_str":"1010231","type":1,"title":"航海王热血航线"},"sub_partition":[]},{"partition":{"id_str":"1010171","type":1,"title":"女神异闻录5"},"sub_partition":[]},{"partition":{"id_str":"1010631","type":1,"title":"境·界 刀鸣"},"sub_partition":[]},{"partition":{"id_str":"1010193","type":1,"title":"星球：重启"},"sub_partition":[]},{"partition":{"id_str":"1010044","type":1,"title":"晶核"},"sub_partition":[]},{"partition":{"id_str":"1010320","type":1,"title":"匹诺曹的谎言"},"sub_partition":[]},{"partition":{"id_str":"1010257","type":1,"title":"新完美世界"},"sub_partition":[]},{"partition":{"id_str":"1010411","type":1,"title":"流放之路"},"sub_partition":[]},{"partition":{"id_str":"1010405","type":1,"title":"激战2"},"sub_partition":[]},{"partition":{"id_str":"1010675","type":1,"title":"时空猎人3"},"sub_partition":[]}]},{"partition":{"id_str":"7","type":1,"title":"策略卡牌"},"sub_partition":[{"partition":{"id_str":"1010013","type":1,"title":"明日方舟"},"sub_partition":[]},{"partition":{"id_str":"1010324","type":1,"title":"植物大战僵尸"},"sub_partition":[]},{"partition":{"id_str":"1010043","type":1,"title":"崩坏：星穹铁道"},"sub_partition":[]},{"partition":{"id_str":"1010160","type":1,"title":"少女前线2：追放"},"sub_partition":[]},{"partition":{"id_str":"1010025","type":1,"title":"阴阳师"},"sub_partition":[]},{"partition":{"id_str":"1010009","type":1,"title":"三国志·战略版"},"sub_partition":[]},{"partition":{"id_str":"1010021","type":1,"title":"率土之滨"},"sub_partition":[]},{"partition":{"id_str":"1010067","type":1,"title":"植物大战僵尸2"},"sub_partition":[]},{"partition":{"id_str":"1010365","type":1,"title":"斗罗大陆：魂师对决"},"sub_partition":[]},{"partition":{"id_str":"1010084","type":1,"title":"恋与深空"},"sub_partition":[]},{"partition":{"id_str":"1010145","type":1,"title":"部落冲突"},"sub_partition":[]},{"partition":{"id_str":"1010105","type":1,"title":"万国觉醒"},"sub_partition":[]},{"partition":{"id_str":"1010419","type":1,"title":"奥奇传说"},"sub_partition":[]},{"partition":{"id_str":"1010287","type":1,"title":"大话西游：归来"},"sub_partition":[]},{"partition":{"id_str":"1010515","type":1,"title":"三国志11"},"sub_partition":[]},{"partition":{"id_str":"1010196","type":1,"title":"重返未来1999"},"sub_partition":[]}]}]},{"partition":{"id_str":"104","type":4,"title":"二次元"},"sub_partition":[]},{"partition":{"id_str":"105","type":4,"title":"舞蹈"},"sub_partition":[]},{"partition":{"id_str":"106","type":4,"title":"文化"},"sub_partition":[]},{"partition":{"id_str":"107","type":4,"title":"生活"},"sub_partition":[]},{"partition":{"id_str":"108","type":4,"title":"运动"},"sub_partition":[]}]};
+
+function __lp_dy_fallbackCategories() {
   return [
     {
       id: "101",
@@ -370,6 +378,120 @@ function __lp_dy_defaultCategories() {
   ];
 }
 
+function __lp_dy_makeCategoryNode(partition, parentIdOverride) {
+  const node = partition && typeof partition === "object" ? partition : {};
+  const id = __lp_dy_toString(node.id_str);
+  if (!id) return null;
+  const parentIdValue = parentIdOverride === undefined || parentIdOverride === null
+    ? node.type
+    : parentIdOverride;
+  return {
+    id,
+    parentId: __lp_dy_toString(parentIdValue),
+    title: __lp_dy_toString(node.title),
+    icon: "",
+    biz: ""
+  };
+}
+
+function __lp_dy_buildCategoriesFromSource(source) {
+  const categoryData = Array.isArray((source || {}).categoryData) ? source.categoryData : [];
+  const result = [];
+
+  for (const item of categoryData) {
+    const partition = (item && item.partition) || {};
+    const mainId = __lp_dy_toString(partition.id_str);
+    const mainTitle = __lp_dy_toString(partition.title);
+    if (!mainId || !mainTitle) continue;
+
+    const subPartition = Array.isArray(item && item.sub_partition) ? item.sub_partition : null;
+
+    if (subPartition && subPartition.length === 0) {
+      const node = __lp_dy_makeCategoryNode(partition, partition.type);
+      if (!node) continue;
+      result.push({
+        id: mainId,
+        title: mainTitle,
+        icon: "",
+        biz: "",
+        subList: [node]
+      });
+      continue;
+    }
+
+    if (!subPartition) {
+      continue;
+    }
+
+    if (subPartition.length === 0) {
+      const node = __lp_dy_makeCategoryNode(partition, mainId);
+      if (!node) continue;
+      result.push({
+        id: mainId,
+        title: mainTitle,
+        icon: "",
+        biz: "",
+        subList: [node]
+      });
+      continue;
+    }
+
+    const subList = [];
+
+    for (const subItem of subPartition) {
+      const subNodePartition = (subItem && subItem.partition) || {};
+      const subNode = __lp_dy_makeCategoryNode(subNodePartition, subNodePartition.type);
+      if (!subNode) continue;
+
+      const thirdPartition = Array.isArray(subItem && subItem.sub_partition) ? subItem.sub_partition : null;
+      if (thirdPartition && thirdPartition.length > 0) {
+        const thirdList = [];
+        for (const thirdItem of thirdPartition) {
+          const thirdNodePartition = (thirdItem && thirdItem.partition) || {};
+          const thirdNode = __lp_dy_makeCategoryNode(thirdNodePartition, thirdNodePartition.type);
+          if (thirdNode) thirdList.push(thirdNode);
+        }
+        if (thirdList.length > 0) {
+          result.push({
+            id: __lp_dy_toString(subNodePartition.id_str),
+            title: __lp_dy_toString(subNodePartition.title),
+            icon: "",
+            biz: "",
+            subList: thirdList
+          });
+        }
+      } else {
+        subList.push(subNode);
+      }
+    }
+
+    if (subList.length > 0) {
+      result.push({
+        id: mainId,
+        title: mainTitle,
+        icon: "",
+        biz: "",
+        subList
+      });
+    }
+  }
+
+  return result;
+}
+
+function __lp_dy_defaultCategories() {
+  const sourceVersion = __lp_dy_toString((__lp_dy_category_source || {}).version);
+  if (__lp_dy_category_cache.built && __lp_dy_category_cache.version === sourceVersion) {
+    return __lp_dy_category_cache.built;
+  }
+
+  const built = __lp_dy_buildCategoriesFromSource(__lp_dy_category_source);
+  const resolved = built.length > 0 ? built : __lp_dy_fallbackCategories();
+  __lp_dy_category_cache.version = sourceVersion;
+  __lp_dy_category_cache.built = resolved;
+  __lp_dy_category_cache.builtAt = Date.now();
+  return resolved;
+}
 function __lp_dy_statusToLiveState(status, hasStream) {
   const s = Number(status || 0);
   if (s === 2) return hasStream ? "1" : "0";
@@ -1017,153 +1139,220 @@ function rc4_encrypt(plaintext, key) {
     return cipher.join('');
 }
 
-function le(e, r) {
-    return (e << (r %= 32) | e >>> 32 - r) >>> 0
+// Directly vendored from sm-crypto (MIT): https://github.com/JuneAndGreen/sm-crypto
+// source: src/sm2/sm3.js + src/sm3/index.js
+const __lp_dy_sm3_W = new Uint32Array(68);
+const __lp_dy_sm3_M = new Uint32Array(64);
+const __lp_dy_sm3_blockLen = 64;
+const __lp_dy_sm3_iPad = new Uint8Array(__lp_dy_sm3_blockLen);
+const __lp_dy_sm3_oPad = new Uint8Array(__lp_dy_sm3_blockLen);
+for (let __lp_i = 0; __lp_i < __lp_dy_sm3_blockLen; __lp_i++) {
+    __lp_dy_sm3_iPad[__lp_i] = 0x36;
+    __lp_dy_sm3_oPad[__lp_i] = 0x5C;
 }
 
-function de(e) {
-    return 0 <= e && e < 16 ? 2043430169 : 16 <= e && e < 64 ? 2055708042 : void console['error']("invalid j for constant Tj")
+function __lp_dy_sm3_rotl(x, n) {
+    const s = n & 31;
+    return (x << s) | (x >>> (32 - s));
 }
 
-function pe(e, r, t, n) {
-    return 0 <= e && e < 16 ? (r ^ t ^ n) >>> 0 : 16 <= e && e < 64 ? (r & t | r & n | t & n) >>> 0 : (console['error']('invalid j for bool function FF'),
-        0)
+function __lp_dy_sm3_xor(x, y) {
+    const result = [];
+    for (let i = x.length - 1; i >= 0; i--) result[i] = (x[i] ^ y[i]) & 0xFF;
+    return result;
 }
 
-function he(e, r, t, n) {
-    return 0 <= e && e < 16 ? (r ^ t ^ n) >>> 0 : 16 <= e && e < 64 ? (r & t | ~r & n) >>> 0 : (console['error']('invalid j for bool function GG'),
-        0)
+function __lp_dy_sm3_P0(X) {
+    return (__lp_dy_sm3_rotl(X, 9) ^ __lp_dy_sm3_rotl(X, 17) ^ X);
 }
 
-function reset() {
-    this.reg[0] = 1937774191,
-        this.reg[1] = 1226093241,
-        this.reg[2] = 388252375,
-        this.reg[3] = 3666478592,
-        this.reg[4] = 2842636476,
-        this.reg[5] = 372324522,
-        this.reg[6] = 3817729613,
-        this.reg[7] = 2969243214,
-        this["chunk"] = [],
-        this["size"] = 0
+function __lp_dy_sm3_P1(X) {
+    return (__lp_dy_sm3_rotl(X, 15) ^ __lp_dy_sm3_rotl(X, 23) ^ X);
 }
 
-function write(e) {
-    var a = "string" == typeof e ? function (e) {
-        n = encodeURIComponent(e)['replace'](/%([0-9A-F]{2})/g, (function (e, r) {
-                return String['fromCharCode']("0x" + r)
-            }
-        ))
-            , a = new Array(n['length']);
-        return Array['prototype']['forEach']['call'](n, (function (e, r) {
-                a[r] = e.charCodeAt(0)
-            }
-        )),
-            a
-    }(e) : e;
-    this.size += a.length;
-    var f = 64 - this['chunk']['length'];
-    if (a['length'] < f)
-        this['chunk'] = this['chunk'].concat(a);
-    else
-        for (this['chunk'] = this['chunk'].concat(a.slice(0, f)); this['chunk'].length >= 64;)
-            this['_compress'](this['chunk']),
-                f < a['length'] ? this['chunk'] = a['slice'](f, Math['min'](f + 64, a['length'])) : this['chunk'] = [],
-                f += 64
-}
+function __lp_dy_sm3_core(array) {
+    let len = array.length * 8;
+    let k = len % 512;
+    k = k >= 448 ? 512 - (k % 448) - 1 : 448 - k - 1;
 
-function sum(e, t) {
-    e && (this['reset'](),
-        this['write'](e)),
-        this['_fill']();
-    for (var f = 0; f < this.chunk['length']; f += 64)
-        this._compress(this['chunk']['slice'](f, f + 64));
-    var i = null;
-    if (t == 'hex') {
-        i = "";
-        for (f = 0; f < 8; f++)
-            i += se(this['reg'][f]['toString'](16), 8, "0")
-    } else
-        for (i = new Array(32),
-                 f = 0; f < 8; f++) {
-            var c = this.reg[f];
-            i[4 * f + 3] = (255 & c) >>> 0,
-                c >>>= 8,
-                i[4 * f + 2] = (255 & c) >>> 0,
-                c >>>= 8,
-                i[4 * f + 1] = (255 & c) >>> 0,
-                c >>>= 8,
-                i[4 * f] = (255 & c) >>> 0
+    const kArr = new Array((k - 7) / 8);
+    const lenArr = new Array(8);
+    for (let i = 0; i < kArr.length; i++) kArr[i] = 0;
+    for (let i = 0; i < lenArr.length; i++) lenArr[i] = 0;
+
+    len = len.toString(2);
+    for (let i = 7; i >= 0; i--) {
+        if (len.length > 8) {
+            const start = len.length - 8;
+            lenArr[i] = parseInt(len.substr(start), 2);
+            len = len.substr(0, start);
+        } else if (len.length > 0) {
+            lenArr[i] = parseInt(len, 2);
+            len = "";
         }
-    return this['reset'](),
-        i
-}
+    }
 
-function _compress(t) {
-    if (t < 64)
-        console.error("compress error: not enough data");
-    else {
-        for (var f = function (e) {
-            for (var r = new Array(132), t = 0; t < 16; t++)
-                r[t] = e[4 * t] << 24,
-                    r[t] |= e[4 * t + 1] << 16,
-                    r[t] |= e[4 * t + 2] << 8,
-                    r[t] |= e[4 * t + 3],
-                    r[t] >>>= 0;
-            for (var n = 16; n < 68; n++) {
-                var a = r[n - 16] ^ r[n - 9] ^ le(r[n - 3], 15);
-                a = a ^ le(a, 15) ^ le(a, 23),
-                    r[n] = (a ^ le(r[n - 13], 7) ^ r[n - 6]) >>> 0
-            }
-            for (n = 0; n < 64; n++)
-                r[n + 68] = (r[n] ^ r[n + 4]) >>> 0;
-            return r
-        }(t), i = this['reg'].slice(0), c = 0; c < 64; c++) {
-            var o = le(i[0], 12) + i[4] + le(de(c), c)
-                , s = ((o = le(o = (4294967295 & o) >>> 0, 7)) ^ le(i[0], 12)) >>> 0
-                , u = pe(c, i[0], i[1], i[2]);
-            u = (4294967295 & (u = u + i[3] + s + f[c + 68])) >>> 0;
-            var b = he(c, i[4], i[5], i[6]);
-            b = (4294967295 & (b = b + i[7] + o + f[c])) >>> 0,
-                i[3] = i[2],
-                i[2] = le(i[1], 9),
-                i[1] = i[0],
-                i[0] = u,
-                i[7] = i[6],
-                i[6] = le(i[5], 19),
-                i[5] = i[4],
-                i[4] = (b ^ le(b, 9) ^ le(b, 17)) >>> 0
+    const m = new Uint8Array([...array, 0x80, ...kArr, ...lenArr]);
+    const dataView = new DataView(m.buffer, 0);
+    const n = m.length / 64;
+    const V = new Uint32Array([
+        0x7380166F, 0x4914B2B9, 0x172442D7, 0xDA8A0600,
+        0xA96F30BC, 0x163138AA, 0xE38DEE4D, 0xB0FB0E4E
+    ]);
+
+    for (let i = 0; i < n; i++) {
+        __lp_dy_sm3_W.fill(0);
+        __lp_dy_sm3_M.fill(0);
+
+        const start = 16 * i;
+        for (let j = 0; j < 16; j++) {
+            __lp_dy_sm3_W[j] = dataView.getUint32((start + j) * 4, false);
         }
-        for (var l = 0; l < 8; l++)
-            this['reg'][l] = (this['reg'][l] ^ i[l]) >>> 0
+        for (let j = 16; j < 68; j++) {
+            __lp_dy_sm3_W[j] = (
+                __lp_dy_sm3_P1((__lp_dy_sm3_W[j - 16] ^ __lp_dy_sm3_W[j - 9]) ^ __lp_dy_sm3_rotl(__lp_dy_sm3_W[j - 3], 15)) ^
+                __lp_dy_sm3_rotl(__lp_dy_sm3_W[j - 13], 7) ^
+                __lp_dy_sm3_W[j - 6]
+            );
+        }
+        for (let j = 0; j < 64; j++) {
+            __lp_dy_sm3_M[j] = __lp_dy_sm3_W[j] ^ __lp_dy_sm3_W[j + 4];
+        }
+
+        const T1 = 0x79CC4519;
+        const T2 = 0x7A879D8A;
+        let A = V[0];
+        let B = V[1];
+        let C = V[2];
+        let D = V[3];
+        let E = V[4];
+        let F = V[5];
+        let G = V[6];
+        let H = V[7];
+        let SS1;
+        let SS2;
+        let TT1;
+        let TT2;
+        let T;
+
+        for (let j = 0; j < 64; j++) {
+            T = j >= 0 && j <= 15 ? T1 : T2;
+            SS1 = __lp_dy_sm3_rotl(__lp_dy_sm3_rotl(A, 12) + E + __lp_dy_sm3_rotl(T, j), 7);
+            SS2 = SS1 ^ __lp_dy_sm3_rotl(A, 12);
+
+            TT1 = (j >= 0 && j <= 15 ? ((A ^ B) ^ C) : (((A & B) | (A & C)) | (B & C))) + D + SS2 + __lp_dy_sm3_M[j];
+            TT2 = (j >= 0 && j <= 15 ? ((E ^ F) ^ G) : ((E & F) | ((~E) & G))) + H + SS1 + __lp_dy_sm3_W[j];
+
+            D = C;
+            C = __lp_dy_sm3_rotl(B, 9);
+            B = A;
+            A = TT1;
+            H = G;
+            G = __lp_dy_sm3_rotl(F, 19);
+            F = E;
+            E = __lp_dy_sm3_P0(TT2);
+        }
+
+        V[0] ^= A;
+        V[1] ^= B;
+        V[2] ^= C;
+        V[3] ^= D;
+        V[4] ^= E;
+        V[5] ^= F;
+        V[6] ^= G;
+        V[7] ^= H;
     }
-}
 
-function _fill() {
-    var a = 8 * this['size']
-        , f = this['chunk']['push'](128) % 64;
-    for (64 - f < 8 && (f -= 64); f < 56; f++)
-        this.chunk['push'](0);
-    for (var i = 0; i < 4; i++) {
-        var c = Math['floor'](a / 4294967296);
-        this['chunk'].push(c >>> 8 * (3 - i) & 255)
+    const result = [];
+    for (let i = 0; i < V.length; i++) {
+        const word = V[i];
+        result.push((word & 0xFF000000) >>> 24, (word & 0xFF0000) >>> 16, (word & 0xFF00) >>> 8, word & 0xFF);
     }
-    for (i = 0; i < 4; i++)
-        this['chunk']['push'](a >>> 8 * (3 - i) & 255)
-
+    return result;
 }
 
-function SM3() {
-    this.reg = [];
-    this.chunk = [];
-    this.size = 0;
-    this.reset()
+function __lp_dy_sm3_hmac(input, key) {
+    if (key.length > __lp_dy_sm3_blockLen) key = __lp_dy_sm3_core(key);
+    while (key.length < __lp_dy_sm3_blockLen) key.push(0);
+    const iPadKey = __lp_dy_sm3_xor(key, __lp_dy_sm3_iPad);
+    const oPadKey = __lp_dy_sm3_xor(key, __lp_dy_sm3_oPad);
+    const hash = __lp_dy_sm3_core([...iPadKey, ...input]);
+    return __lp_dy_sm3_core([...oPadKey, ...hash]);
 }
-SM3.prototype.reset = reset;
-SM3.prototype.write = write;
-SM3.prototype.sum = sum;
-SM3.prototype._compress = _compress;
-SM3.prototype._fill = _fill;
+
+function __lp_dy_sm3_leftPad(input, num) {
+    return input.length >= num ? input : (new Array(num - input.length + 1)).join("0") + input;
+}
+
+function __lp_dy_sm3_arrayToHex(arr) {
+    return arr.map((item) => {
+        const hex = item.toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+    }).join("");
+}
+
+function __lp_dy_sm3_hexToArray(hexStr) {
+    const words = [];
+    let text = __lp_dy_toString(hexStr);
+    if (text.length % 2 !== 0) {
+        text = __lp_dy_sm3_leftPad(text, text.length + 1);
+    }
+    for (let i = 0; i < text.length; i += 2) {
+        words.push(parseInt(text.substr(i, 2), 16));
+    }
+    return words;
+}
+
+function __lp_dy_sm3_utf8ToArray(str) {
+    const arr = [];
+    for (let i = 0; i < str.length; i++) {
+        const point = str.codePointAt(i);
+        if (point <= 0x007F) {
+            arr.push(point);
+        } else if (point <= 0x07FF) {
+            arr.push(0xC0 | (point >>> 6));
+            arr.push(0x80 | (point & 0x3F));
+        } else if (point <= 0xD7FF || (point >= 0xE000 && point <= 0xFFFF)) {
+            arr.push(0xE0 | (point >>> 12));
+            arr.push(0x80 | ((point >>> 6) & 0x3F));
+            arr.push(0x80 | (point & 0x3F));
+        } else if (point >= 0x010000 && point <= 0x10FFFF) {
+            i += 1;
+            arr.push(0xF0 | ((point >>> 18) & 0x1C));
+            arr.push(0x80 | ((point >>> 12) & 0x3F));
+            arr.push(0x80 | ((point >>> 6) & 0x3F));
+            arr.push(0x80 | (point & 0x3F));
+        } else {
+            arr.push(point);
+            throw new Error("input is not supported");
+        }
+    }
+    return arr;
+}
+
+function sm3(input, options) {
+    const normalizedInput = typeof input === "string"
+        ? __lp_dy_sm3_utf8ToArray(input)
+        : Array.prototype.slice.call(input);
+
+    if (options) {
+        const mode = options.mode || "hmac";
+        if (mode !== "hmac") throw new Error("invalid mode");
+        let key = options.key;
+        if (!key) throw new Error("invalid key");
+        key = typeof key === "string" ? __lp_dy_sm3_hexToArray(key) : Array.prototype.slice.call(key);
+        return __lp_dy_sm3_arrayToHex(__lp_dy_sm3_hmac(normalizedInput, key));
+    }
+
+    return __lp_dy_sm3_arrayToHex(__lp_dy_sm3_core(normalizedInput));
+}
+
+function __lp_dy_sm3_double_bytes(input) {
+    const normalized = Array.isArray(input) ? input.map((n) => Number(n) & 0xFF) : __lp_dy_toString(input);
+    const firstHex = sm3(normalized);
+    const secondHex = sm3(__lp_dy_sm3_hexToArray(firstHex));
+    return __lp_dy_sm3_hexToArray(secondHex);
+}
 
 function result_encrypt(long_str, num = null) {
     let s_obj = {
@@ -1229,7 +1418,6 @@ function gener_random(random, option) {
 
 //////////////////////////////////////////////
 function generate_rc4_bb_str(url_search_params, user_agent, window_env_str, suffix = "cus", Arguments = [0, 1, 14]) {
-    let sm3 = new SM3()
     let start_time = Date.now()
     /**
      * 进行3次加密处理
@@ -1238,11 +1426,11 @@ function generate_rc4_bb_str(url_search_params, user_agent, window_env_str, suff
      * 3: 对ua处理之后的结果
      */
         // url_search_params两次sm3之的结果
-    let url_search_params_list = sm3.sum(sm3.sum(url_search_params + suffix))
+    let url_search_params_list = __lp_dy_sm3_double_bytes(url_search_params + suffix)
     // 对后缀两次sm3之的结果
-    let cus = sm3.sum(sm3.sum(suffix))
+    let cus = __lp_dy_sm3_double_bytes(suffix)
     // 对ua处理之后的结果
-    let ua = sm3.sum(result_encrypt(rc4_encrypt(user_agent, String.fromCharCode.apply(null, [0.00390625, 1, Arguments[2]])), "s3"))
+    let ua = __lp_dy_sm3_double_bytes(result_encrypt(rc4_encrypt(user_agent, String.fromCharCode.apply(null, [0.00390625, 1, Arguments[2]])), "s3"))
     //
     let end_time = Date.now()
     // b

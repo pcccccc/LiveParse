@@ -92,11 +92,35 @@ struct PluginSystemTests {
         #expect(plugin.manifest.pluginId == "douyin")
         try await plugin.load()
     }
+
+    @Test
+    func builtInDouyinPluginCategoryCatalogNotTruncated() async throws {
+        let manager = try LiveParsePluginManager()
+        let categories: [LiveMainListModel] = try await manager.callDecodable(
+            pluginId: "douyin",
+            function: "getCategoryList",
+            payload: [:]
+        )
+
+        #expect(categories.count >= 10)
+        let ids = Set(categories.map(\.id))
+        #expect(ids.contains("1"))   // 游戏子分类（射击游戏）
+        #expect(ids.contains("108")) // 运动
+    }
     @Test
     func builtInYoutubePluginResolvable() async throws {
         let manager = try LiveParsePluginManager()
         let plugin = try manager.resolve(pluginId: "youtube")
         #expect(plugin.manifest.pluginId == "youtube")
         try await plugin.load()
+    }
+
+    @Test
+    func jsPlatformManagerMarksEightPlatforms() async throws {
+        let infos = LiveParseJSPlatformManager.availablePlatformInfos()
+        #expect(infos.count == 8)
+
+        let pluginIds = Set(infos.map(\.pluginId))
+        #expect(pluginIds == Set(["bilibili", "huya", "douyin", "douyu", "cc", "ks", "yy", "youtube"]))
     }
 }

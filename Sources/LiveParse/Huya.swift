@@ -8,7 +8,6 @@
 import Foundation
 import Alamofire
 import CommonCrypto
-import TarsKit
 
 struct HuyaMainListModel: Codable {
     let id: String
@@ -167,16 +166,6 @@ struct HuyaSearchDocs: Codable {
 
 public struct Huya: LiveParse {
 
-    private static let baseUrl = "https://m.huya.com/"
-    private static let HYSDK_UA = "HYSDK(Windows, 30000002)_APP(pc_exe&7060000&official)_SDK(trans&2.32.3.5646)"
-    private static let requestHeaders: [String: String] = [
-        "Origin": baseUrl,
-        "Referer": baseUrl,
-        "User-Agent": HYSDK_UA
-    ]
-
-    static let tupClient = TarsHttp(baseUrl: "http://wup.huya.com", servantName: "liveui", headers: requestHeaders)
-    
     // MARK: - 正则表达式常量
     private static let roomIdPattern = "(?:huya\\.com/)(\\d+)"
     private static let htmlRoomIdPattern = "\"lProfileRoom\":(\\d+),"
@@ -308,6 +297,7 @@ public struct Huya: LiveParse {
                     ]
                 )
                 logInfo("Huya.getPlayArgs 使用 JS 插件返回 \(result.count) 组线路")
+                logPlayArgsDiagnostics(source: "plugin-js", roomId: roomId, lines: result)
                 return result
             } catch {
                 logWarning("Huya.getPlayArgs JS 插件失败：\(error)")
@@ -372,6 +362,7 @@ public struct Huya: LiveParse {
             }
 
             if !results.isEmpty {
+                logPlayArgsDiagnostics(source: "swift-fallback", roomId: roomId, lines: results)
                 return results
             }
         }
@@ -394,6 +385,39 @@ public struct Huya: LiveParse {
         ))
     }
 
+    private static func logPlayArgsDiagnostics(source: String, roomId: String, lines: [LiveQualityModel]) {
+        guard let firstLine = lines.first,
+              let firstQuality = firstLine.qualitys.first else {
+            logWarning("Huya.playArgs[\(source)] 空结果 roomId=\(roomId)")
+            return
+        }
+
+        let rawURL = firstQuality.url
+        guard let components = URLComponents(string: rawURL) else {
+            logWarning("Huya.playArgs[\(source)] 首条URL无法解析 roomId=\(roomId) url=\(rawURL)")
+            return
+        }
+
+        let queryMap: [String: String] = (components.queryItems ?? []).reduce(into: [:]) { acc, item in
+            acc[item.name] = item.value ?? ""
+        }
+        let summary = [
+            "roomId=\(roomId)",
+            "line=\(firstLine.cdn)",
+            "quality=\(firstQuality.title)",
+            "codec=\(firstQuality.liveCodeType.rawValue)",
+            "host=\(components.host ?? "")",
+            "path=\(components.path)",
+            "ctype=\(queryMap["ctype"] ?? "")",
+            "t=\(queryMap["t"] ?? "")",
+            "u=\(queryMap["u"] ?? "")",
+            "uid=\(queryMap["uid"] ?? "")",
+            "ratio=\(queryMap["ratio"] ?? "")",
+            "wsTime=\(queryMap["wsTime"] ?? "")"
+        ].joined(separator: ", ")
+        logInfo("Huya.playArgs[\(source)] \(summary)")
+    }
+
     /// 从HTML中提取topSid (presenterUid)
     private static func extractTopSid(from html: String) -> Int {
         let pattern = "lChannelId\":(\\d+)"
@@ -403,24 +427,6 @@ public struct Huya: LiveParse {
             return 0
         }
         return Int(html[range]) ?? 0
-    }
-
-    /// 获取CDN Token (新接口)
-    private static func getCdnTokenInfoEx(streamName: String) async throws -> String {
-        let tid = HuyaUserId()
-        tid.sHuYaUA = "pc_exe&7060000&official"
-
-        let req = GetCdnTokenExReq()
-        req.tId = tid
-        req.sStreamName = streamName
-
-        let resp = try await tupClient.tupRequest("getCdnTokenInfoEx", tReq: req, tRsp: GetCdnTokenExResp())
-        return resp.sFlvToken
-    }
-
-    /// 暴露给插件系统的 token 获取（内部调用同一套 Tars 流程）
-    static func plugin_getCdnTokenInfoEx(streamName: String) async throws -> String {
-        try await getCdnTokenInfoEx(streamName: streamName)
     }
 
     /// 构建antiCode签名
@@ -497,43 +503,31 @@ public struct Huya: LiveParse {
 
     public static func getPlayURL(url: String, streamName: String, flvAntiCode: String, presenterUid: Int, iBitRate: Int) async throws -> String {
         let requestDetail = NetworkRequestDetail(
-            url: "tars://wup.huya.com/liveui/getCdnTokenInfoEx",
-            method: "TARS",
+            url: "https://m.huya.com/",
+            method: "JS_SIGN",
             parameters: [
                 "streamName": streamName,
+                "flvAntiCode": flvAntiCode,
                 "presenterUid": presenterUid,
                 "iBitRate": iBitRate
             ]
         )
 
-        if url.isEmpty {
+        if url.isEmpty || streamName.isEmpty || flvAntiCode.isEmpty {
             throw LiveParseError.business(.emptyResult(
                 location: "Huya.getPlayURL.input",
                 request: requestDetail
             ))
         }
 
-        do {
-            let antiCode = try await getCdnTokenInfoEx(streamName: streamName)
-            let finalAntiCode = buildAntiCode(stream: streamName, presenterUid: presenterUid, antiCode: antiCode)
-
-            var finalURL = "\(url)/\(streamName).flv?\(finalAntiCode)&codec=264"
-            if iBitRate > 0 {
-                finalURL += "&ratio=\(iBitRate)"
-            }
-
-            logDebug("生成虎牙播放地址: \(finalURL)")
-
-            return finalURL
-        } catch let error as LiveParseError {
-            throw error
-        } catch {
-            throw LiveParseError.network(.requestFailed(
-                request: requestDetail,
-                response: nil,
-                underlyingError: error
-            ))
+        let finalAntiCode = buildAntiCode(stream: streamName, presenterUid: presenterUid, antiCode: flvAntiCode)
+        var finalURL = "\(url)/\(streamName).flv?\(finalAntiCode)&codec=264"
+        if iBitRate > 0 {
+            finalURL += "&ratio=\(iBitRate)"
         }
+
+        logDebug("生成虎牙播放地址: \(finalURL)")
+        return finalURL
     }
     
     public static func getLiveLastestInfo(roomId: String, userId: String?) async throws -> LiveModel {

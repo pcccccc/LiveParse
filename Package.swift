@@ -20,7 +20,6 @@ let package = Package(
         .package(url: "https://github.com/tsolomko/SWCompression", .upToNextMajor(from: "4.8.6")),
         .package(url: "https://github.com/apple/swift-protobuf.git", .upToNextMajor(from: "1.25.1")),
         .package(url: "https://github.com/alexeichhorn/YouTubeKit", .upToNextMajor(from: "0.4.3")),
-        .package(url: "https://github.com/pcccccc/TarsKit", .upToNextMajor(from: "1.3.0")),
         .package(url: "https://github.com/pcccccc/GMObjC", .upToNextMajor(from: "1.1.8"))
     ],
     targets: [
@@ -35,7 +34,6 @@ let package = Package(
                 .product(name: "SWCompression", package: "SWCompression"),
                 .product(name: "SwiftProtobuf", package: "swift-protobuf"),
                 .product(name: "YouTubeKit", package: "YouTubeKit"),
-                .product(name: "TarsKit", package: "TarsKit"),
                 .product(name: "GMObjC", package: "GMObjC")
             ],
             resources: [.process("Resources")],

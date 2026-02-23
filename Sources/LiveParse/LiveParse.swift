@@ -170,16 +170,25 @@ public final class LiveParseTools {
     }
 
     public class func getAllSupportPlatform() -> [LiveParsePlatformInfo] {
-        return [
-            LiveParsePlatformInfo(liveType: .bilibili, livePlatformName: getLivePlatformName(.bilibili), description: "超清直播须在设置扫码"),
-            LiveParsePlatformInfo(liveType: .huya, livePlatformName: getLivePlatformName(.huya), description: "竞技由我，玩在虎牙"),
-            LiveParsePlatformInfo(liveType: .douyin, livePlatformName: getLivePlatformName(.douyin), description: "无法使用请在PC浏览器扫码登录"),
-            LiveParsePlatformInfo(liveType: .douyu, livePlatformName: getLivePlatformName(.douyu), description: "每个人的直播平台"),
-            LiveParsePlatformInfo(liveType: .cc, livePlatformName: getLivePlatformName(.cc), description: "网易游戏直播(暂无弹幕)"),
-            LiveParsePlatformInfo(liveType: .ks, livePlatformName: getLivePlatformName(.ks), description: "无法播放请手动打开任意直播间通过滑块验证码(暂无弹幕)"),
-            LiveParsePlatformInfo(liveType: .yy, livePlatformName: getLivePlatformName(.yy), description: "全民娱乐的互动直播平台(暂无弹幕)"),
-            LiveParsePlatformInfo(liveType: .youtube, livePlatformName: getLivePlatformName(.youtube), description: "需要自行解决代理问题，仅支持搜索观看(暂无弹幕)"),
+        let descriptions: [LiveType: String] = [
+            .bilibili: "超清直播须在设置扫码",
+            .huya: "竞技由我，玩在虎牙",
+            .douyin: "无法使用请在PC浏览器扫码登录",
+            .douyu: "每个人的直播平台",
+            .cc: "网易游戏直播(暂无弹幕)",
+            .ks: "无法播放请手动打开任意直播间通过滑块验证码(暂无弹幕)",
+            .yy: "全民娱乐的互动直播平台(暂无弹幕)",
+            .youtube: "需要自行解决代理问题，仅支持搜索观看(暂无弹幕)"
         ]
+
+        return LiveParseJSPlatformManager.availablePlatforms.map { platform in
+            let liveType = platform.liveType
+            return LiveParsePlatformInfo(
+                liveType: liveType,
+                livePlatformName: getLivePlatformName(liveType),
+                description: descriptions[liveType] ?? ""
+            )
+        }
     }
 }
 
