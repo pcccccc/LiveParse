@@ -8,6 +8,8 @@ public struct LiveParsePluginManifest: Codable, Equatable, Sendable {
     public let liveTypes: [String]
     public let entry: String
     public let minHostVersion: String?
+    /// 插件入口脚本执行前需要预加载的脚本文件名列表（相对于插件根目录或 bundle 资源目录）
+    public let preloadScripts: [String]?
 
     public init(
         pluginId: String,
@@ -16,7 +18,8 @@ public struct LiveParsePluginManifest: Codable, Equatable, Sendable {
         displayName: String? = nil,
         liveTypes: [String],
         entry: String,
-        minHostVersion: String? = nil
+        minHostVersion: String? = nil,
+        preloadScripts: [String]? = nil
     ) {
         self.pluginId = pluginId
         self.version = version
@@ -25,6 +28,7 @@ public struct LiveParsePluginManifest: Codable, Equatable, Sendable {
         self.liveTypes = liveTypes
         self.entry = entry
         self.minHostVersion = minHostVersion
+        self.preloadScripts = preloadScripts
     }
 }
 

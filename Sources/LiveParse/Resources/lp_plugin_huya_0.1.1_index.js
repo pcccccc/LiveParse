@@ -1,4 +1,4 @@
-function __lp_tryDecodePercent(s) {
+function _lp_tryDecodePercent(s) {
   try {
     return decodeURIComponent(s);
   } catch (e) {
@@ -6,7 +6,7 @@ function __lp_tryDecodePercent(s) {
   }
 }
 
-function __lp_huya_throw(code, message, context) {
+function _huya_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
     Host.raise(code, message, context || {});
   }
@@ -16,7 +16,7 @@ function __lp_huya_throw(code, message, context) {
   throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
 }
 
-function __lp_urlQueryAllowedEncode(s) {
+function _lp_urlQueryAllowedEncode(s) {
   // 近似 iOS 的 urlQueryAllowed：尽量保留 + / =
   return encodeURIComponent(s)
     .replace(/%2B/gi, "+")
@@ -24,7 +24,7 @@ function __lp_urlQueryAllowedEncode(s) {
     .replace(/%3D/gi, "=");
 }
 
-function __lp_parseQueryString(qs) {
+function _lp_parseQuery(qs) {
   const out = {};
   if (!qs) return out;
   const parts = String(qs).split("&");
@@ -33,14 +33,14 @@ function __lp_parseQueryString(qs) {
     const idx = p.indexOf("=");
     const k = idx >= 0 ? p.slice(0, idx) : p;
     const v = idx >= 0 ? p.slice(idx + 1) : "";
-    out[k] = __lp_tryDecodePercent(v);
+    out[k] = _lp_tryDecodePercent(v);
   }
   return out;
 }
 
-const __lp_huya_wup_base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const _huya_wup_base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-function __lp_huya_bytesToBase64(bytes) {
+function _huya_bytesToBase64(bytes) {
   let out = "";
   let i = 0;
   while (i < bytes.length) {
@@ -50,21 +50,21 @@ function __lp_huya_bytesToBase64(bytes) {
     const hasB2 = i < bytes.length;
     const b2 = hasB2 ? (bytes[i++] & 0xff) : 0;
 
-    out += __lp_huya_wup_base64_chars[b0 >> 2];
-    out += __lp_huya_wup_base64_chars[((b0 & 0x03) << 4) | (b1 >> 4)];
-    out += hasB1 ? __lp_huya_wup_base64_chars[((b1 & 0x0f) << 2) | (b2 >> 6)] : "=";
-    out += hasB2 ? __lp_huya_wup_base64_chars[b2 & 0x3f] : "=";
+    out += _huya_wup_base64_chars[b0 >> 2];
+    out += _huya_wup_base64_chars[((b0 & 0x03) << 4) | (b1 >> 4)];
+    out += hasB1 ? _huya_wup_base64_chars[((b1 & 0x0f) << 2) | (b2 >> 6)] : "=";
+    out += hasB2 ? _huya_wup_base64_chars[b2 & 0x3f] : "=";
   }
   return out;
 }
 
-function __lp_huya_base64ToBytes(base64) {
+function _huya_base64ToBytes(base64) {
   const text = String(base64 || "").replace(/[\r\n\s]/g, "");
   if (!text) return [];
 
   const map = {};
-  for (let i = 0; i < __lp_huya_wup_base64_chars.length; i++) {
-    map[__lp_huya_wup_base64_chars[i]] = i;
+  for (let i = 0; i < _huya_wup_base64_chars.length; i++) {
+    map[_huya_wup_base64_chars[i]] = i;
   }
 
   const out = [];
@@ -101,7 +101,7 @@ function __lp_huya_base64ToBytes(base64) {
   return out;
 }
 
-function __LP_HUYA_UserIdEx() {
+function _HUYA_UserIdEx() {
   this.lUid = 0;
   this.sGuid = "";
   this.sToken = "";
@@ -111,10 +111,10 @@ function __LP_HUYA_UserIdEx() {
   this.sDeviceInfo = "";
   this.sQIMEI = "";
 }
-__LP_HUYA_UserIdEx.prototype._clone = function () { return new __LP_HUYA_UserIdEx(); };
-__LP_HUYA_UserIdEx.prototype._write = function (os, tag, value) { os.writeStruct(tag, value); };
-__LP_HUYA_UserIdEx.prototype._read = function (is, tag, def) { return is.readStruct(tag, true, def); };
-__LP_HUYA_UserIdEx.prototype.writeTo = function (os) {
+_HUYA_UserIdEx.prototype._clone = function () { return new _HUYA_UserIdEx(); };
+_HUYA_UserIdEx.prototype._write = function (os, tag, value) { os.writeStruct(tag, value); };
+_HUYA_UserIdEx.prototype._read = function (is, tag, def) { return is.readStruct(tag, true, def); };
+_HUYA_UserIdEx.prototype.writeTo = function (os) {
   os.writeInt64(0, this.lUid);
   os.writeString(1, this.sGuid);
   os.writeString(2, this.sToken);
@@ -124,7 +124,7 @@ __LP_HUYA_UserIdEx.prototype.writeTo = function (os) {
   os.writeString(6, this.sDeviceInfo);
   os.writeString(7, this.sQIMEI);
 };
-__LP_HUYA_UserIdEx.prototype.readFrom = function (is) {
+_HUYA_UserIdEx.prototype.readFrom = function (is) {
   this.lUid = is.readInt64(0, false, this.lUid);
   this.sGuid = is.readString(1, false, this.sGuid);
   this.sToken = is.readString(2, false, this.sToken);
@@ -135,24 +135,24 @@ __LP_HUYA_UserIdEx.prototype.readFrom = function (is) {
   this.sQIMEI = is.readString(7, false, this.sQIMEI);
 };
 
-function __LP_HUYA_GetCdnTokenExReq() {
+function _HUYA_GetCdnTokenExReq() {
   this.sFlvUrl = "";
   this.sStreamName = "";
   this.iLoopTime = 0;
-  this.tId = new __LP_HUYA_UserIdEx();
+  this.tId = new _HUYA_UserIdEx();
   this.iAppId = 66;
 }
-__LP_HUYA_GetCdnTokenExReq.prototype._clone = function () { return new __LP_HUYA_GetCdnTokenExReq(); };
-__LP_HUYA_GetCdnTokenExReq.prototype._write = function (os, tag, value) { os.writeStruct(tag, value); };
-__LP_HUYA_GetCdnTokenExReq.prototype._read = function (is, tag, def) { return is.readStruct(tag, true, def); };
-__LP_HUYA_GetCdnTokenExReq.prototype.writeTo = function (os) {
+_HUYA_GetCdnTokenExReq.prototype._clone = function () { return new _HUYA_GetCdnTokenExReq(); };
+_HUYA_GetCdnTokenExReq.prototype._write = function (os, tag, value) { os.writeStruct(tag, value); };
+_HUYA_GetCdnTokenExReq.prototype._read = function (is, tag, def) { return is.readStruct(tag, true, def); };
+_HUYA_GetCdnTokenExReq.prototype.writeTo = function (os) {
   os.writeString(0, this.sFlvUrl);
   os.writeString(1, this.sStreamName);
   os.writeInt32(2, this.iLoopTime);
   os.writeStruct(3, this.tId);
   os.writeInt32(4, this.iAppId);
 };
-__LP_HUYA_GetCdnTokenExReq.prototype.readFrom = function (is) {
+_HUYA_GetCdnTokenExReq.prototype.readFrom = function (is) {
   this.sFlvUrl = is.readString(0, false, this.sFlvUrl);
   this.sStreamName = is.readString(1, false, this.sStreamName);
   this.iLoopTime = is.readInt32(2, false, this.iLoopTime);
@@ -160,25 +160,25 @@ __LP_HUYA_GetCdnTokenExReq.prototype.readFrom = function (is) {
   this.iAppId = is.readInt32(4, false, this.iAppId);
 };
 
-function __LP_HUYA_GetCdnTokenExResp() {
+function _HUYA_GetCdnTokenExResp() {
   this.sFlvToken = "";
   this.iExpireTime = 0;
 }
-__LP_HUYA_GetCdnTokenExResp.prototype._clone = function () { return new __LP_HUYA_GetCdnTokenExResp(); };
-__LP_HUYA_GetCdnTokenExResp.prototype._write = function (os, tag, value) { os.writeStruct(tag, value); };
-__LP_HUYA_GetCdnTokenExResp.prototype._read = function (is, tag, def) { return is.readStruct(tag, true, def); };
-__LP_HUYA_GetCdnTokenExResp.prototype.writeTo = function (os) {
+_HUYA_GetCdnTokenExResp.prototype._clone = function () { return new _HUYA_GetCdnTokenExResp(); };
+_HUYA_GetCdnTokenExResp.prototype._write = function (os, tag, value) { os.writeStruct(tag, value); };
+_HUYA_GetCdnTokenExResp.prototype._read = function (is, tag, def) { return is.readStruct(tag, true, def); };
+_HUYA_GetCdnTokenExResp.prototype.writeTo = function (os) {
   os.writeString(0, this.sFlvToken);
   os.writeInt32(1, this.iExpireTime);
 };
-__LP_HUYA_GetCdnTokenExResp.prototype.readFrom = function (is) {
+_HUYA_GetCdnTokenExResp.prototype.readFrom = function (is) {
   this.sFlvToken = is.readString(0, false, this.sFlvToken);
   this.iExpireTime = is.readInt32(1, false, this.iExpireTime);
 };
 
-const __lp_huya_tokenCache = {};
+const _huya_tokenCache = {};
 
-async function __lp_huya_getCdnTokenInfoEx(streamName) {
+async function _huya_getCdnTokenInfoEx(streamName) {
   const name = String(streamName || "");
   if (!name) return "";
 
@@ -187,16 +187,16 @@ async function __lp_huya_getCdnTokenInfoEx(streamName) {
     Host.runtime.loadBuiltinScript("huya.js");
   }
   if (typeof Taf === "undefined" || typeof HUYA === "undefined") {
-    __lp_huya_throw("INVALID_RESPONSE", "huya.js runtime not available", { streamName: name });
+    _huya_throw("INVALID_RESPONSE", "huya.js runtime not available", { streamName: name });
   }
 
   const now = Date.now();
-  const cached = __lp_huya_tokenCache[name];
+  const cached = _huya_tokenCache[name];
   if (cached && cached.token && cached.expiresAt > now) {
     return cached.token;
   }
 
-  const req = new __LP_HUYA_GetCdnTokenExReq();
+  const req = new _HUYA_GetCdnTokenExReq();
   req.sFlvUrl = "";
   req.sStreamName = name;
   req.iLoopTime = 0;
@@ -219,7 +219,7 @@ async function __lp_huya_getCdnTokenInfoEx(streamName) {
 
   const encoded = wup.encode();
   const encodedBytes = Array.from(new Uint8Array(encoded.getBuffer()));
-  const requestBodyBase64 = __lp_huya_bytesToBase64(encodedBytes);
+  const requestBodyBase64 = _huya_bytesToBase64(encodedBytes);
 
   const response = await Host.http.request({
     url: "http://wup.huya.com",
@@ -236,37 +236,37 @@ async function __lp_huya_getCdnTokenInfoEx(streamName) {
 
   const responseBase64 = String((response && response.bodyBase64) || "");
   if (!responseBase64) {
-    __lp_huya_throw("INVALID_RESPONSE", "empty wup response", { streamName: name });
+    _huya_throw("INVALID_RESPONSE", "empty wup response", { streamName: name });
   }
 
-  const responseBytes = __lp_huya_base64ToBytes(responseBase64);
+  const responseBytes = _huya_base64ToBytes(responseBase64);
   if (responseBytes.length === 0) {
-    __lp_huya_throw("INVALID_RESPONSE", "invalid wup response bytes", { streamName: name });
+    _huya_throw("INVALID_RESPONSE", "invalid wup response bytes", { streamName: name });
   }
 
   const respWup = new Taf.Wup();
   respWup.decode(new Uint8Array(responseBytes).buffer);
   const code = Number(respWup.readInt32("", 0));
   if (code !== 0) {
-    __lp_huya_throw("UPSTREAM", `getCdnTokenInfoEx code=${code}`, { streamName: name, code: String(code) });
+    _huya_throw("UPSTREAM", `getCdnTokenInfoEx code=${code}`, { streamName: name, code: String(code) });
   }
 
-  const rsp = respWup.readStruct("tRsp", new __LP_HUYA_GetCdnTokenExResp());
+  const rsp = respWup.readStruct("tRsp", new _HUYA_GetCdnTokenExResp());
   const token = String((rsp && rsp.sFlvToken) || "");
   if (!token) {
-    __lp_huya_throw("INVALID_RESPONSE", "empty sFlvToken", { streamName: name });
+    _huya_throw("INVALID_RESPONSE", "empty sFlvToken", { streamName: name });
   }
 
   const expire = Number((rsp && rsp.iExpireTime) || 0);
   const safeTTL = expire > 0 ? Math.max(15, Math.min(60, expire - 5)) : 30;
-  __lp_huya_tokenCache[name] = {
+  _huya_tokenCache[name] = {
     token,
     expiresAt: now + safeTTL * 1000
   };
   return token;
 }
 
-async function __lp_huya_getCategorySubList(bussType) {
+async function _huya_getCategorySubList(bussType) {
   const resp = await Host.http.request({
     url: `https://live.cdn.huya.com/liveconfig/game/bussLive?bussType=${encodeURIComponent(String(bussType))}`,
     method: "GET",
@@ -286,7 +286,7 @@ async function __lp_huya_getCategorySubList(bussType) {
   });
 }
 
-async function __lp_huya_getRoomList(gameId, page) {
+async function _huya_getRoomList(gameId, page) {
   const qs = [
     "m=LiveList",
     "do=getLiveListByPage",
@@ -313,7 +313,7 @@ async function __lp_huya_getRoomList(gameId, page) {
   });
 }
 
-async function __lp_huya_searchRooms(keyword, page) {
+async function _huya_searchRooms(keyword, page) {
   const qs = [
     "m=Search",
     "do=getSearchContent",
@@ -344,49 +344,49 @@ async function __lp_huya_searchRooms(keyword, page) {
   });
 }
 
-function __lp_convertUnicodeEscapes(input) {
+function _lp_convertUnicodeEscapes(input) {
   return String(input).replace(/\\u([0-9A-Fa-f]{4})/g, function (_, hex) {
     return String.fromCharCode(parseInt(hex, 16));
   });
 }
 
-function __lp_removeIncludeFunctionValue(input) {
+function _lp_removeIncludeFunctionValue(input) {
   // 保持 JSON 可解析：将 function(...) { ... } 替换为 ""。
   return String(input).replace(/function\s*\([^}]*\}/g, "\"\"");
 }
 
-function __lp_extractHNFGlobalInit(html) {
+function _lp_extractHNFGlobalInit(html) {
   const re = /window\.HNF_GLOBAL_INIT\s*=\s*(.*?)<\/script>/s;
   const m = String(html).match(re);
-  if (!m) __lp_huya_throw("PARSE", "HNF_GLOBAL_INIT not found");
+  if (!m) _huya_throw("PARSE", "HNF_GLOBAL_INIT not found");
 
   let jsonString = m[1];
   jsonString = jsonString.replace(/\n/g, "").trim();
   jsonString = jsonString.replace(/;\s*$/, "");
-  jsonString = __lp_removeIncludeFunctionValue(jsonString);
-  jsonString = __lp_convertUnicodeEscapes(jsonString);
+  jsonString = _lp_removeIncludeFunctionValue(jsonString);
+  jsonString = _lp_convertUnicodeEscapes(jsonString);
   return JSON.parse(jsonString);
 }
 
-function __lp_extractTopSid(html) {
+function _lp_extractTopSid(html) {
   const m = String(html).match(/lChannelId\":(\d+)/);
   return m ? parseInt(m[1], 10) : 0;
 }
 
-function __lp_isValidRoomId(roomId) {
+function _lp_isNumericId(roomId) {
   const s = String(roomId || "").trim();
   if (!/^\d+$/.test(s)) return false;
   const n = parseInt(s, 10);
   return Number.isFinite(n) && n > 0;
 }
 
-function __lp_extractFirstURL(text) {
+function _lp_firstURL(text) {
   const m = String(text || "").match(/https?:\/\/[^\s|]+/);
   if (!m) return "";
   return String(m[0]).replace(/[),，。】]+$/g, "");
 }
 
-function __lp_extractRoomIdFromText(text) {
+function _lp_extractRoomIdFromText(text) {
   const s = String(text || "");
   let m = s.match(/(?:huya\.com\/)(\d+)/);
   if (m && m[1]) return m[1];
@@ -395,7 +395,7 @@ function __lp_extractRoomIdFromText(text) {
   return "";
 }
 
-function __lp_extractRoomIdFromHtml(html) {
+function _lp_extractRoomIdFromHtml(html) {
   const s = String(html || "");
   let m = s.match(/lProfileRoom\":(\d+)/);
   if (m && m[1]) return m[1];
@@ -406,24 +406,24 @@ function __lp_extractRoomIdFromHtml(html) {
   return "";
 }
 
-async function __lp_huya_resolveRoomIdFromShareCode(shareCode) {
+async function _huya_resolveRoomIdFromShareCode(shareCode) {
   const input = String(shareCode || "").trim();
-  if (!input) __lp_huya_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
+  if (!input) _huya_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
 
-  if (__lp_isValidRoomId(input)) return input;
+  if (_lp_isNumericId(input)) return input;
 
-  let roomId = __lp_extractRoomIdFromText(input);
-  if (__lp_isValidRoomId(roomId)) return roomId;
+  let roomId = _lp_extractRoomIdFromText(input);
+  if (_lp_isNumericId(roomId)) return roomId;
 
   const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69";
 
   const guessedURL = (input.includes("huya.com") && input.indexOf("://") < 0)
     ? ("https://" + input.replace(/^\/\//, ""))
     : "";
-  const url = __lp_extractFirstURL(input) || guessedURL;
+  const url = _lp_firstURL(input) || guessedURL;
   if (url) {
-    roomId = __lp_extractRoomIdFromText(url);
-    if (__lp_isValidRoomId(roomId)) return roomId;
+    roomId = _lp_extractRoomIdFromText(url);
+    if (_lp_isNumericId(roomId)) return roomId;
 
     const resp = await Host.http.request({
       url,
@@ -432,17 +432,17 @@ async function __lp_huya_resolveRoomIdFromShareCode(shareCode) {
       timeout: 20
     });
 
-    roomId = __lp_extractRoomIdFromText(resp.url || "");
-    if (__lp_isValidRoomId(roomId)) return roomId;
+    roomId = _lp_extractRoomIdFromText(resp.url || "");
+    if (_lp_isNumericId(roomId)) return roomId;
 
-    roomId = __lp_extractRoomIdFromHtml(resp.bodyText || "");
-    if (__lp_isValidRoomId(roomId)) return roomId;
+    roomId = _lp_extractRoomIdFromHtml(resp.bodyText || "");
+    if (_lp_isNumericId(roomId)) return roomId;
   }
 
-  __lp_huya_throw("NOT_FOUND", "roomId not found", { shareCode: String(shareCode || "") });
+  _huya_throw("NOT_FOUND", "roomId not found", { shareCode: String(shareCode || "") });
 }
 
-function __lp_rotl64(t) {
+function _lp_rotl64(t) {
   // Swift 实现：仅对低 32bit 做循环左移 8 位
   const low = (t >>> 0);
   const rotatedLow = (((low << 8) | (low >>> 24)) >>> 0);
@@ -451,8 +451,8 @@ function __lp_rotl64(t) {
   return high + rotatedLow;
 }
 
-function __lp_buildAntiCode(streamName, presenterUid, antiCode) {
-  const params = __lp_parseQueryString(antiCode);
+function _lp_buildAntiCode(streamName, presenterUid, antiCode) {
+  const params = _lp_parseQuery(antiCode);
   if (!params.fm) return antiCode;
 
   const ctype = params.ctype || "huya_pc_exe";
@@ -463,10 +463,10 @@ function __lp_buildAntiCode(streamName, presenterUid, antiCode) {
   const seqId = presenterUid + calcStartTime;
   const secretHash = Host.crypto.md5(`${seqId}|${ctype}|${platformId}`);
 
-  const convertUid = __lp_rotl64(presenterUid);
+  const convertUid = _lp_rotl64(presenterUid);
   const calcUid = isWap ? presenterUid : convertUid;
 
-  const fmDecoded = Host.crypto.base64Decode(__lp_tryDecodePercent(params.fm));
+  const fmDecoded = Host.crypto.base64Decode(_lp_tryDecodePercent(params.fm));
   const secretPrefix = String(fmDecoded).split("_")[0] || "";
   const wsTime = params.wsTime || "";
   const secretStr = `${secretPrefix}_${calcUid}_${streamName}_${secretHash}_${wsTime}`;
@@ -476,7 +476,7 @@ function __lp_buildAntiCode(streamName, presenterUid, antiCode) {
   const ct = Math.floor((wsTimeInt + Math.random()) * 1000);
   const uuid = Math.floor(((ct % 10000000000) + Math.random()) * 1000) % 0xFFFFFFFF;
 
-  const fmEncoded = __lp_urlQueryAllowedEncode(params.fm);
+  const fmEncoded = _lp_urlQueryAllowedEncode(params.fm);
 
   const res = [];
   res.push(`wsSecret=${wsSecret}`);
@@ -498,17 +498,17 @@ function __lp_buildAntiCode(streamName, presenterUid, antiCode) {
   return res.join("&");
 }
 
-async function __lp_getPlayURL(stream, presenterUid, bitRate) {
+async function _lp_getPlayURL(stream, presenterUid, bitRate) {
   let antiCodeSource = "";
   try {
-    antiCodeSource = await __lp_huya_getCdnTokenInfoEx(stream.sStreamName);
+    antiCodeSource = await _huya_getCdnTokenInfoEx(stream.sStreamName);
   } catch (_) {
     antiCodeSource = String(stream.sFlvAntiCode || "");
   }
   if (!antiCodeSource) {
     return "";
   }
-  const antiCode = __lp_buildAntiCode(stream.sStreamName, presenterUid, antiCodeSource);
+  const antiCode = _lp_buildAntiCode(stream.sStreamName, presenterUid, antiCodeSource);
   let url = `${stream.sFlvUrl}/${stream.sStreamName}.flv?${antiCode}&codec=264`;
   if (bitRate > 0) {
     url += `&ratio=${bitRate}`;
@@ -516,7 +516,7 @@ async function __lp_getPlayURL(stream, presenterUid, bitRate) {
   return url;
 }
 
-async function __lp_getHlsPlayURL(stream, presenterUid, bitRate) {
+async function _lp_getHlsPlayURL(stream, presenterUid, bitRate) {
   const base = String(stream.sHlsUrl || "");
   const streamName = String(stream.sStreamName || "");
   if (!base || !streamName) return "";
@@ -524,7 +524,7 @@ async function __lp_getHlsPlayURL(stream, presenterUid, bitRate) {
   const antiCodeSource = String(stream.sHlsAntiCode || stream.sFlvAntiCode || "");
   if (!antiCodeSource) return "";
 
-  const antiCode = __lp_buildAntiCode(streamName, presenterUid, antiCodeSource);
+  const antiCode = _lp_buildAntiCode(streamName, presenterUid, antiCodeSource);
   const suffix = String(stream.sHlsUrlSuffix || "m3u8");
 
   let url = `${base}/${streamName}.${suffix}?${antiCode}`;
@@ -536,13 +536,13 @@ async function __lp_getHlsPlayURL(stream, presenterUid, bitRate) {
 
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
-  async getRoomInfoFromShareCode(payload) {
+  async resolveShare(payload) {
     const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
-    if (!shareCode) __lp_huya_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
-    const roomId = await __lp_huya_resolveRoomIdFromShareCode(shareCode);
-    return await this.getLiveLastestInfo({ roomId, userId: null });
+    if (!shareCode) _huya_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
+    const roomId = await _huya_resolveRoomIdFromShareCode(shareCode);
+    return await this.getRoomDetail({ roomId, userId: null });
   },
-  async getCategoryList(payload) {
+  async getCategories(payload) {
     const main = [
       { id: "1", title: "网游" },
       { id: "2", title: "单机" },
@@ -551,29 +551,29 @@ globalThis.LiveParsePlugin = {
     ];
     const out = [];
     for (const item of main) {
-      const subList = await __lp_huya_getCategorySubList(item.id);
+      const subList = await _huya_getCategorySubList(item.id);
       out.push({ id: item.id, title: item.title, icon: "", biz: "", subList });
     }
     return out;
   },
 
-  async getRoomList(payload) {
+  async getRooms(payload) {
     const id = String(payload && payload.id ? payload.id : "");
     const page = (payload && payload.page) ? Number(payload.page) : 1;
-    if (!id) __lp_huya_throw("INVALID_ARGS", "id is required", { field: "id" });
-    return await __lp_huya_getRoomList(id, page);
+    if (!id) _huya_throw("INVALID_ARGS", "id is required", { field: "id" });
+    return await _huya_getRoomList(id, page);
   },
 
-  async searchRooms(payload) {
+  async search(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
     const page = (payload && payload.page) ? Number(payload.page) : 1;
-    if (!keyword) __lp_huya_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
-    return await __lp_huya_searchRooms(keyword, page);
+    if (!keyword) _huya_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
+    return await _huya_searchRooms(keyword, page);
   },
 
-  async getLiveLastestInfo(payload) {
+  async getRoomDetail(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    if (!roomId) _huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
     const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69";
     const resp = await Host.http.request({
@@ -583,7 +583,7 @@ globalThis.LiveParsePlugin = {
       timeout: 20
     });
     const html = resp.bodyText || "";
-    const data = __lp_extractHNFGlobalInit(html);
+    const data = _lp_extractHNFGlobalInit(html);
 
     const roomInfo = data && data.roomInfo;
     const eLiveStatus = roomInfo ? roomInfo.eLiveStatus : 0;
@@ -608,7 +608,7 @@ globalThis.LiveParsePlugin = {
     }
 
     if (!liveInfo) {
-      __lp_huya_throw("INVALID_RESPONSE", "missing liveInfo", { roomId: String(roomId || "") });
+      _huya_throw("INVALID_RESPONSE", "missing liveInfo", { roomId: String(roomId || "") });
     }
 
     // liveInfo 结构与 Swift 侧 HuyaRoomTLiveInfo 对齐
@@ -627,9 +627,9 @@ globalThis.LiveParsePlugin = {
 
   async getLiveState(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    if (!roomId) _huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
-    const info = await this.getLiveLastestInfo({
+    const info = await this.getRoomDetail({
       roomId,
       userId: payload && payload.userId ? payload.userId : null
     });
@@ -639,9 +639,9 @@ globalThis.LiveParsePlugin = {
     };
   },
 
-  async getDanmukuArgs(payload) {
+  async getDanmaku(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    if (!roomId) _huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
     const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69";
     const resp = await Host.http.request({
@@ -652,12 +652,12 @@ globalThis.LiveParsePlugin = {
     });
     const html = resp.bodyText || "";
 
-    const data = __lp_extractHNFGlobalInit(html);
+    const data = _lp_extractHNFGlobalInit(html);
     const liveInfo = data && data.roomInfo && data.roomInfo.tLiveInfo;
     const streamInfo = liveInfo && liveInfo.tLiveStreamInfo && liveInfo.tLiveStreamInfo.vStreamInfo;
     const firstStream = streamInfo && streamInfo.value ? streamInfo.value[0] : null;
     if (!liveInfo || !firstStream) {
-      __lp_huya_throw("INVALID_RESPONSE", "missing stream info", { roomId: String(roomId || "") });
+      _huya_throw("INVALID_RESPONSE", "missing stream info", { roomId: String(roomId || "") });
     }
 
     return {
@@ -669,9 +669,9 @@ globalThis.LiveParsePlugin = {
       headers: null
     };
   },
-  async getPlayArgs(payload) {
+  async getPlayback(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    if (!roomId) _huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
     const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Mobile/15E148 Safari/604.1";
     const resp = await Host.http.request({
@@ -682,8 +682,8 @@ globalThis.LiveParsePlugin = {
     });
     const html = resp.bodyText || "";
 
-    const data = __lp_extractHNFGlobalInit(html);
-    const topSid = __lp_extractTopSid(html);
+    const data = _lp_extractHNFGlobalInit(html);
+    const topSid = _lp_extractTopSid(html);
     const results = [];
 
     const streamInfo = data && data.roomInfo && data.roomInfo.tLiveInfo && data.roomInfo.tLiveInfo.tLiveStreamInfo;
@@ -699,7 +699,7 @@ globalThis.LiveParsePlugin = {
           const bitRate = br.iBitRate || 0;
           const title = br.sDisplayName || "";
 
-          const flvURL = await __lp_getPlayURL(s, topSid, bitRate);
+          const flvURL = await _lp_getPlayURL(s, topSid, bitRate);
           if (flvURL) {
             qualities.push({
               roomId,
@@ -711,7 +711,7 @@ globalThis.LiveParsePlugin = {
             });
           }
 
-          const hlsURL = await __lp_getHlsPlayURL(s, topSid, bitRate);
+          const hlsURL = await _lp_getHlsPlayURL(s, topSid, bitRate);
           if (hlsURL) {
             qualities.push({
               roomId,
@@ -748,6 +748,6 @@ globalThis.LiveParsePlugin = {
       }];
     }
 
-    __lp_huya_throw("INVALID_RESPONSE", "empty result", { roomId: String(roomId || "") });
+    _huya_throw("INVALID_RESPONSE", "empty result", { roomId: String(roomId || "") });
   }
 };

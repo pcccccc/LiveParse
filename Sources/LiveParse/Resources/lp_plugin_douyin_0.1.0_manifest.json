@@ -4,5 +4,6 @@
   "apiVersion": 1,
   "displayName": "Douyin (JS PoC)",
   "liveTypes": ["2"],
-  "entry": "lp_plugin_douyin_0.1.0_index.js"
+  "entry": "lp_plugin_douyin_0.1.0_index.js",
+  "preloadScripts": ["webmssdk.js"]
 }

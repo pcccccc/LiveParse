@@ -1,4 +1,4 @@
-function __lp_tryDecodePercent(s) {
+function _lp_decodePercent(s) {
   try {
     return decodeURIComponent(s);
   } catch (e) {
@@ -6,7 +6,7 @@ function __lp_tryDecodePercent(s) {
   }
 }
 
-function __lp_douyu_throw(code, message, context) {
+function _douyu_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
     Host.raise(code, message, context || {});
   }
@@ -16,7 +16,7 @@ function __lp_douyu_throw(code, message, context) {
   throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
 }
 
-function __lp_parseQueryString(qs) {
+function _lp_parseQuery(qs) {
   const out = {};
   if (!qs) return out;
   const parts = String(qs).split("&");
@@ -25,31 +25,31 @@ function __lp_parseQueryString(qs) {
     const idx = p.indexOf("=");
     const k = idx >= 0 ? p.slice(0, idx) : p;
     const v = idx >= 0 ? p.slice(idx + 1) : "";
-    out[k] = __lp_tryDecodePercent(v);
+    out[k] = _lp_decodePercent(v);
   }
   return out;
 }
 
-function __lp_isValidRoomId(roomId) {
+function _lp_isNumericId(roomId) {
   const s = String(roomId || "").trim();
   if (!/^\d+$/.test(s)) return false;
   const n = parseInt(s, 10);
   return Number.isFinite(n) && n > 0;
 }
 
-function __lp_firstMatch(text, re) {
+function _lp_firstMatch(text, re) {
   const m = String(text || "").match(re);
   if (!m || !m[1]) return "";
   return String(m[1]);
 }
 
-function __lp_extractFirstURL(text) {
+function _lp_firstURL(text) {
   const m = String(text || "").match(/https?:\/\/[^\s|]+/);
   if (!m) return "";
   return String(m[0]).replace(/[),，。】]+$/g, "");
 }
 
-function __lp_generateRandomString(length) {
+function _lp_randomString(length) {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let out = "";
   for (let i = 0; i < length; i += 1) {
@@ -58,7 +58,7 @@ function __lp_generateRandomString(length) {
   return out;
 }
 
-async function __lp_douyu_getCategoryList() {
+async function _douyu_getCategories() {
   const resp = await Host.http.request({
     url: "https://m.douyu.com/api/cate/list",
     method: "GET",
@@ -66,7 +66,7 @@ async function __lp_douyu_getCategoryList() {
   });
   const obj = JSON.parse(resp.bodyText || "{}");
   if ((obj && obj.code) !== 0) {
-    __lp_douyu_throw("UPSTREAM", `category code invalid: ${obj && obj.code}`, { code: String((obj && obj.code) || "") });
+    _douyu_throw("UPSTREAM", `category code invalid: ${obj && obj.code}`, { code: String((obj && obj.code) || "") });
   }
 
   const cate1Info = (obj && obj.data && obj.data.cate1Info) || [];
@@ -95,7 +95,7 @@ async function __lp_douyu_getCategoryList() {
   });
 }
 
-async function __lp_douyu_getRoomList(id, page) {
+async function _douyu_getRooms(id, page) {
   const url = `https://www.douyu.com/gapi/rkc/directory/mixList/2_${encodeURIComponent(String(id))}/${encodeURIComponent(String(page))}`;
   const resp = await Host.http.request({
     url,
@@ -104,7 +104,7 @@ async function __lp_douyu_getRoomList(id, page) {
   });
   const obj = JSON.parse(resp.bodyText || "{}");
   if ((obj && obj.code) !== 0) {
-    __lp_douyu_throw("UPSTREAM", `room list code invalid: ${obj && obj.code}`, { code: String((obj && obj.code) || "") });
+    _douyu_throw("UPSTREAM", `room list code invalid: ${obj && obj.code}`, { code: String((obj && obj.code) || "") });
   }
 
   const list = (obj && obj.data && obj.data.rl) || [];
@@ -127,7 +127,7 @@ async function __lp_douyu_getRoomList(id, page) {
     });
 }
 
-async function __lp_douyu_getLiveLatestInfo(roomId) {
+async function _douyu_getRoomDetail(roomId) {
   const url = `https://www.douyu.com/betard/${encodeURIComponent(String(roomId))}`;
   const resp = await Host.http.request({
     url,
@@ -141,7 +141,7 @@ async function __lp_douyu_getLiveLatestInfo(roomId) {
 
   const obj = JSON.parse(resp.bodyText || "{}");
   const room = (obj && obj.room) || null;
-  if (!room) __lp_douyu_throw("INVALID_RESPONSE", "missing room field", { roomId: String(roomId || "") });
+  if (!room) _douyu_throw("INVALID_RESPONSE", "missing room field", { roomId: String(roomId || "") });
 
   const showStatus = Number(room.show_status || -1);
   const videoLoop = Number(room.videoLoop || -1);
@@ -169,7 +169,7 @@ async function __lp_douyu_getLiveLatestInfo(roomId) {
   };
 }
 
-async function __lp_douyu_getSign(roomId) {
+async function _douyu_getSign(roomId) {
   const encResp = await Host.http.request({
     url: `https://www.douyu.com/swf_api/homeH5Enc?rids=${encodeURIComponent(String(roomId))}`,
     method: "GET",
@@ -181,11 +181,11 @@ async function __lp_douyu_getSign(roomId) {
   });
   const encObj = JSON.parse(encResp.bodyText || "{}");
   const jsEnc = encObj && encObj.data && encObj.data[`room${String(roomId)}`];
-  if (!jsEnc) __lp_douyu_throw("INVALID_RESPONSE", "missing js encryption code", { roomId: String(roomId || "") });
+  if (!jsEnc) _douyu_throw("INVALID_RESPONSE", "missing js encryption code", { roomId: String(roomId || "") });
 
   let jsCode = String(jsEnc).replace(/return\s+eval/g, "return [strc, vdwdae325w_64we];");
   const m = jsCode.match(/(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function/);
-  if (!m || !m[1]) __lp_douyu_throw("PARSE", "sign function not found", { roomId: String(roomId || "") });
+  if (!m || !m[1]) _douyu_throw("PARSE", "sign function not found", { roomId: String(roomId || "") });
 
   let encFunction = String(m[1]);
   encFunction = encFunction.replace(/eval.*?;\}/i, "strc;}");
@@ -195,17 +195,17 @@ async function __lp_douyu_getSign(roomId) {
   try {
     fnPair = eval(`${encFunction};ub98484234();`);
   } catch (e) {
-    __lp_douyu_throw("PARSE", "execute encryption js failed", { roomId: String(roomId || "") });
+    _douyu_throw("PARSE", "execute encryption js failed", { roomId: String(roomId || "") });
   }
 
   if (!fnPair || !Array.isArray(fnPair) || fnPair.length < 2) {
-    __lp_douyu_throw("INVALID_RESPONSE", "invalid encryption function result", { roomId: String(roomId || "") });
+    _douyu_throw("INVALID_RESPONSE", "invalid encryption function result", { roomId: String(roomId || "") });
   }
 
   let signFun = String(fnPair[0] || "");
   const signV = String(fnPair[1] || "");
   if (!signFun || !signV) {
-    __lp_douyu_throw("INVALID_RESPONSE", "sign function empty", { roomId: String(roomId || "") });
+    _douyu_throw("INVALID_RESPONSE", "sign function empty", { roomId: String(roomId || "") });
   }
 
   const tt = String(Math.floor(Date.now() / 1000));
@@ -219,15 +219,15 @@ async function __lp_douyu_getSign(roomId) {
   try {
     paramsString = String(eval(signFun) || "");
   } catch (e) {
-    __lp_douyu_throw("PARSE", "execute sign function failed", { roomId: String(roomId || "") });
+    _douyu_throw("PARSE", "execute sign function failed", { roomId: String(roomId || "") });
   }
 
-  const params = __lp_parseQueryString(paramsString);
+  const params = _lp_parseQuery(paramsString);
   return params;
 }
 
-async function __lp_douyu_getRealPlayArgs(roomId, rate, cdn) {
-  const params = await __lp_douyu_getSign(roomId);
+async function _douyu_getPlayback(roomId, rate, cdn) {
+  const params = await _douyu_getSign(roomId);
   params.rate = String(rate || 0);
   if (cdn) params.cdn = String(cdn);
 
@@ -249,7 +249,7 @@ async function __lp_douyu_getRealPlayArgs(roomId, rate, cdn) {
 
   const obj = JSON.parse(resp.bodyText || "{}");
   const data = obj && obj.data;
-  if (!data) __lp_douyu_throw("INVALID_RESPONSE", "missing play data", { roomId: String(roomId || "") });
+  if (!data) _douyu_throw("INVALID_RESPONSE", "missing play data", { roomId: String(roomId || "") });
 
   const multirates = data.multirates || [];
   const cdns = data.cdnsWithName || [];
@@ -282,8 +282,8 @@ async function __lp_douyu_getRealPlayArgs(roomId, rate, cdn) {
   return out;
 }
 
-async function __lp_douyu_search(keyword, page) {
-  const did = __lp_generateRandomString(32);
+async function _douyu_search(keyword, page) {
+  const did = _lp_randomString(32);
   const qs = [
     `kw=${encodeURIComponent(String(keyword))}`,
     `page=${encodeURIComponent(String(page))}`,
@@ -318,21 +318,21 @@ async function __lp_douyu_search(keyword, page) {
   });
 }
 
-async function __lp_douyu_resolveRoomIdFromShareCode(shareCode) {
+async function _douyu_resolveShare(shareCode) {
   const input = String(shareCode || "").trim();
-  if (!input) __lp_douyu_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
+  if (!input) _douyu_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
 
-  if (__lp_isValidRoomId(input)) return input;
+  if (_lp_isNumericId(input)) return input;
 
   let roomId = "";
   if (input.includes("douyu.com")) {
-    roomId = __lp_firstMatch(input, /douyu\.com\/(\d+)/);
-    if (__lp_isValidRoomId(roomId)) return roomId;
-    roomId = __lp_firstMatch(input, /rid=(\d+)/);
-    if (__lp_isValidRoomId(roomId)) return roomId;
+    roomId = _lp_firstMatch(input, /douyu\.com\/(\d+)/);
+    if (_lp_isNumericId(roomId)) return roomId;
+    roomId = _lp_firstMatch(input, /rid=(\d+)/);
+    if (_lp_isNumericId(roomId)) return roomId;
   }
 
-  let candidateUrl = __lp_extractFirstURL(input);
+  let candidateUrl = _lp_firstURL(input);
   if (!candidateUrl) {
     if (input.startsWith("http")) {
       candidateUrl = input;
@@ -348,8 +348,8 @@ async function __lp_douyu_resolveRoomIdFromShareCode(shareCode) {
       timeout: 20
     });
 
-    roomId = __lp_firstMatch(resp.url || "", /(?:douyu\.com\/|rid=)(\d+)/);
-    if (__lp_isValidRoomId(roomId)) return roomId;
+    roomId = _lp_firstMatch(resp.url || "", /(?:douyu\.com\/|rid=)(\d+)/);
+    if (_lp_isNumericId(roomId)) return roomId;
 
     const html = String(resp.bodyText || "");
     const patterns = [
@@ -359,66 +359,66 @@ async function __lp_douyu_resolveRoomIdFromShareCode(shareCode) {
     ];
 
     for (const p of patterns) {
-      roomId = __lp_firstMatch(html, p);
-      if (__lp_isValidRoomId(roomId)) return roomId;
+      roomId = _lp_firstMatch(html, p);
+      if (_lp_isNumericId(roomId)) return roomId;
     }
   }
 
-  __lp_douyu_throw("NOT_FOUND", "roomId not found", { shareCode: String(shareCode || "") });
+  _douyu_throw("NOT_FOUND", "roomId not found", { shareCode: String(shareCode || "") });
 }
 
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
 
-  async getCategoryList() {
-    return await __lp_douyu_getCategoryList();
+  async getCategories() {
+    return await _douyu_getCategories();
   },
 
-  async getRoomList(payload) {
+  async getRooms(payload) {
     const id = String(payload && payload.id ? payload.id : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!id) __lp_douyu_throw("INVALID_ARGS", "id is required", { field: "id" });
-    return await __lp_douyu_getRoomList(id, page);
+    if (!id) _douyu_throw("INVALID_ARGS", "id is required", { field: "id" });
+    return await _douyu_getRooms(id, page);
   },
 
-  async getPlayArgs(payload) {
+  async getPlayback(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    return await __lp_douyu_getRealPlayArgs(roomId, 0, null);
+    if (!roomId) _douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    return await _douyu_getPlayback(roomId, 0, null);
   },
 
-  async getLiveLastestInfo(payload) {
+  async getRoomDetail(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    return await __lp_douyu_getLiveLatestInfo(roomId);
+    if (!roomId) _douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    return await _douyu_getRoomDetail(roomId);
   },
 
   async getLiveState(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    const info = await __lp_douyu_getLiveLatestInfo(roomId);
+    if (!roomId) _douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    const info = await _douyu_getRoomDetail(roomId);
     return {
       liveState: String(info && info.liveState ? info.liveState : "3")
     };
   },
 
-  async searchRooms(payload) {
+  async search(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!keyword) __lp_douyu_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
-    return await __lp_douyu_search(keyword, page);
+    if (!keyword) _douyu_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
+    return await _douyu_search(keyword, page);
   },
 
-  async getRoomInfoFromShareCode(payload) {
+  async resolveShare(payload) {
     const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
-    if (!shareCode) __lp_douyu_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
-    const roomId = await __lp_douyu_resolveRoomIdFromShareCode(shareCode);
-    return await __lp_douyu_getLiveLatestInfo(roomId);
+    if (!shareCode) _douyu_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
+    const roomId = await _douyu_resolveShare(shareCode);
+    return await _douyu_getRoomDetail(roomId);
   },
 
-  async getDanmukuArgs(payload) {
+  async getDanmaku(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    if (!roomId) _douyu_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return {
       args: {
         roomId: String(roomId)

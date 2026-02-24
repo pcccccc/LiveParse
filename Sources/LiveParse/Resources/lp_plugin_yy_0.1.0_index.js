@@ -13,7 +13,7 @@ const __lp_yy_playHeaders = {
 
 const __lp_yy_sidQueryKeys = ["sid", "ssid", "roomId"];
 
-function __lp_yy_throw(code, message, context) {
+function _yy_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
     Host.raise(code, message, context || {});
   }
@@ -23,30 +23,30 @@ function __lp_yy_throw(code, message, context) {
   throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
 }
 
-function __lp_yy_parseCode(value, fallback) {
+function _yy_parseCode(value, fallback) {
   const raw = String(value === undefined || value === null ? "" : value).trim();
   if (!raw) return fallback;
   const parsed = parseInt(raw, 10);
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
-function __lp_yy_isValidRoomId(value) {
+function _yy_isValidRoomId(value) {
   return /^\d{3,}$/.test(String(value || ""));
 }
 
-function __lp_yy_firstURL(text) {
+function _yy_firstURL(text) {
   const m = String(text || "").match(/https?:\/\/[^\s|]+/);
   return m ? String(m[0]) : "";
 }
 
-function __lp_yy_buildRoomListURL(id, parentId) {
+function _yy_buildRoomListURL(id, parentId) {
   if (String(id) === "index") {
     return `https://yyapp-idx.yy.com/mobyy/nav/${encodeURIComponent(String(id))}/${encodeURIComponent(String(parentId || ""))}`;
   }
   return `https://rubiks-idx.yy.com/nav/${encodeURIComponent(String(id))}/${encodeURIComponent(String(parentId || ""))}`;
 }
 
-function __lp_yy_parseLineInfos(avpInfo) {
+function _yy_parseLineInfos(avpInfo) {
   const streamLineList = avpInfo && avpInfo.stream_line_list;
   if (!streamLineList || typeof streamLineList !== "object") return [];
 
@@ -70,7 +70,7 @@ function __lp_yy_parseLineInfos(avpInfo) {
   return result;
 }
 
-function __lp_yy_extractPlayURL(avpInfo) {
+function _yy_extractPlayURL(avpInfo) {
   const lineAddr = avpInfo && avpInfo.stream_line_addr;
   if (!lineAddr || typeof lineAddr !== "object") return "";
 
@@ -83,11 +83,11 @@ function __lp_yy_extractPlayURL(avpInfo) {
   return "";
 }
 
-function __lp_yy_parseQualityDetails(jsonObject, defaultURL, roomId) {
+function _yy_parseQualityDetails(jsonObject, defaultURL, roomId) {
   const channelInfo = jsonObject && jsonObject.channel_stream_info;
   const streams = channelInfo && channelInfo.streams;
   if (!Array.isArray(streams)) {
-    __lp_yy_throw("INVALID_RESPONSE", "missing channel_stream_info.streams", { roomId: String(roomId || "") });
+    _yy_throw("INVALID_RESPONSE", "missing channel_stream_info.streams", { roomId: String(roomId || "") });
   }
 
   const details = [];
@@ -123,12 +123,12 @@ function __lp_yy_parseQualityDetails(jsonObject, defaultURL, roomId) {
   }
 
   if (details.length === 0) {
-    __lp_yy_throw("INVALID_RESPONSE", "missing gear_info", { roomId: String(roomId || "") });
+    _yy_throw("INVALID_RESPONSE", "missing gear_info", { roomId: String(roomId || "") });
   }
   return details;
 }
 
-async function __lp_yy_getRealPlayArgs(roomId, lineSeq, gear) {
+async function _yy_getPlayback(roomId, lineSeq, gear) {
   const millis13 = Date.now();
   const millis10 = Math.floor(Date.now() / 1000);
 
@@ -189,13 +189,13 @@ async function __lp_yy_getRealPlayArgs(roomId, lineSeq, gear) {
 
   const obj = JSON.parse(resp.bodyText || "{}");
   const avpInfo = obj && obj.avp_info_res;
-  if (!avpInfo) __lp_yy_throw("INVALID_RESPONSE", "missing avp_info_res", { roomId: String(roomId || "") });
+  if (!avpInfo) _yy_throw("INVALID_RESPONSE", "missing avp_info_res", { roomId: String(roomId || "") });
 
-  const lineInfos = __lp_yy_parseLineInfos(avpInfo);
-  const playURL = __lp_yy_extractPlayURL(avpInfo);
-  if (!playURL) __lp_yy_throw("NOT_FOUND", "missing play url", { roomId: String(roomId || "") });
+  const lineInfos = _yy_parseLineInfos(avpInfo);
+  const playURL = _yy_extractPlayURL(avpInfo);
+  if (!playURL) _yy_throw("NOT_FOUND", "missing play url", { roomId: String(roomId || "") });
 
-  const qualityDetails = __lp_yy_parseQualityDetails(obj, playURL, roomId);
+  const qualityDetails = _yy_parseQualityDetails(obj, playURL, roomId);
 
   return lineInfos.map(function (line) {
     return {
@@ -206,7 +206,7 @@ async function __lp_yy_getRealPlayArgs(roomId, lineSeq, gear) {
   });
 }
 
-function __lp_yy_roomDataToLiveModel(item) {
+function _yy_toRoomModel(item) {
   const sid = String(item && item.sid ? item.sid : "");
   const uid = item && item.uid ? String(item.uid) : sid;
   return {
@@ -222,7 +222,7 @@ function __lp_yy_roomDataToLiveModel(item) {
   };
 }
 
-function __lp_yy_searchDocToLiveModel(doc) {
+function _yy_searchToRoomModel(doc) {
   const roomId = String((doc && doc.sid) || "");
   return {
     userName: String((doc && (doc.name || doc.stageName)) || ""),
@@ -237,24 +237,24 @@ function __lp_yy_searchDocToLiveModel(doc) {
   };
 }
 
-function __lp_yy_resolveRoomIdFromShareCode(shareCode) {
+function _yy_resolveShare(shareCode) {
   const trimmed = String(shareCode || "").trim();
-  if (!trimmed) __lp_yy_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
+  if (!trimmed) _yy_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
 
-  const urlText = __lp_yy_firstURL(trimmed);
+  const urlText = _yy_firstURL(trimmed);
   if (urlText) {
     try {
       const u = new URL(urlText);
       for (const key of __lp_yy_sidQueryKeys) {
         const value = u.searchParams.get(key);
-        if (value && __lp_yy_isValidRoomId(value)) {
+        if (value && _yy_isValidRoomId(value)) {
           return value;
         }
       }
 
       const pathIds = String(u.pathname || "")
         .split("/")
-        .filter(function (token) { return __lp_yy_isValidRoomId(token); });
+        .filter(function (token) { return _yy_isValidRoomId(token); });
       if (pathIds.length > 0) {
         return pathIds[pathIds.length - 1];
       }
@@ -264,18 +264,18 @@ function __lp_yy_resolveRoomIdFromShareCode(shareCode) {
 
   const tokens = trimmed.split(/[\s|]+/);
   for (const token of tokens) {
-    if (__lp_yy_isValidRoomId(token)) return token;
+    if (_yy_isValidRoomId(token)) return token;
   }
 
-  if (__lp_yy_isValidRoomId(trimmed)) return trimmed;
+  if (_yy_isValidRoomId(trimmed)) return trimmed;
 
-  __lp_yy_throw("NOT_FOUND", "cannot resolve roomId from shareCode", { shareCode: String(shareCode || "") });
+  _yy_throw("NOT_FOUND", "cannot resolve roomId from shareCode", { shareCode: String(shareCode || "") });
 }
 
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
 
-  async getCategoryList() {
+  async getCategories() {
     const resp = await Host.http.request({
       url: "https://rubiks-idx.yy.com/navs",
       method: "GET",
@@ -284,8 +284,8 @@ globalThis.LiveParsePlugin = {
     });
 
     const response = JSON.parse(resp.bodyText || "{}");
-    if (__lp_yy_parseCode(response.code, -1) !== 0) {
-      __lp_yy_throw("UPSTREAM", `YY category error: ${response.code} - ${response.message || ""}`, {
+    if (_yy_parseCode(response.code, -1) !== 0) {
+      _yy_throw("UPSTREAM", `YY category error: ${response.code} - ${response.message || ""}`, {
         code: String(response.code || ""),
         message: String(response.message || "")
       });
@@ -331,12 +331,12 @@ globalThis.LiveParsePlugin = {
     return result;
   },
 
-  async getRoomList(payload) {
+  async getRooms(payload) {
     const id = String(payload && payload.id ? payload.id : "");
     const parentId = String(payload && payload.parentId ? payload.parentId : "");
-    if (!id) __lp_yy_throw("INVALID_ARGS", "id is required", { field: "id" });
+    if (!id) _yy_throw("INVALID_ARGS", "id is required", { field: "id" });
 
-    const url = __lp_yy_buildRoomListURL(id, parentId);
+    const url = _yy_buildRoomListURL(id, parentId);
     const resp = await Host.http.request({
       url,
       method: "GET",
@@ -345,8 +345,8 @@ globalThis.LiveParsePlugin = {
     });
 
     const response = JSON.parse(resp.bodyText || "{}");
-    if (response.code !== undefined && __lp_yy_parseCode(response.code, -1) !== 0) {
-      __lp_yy_throw("UPSTREAM", `YY room list error: ${response.code} - ${response.message || ""}`, {
+    if (response.code !== undefined && _yy_parseCode(response.code, -1) !== 0) {
+      _yy_throw("UPSTREAM", `YY room list error: ${response.code} - ${response.message || ""}`, {
         code: String(response.code || ""),
         message: String(response.message || "")
       });
@@ -362,21 +362,21 @@ globalThis.LiveParsePlugin = {
 
         const name = String((item && item.name) || "");
         if (name.includes("预告") || name.includes("活动")) continue;
-        rooms.push(__lp_yy_roomDataToLiveModel(item));
+        rooms.push(_yy_toRoomModel(item));
       }
     }
     return rooms;
   },
 
-  async getPlayArgs(payload) {
+  async getPlayback(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    return await __lp_yy_getRealPlayArgs(roomId, -1, 4);
+    if (!roomId) _yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    return await _yy_getPlayback(roomId, -1, 4);
   },
 
-  async getLiveLastestInfo(payload) {
+  async getRoomDetail(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    if (!roomId) _yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
     const url = `https://www.yy.com/api/liveInfoDetail/${encodeURIComponent(String(roomId))}/${encodeURIComponent(String(roomId))}/0`;
     const resp = await Host.http.request({
@@ -386,8 +386,8 @@ globalThis.LiveParsePlugin = {
     });
 
     const response = JSON.parse(resp.bodyText || "{}");
-    if (__lp_yy_parseCode(response.resultCode, -1) !== 0 || !response.data) {
-      __lp_yy_throw("NOT_FOUND", `YY room detail not found: ${roomId}`, { roomId: String(roomId || "") });
+    if (_yy_parseCode(response.resultCode, -1) !== 0 || !response.data) {
+      _yy_throw("NOT_FOUND", `YY room detail not found: ${roomId}`, { roomId: String(roomId || "") });
     }
 
     const info = response.data;
@@ -406,17 +406,17 @@ globalThis.LiveParsePlugin = {
 
   async getLiveState(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    const latest = await this.getLiveLastestInfo(payload || {});
+    if (!roomId) _yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    const latest = await this.getRoomDetail(payload || {});
     return {
       liveState: String((latest && latest.liveState) || "3")
     };
   },
 
-  async searchRooms(payload) {
+  async search(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!keyword) __lp_yy_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
+    if (!keyword) _yy_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
 
     const qs = [
       `q=${encodeURIComponent(String(keyword))}`,
@@ -432,26 +432,26 @@ globalThis.LiveParsePlugin = {
 
     const response = JSON.parse(resp.bodyText || "{}");
     if (!response.success) {
-      __lp_yy_throw("UPSTREAM", `YY search error: ${response.message || ""}`, { message: String(response.message || "") });
+      _yy_throw("UPSTREAM", `YY search error: ${response.message || ""}`, { message: String(response.message || "") });
     }
 
     const docs = (((response || {}).data || {}).searchResult || {}).response;
     const roomDocs = docs && docs["1"] && docs["1"].docs ? docs["1"].docs : [];
     return roomDocs
       .filter(function (doc) { return !!(doc && doc.sid); })
-      .map(function (doc) { return __lp_yy_searchDocToLiveModel(doc); });
+      .map(function (doc) { return _yy_searchToRoomModel(doc); });
   },
 
-  async getRoomInfoFromShareCode(payload) {
+  async resolveShare(payload) {
     const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
-    if (!shareCode) __lp_yy_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
-    const roomId = __lp_yy_resolveRoomIdFromShareCode(shareCode);
-    return await this.getLiveLastestInfo({ roomId, userId: null });
+    if (!shareCode) _yy_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
+    const roomId = _yy_resolveShare(shareCode);
+    return await this.getRoomDetail({ roomId, userId: null });
   },
 
-  async getDanmukuArgs(payload) {
+  async getDanmaku(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    if (!roomId) _yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return {
       args: {},
       headers: null

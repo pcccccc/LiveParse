@@ -98,7 +98,7 @@ struct PluginSystemTests {
         let manager = try LiveParsePluginManager()
         let categories: [LiveMainListModel] = try await manager.callDecodable(
             pluginId: "douyin",
-            function: "getCategoryList",
+            function: "getCategories",
             payload: [:]
         )
 
@@ -108,19 +108,11 @@ struct PluginSystemTests {
         #expect(ids.contains("108")) // 运动
     }
     @Test
-    func builtInYoutubePluginResolvable() async throws {
-        let manager = try LiveParsePluginManager()
-        let plugin = try manager.resolve(pluginId: "youtube")
-        #expect(plugin.manifest.pluginId == "youtube")
-        try await plugin.load()
-    }
-
-    @Test
-    func jsPlatformManagerMarksEightPlatforms() async throws {
+    func jsPlatformManagerMarksSevenPlatforms() async throws {
         let infos = LiveParseJSPlatformManager.availablePlatformInfos()
-        #expect(infos.count == 8)
+        #expect(infos.count == 7)
 
         let pluginIds = Set(infos.map(\.pluginId))
-        #expect(pluginIds == Set(["bilibili", "huya", "douyin", "douyu", "cc", "ks", "yy", "youtube"]))
+        #expect(pluginIds == Set(["bilibili", "huya", "douyin", "douyu", "cc", "ks", "yy"]))
     }
 }

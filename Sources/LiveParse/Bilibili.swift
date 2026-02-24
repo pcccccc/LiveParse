@@ -299,7 +299,7 @@ public struct Bilibili: LiveParse {
             do {
                 let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "bilibili",
-                    function: "getCategoryList",
+                    function: "getCategories",
                     payload: [
                         "cookie": BiliBiliCookie.cookie,
                         "uid": BiliBiliCookie.uid
@@ -354,7 +354,7 @@ public struct Bilibili: LiveParse {
             do {
                 let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "bilibili",
-                    function: "getRoomList",
+                    function: "getRooms",
                     payload: [
                         "id": id,
                         "parentId": parentId as Any,
@@ -458,7 +458,7 @@ public struct Bilibili: LiveParse {
             do {
                 let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "bilibili",
-                    function: "getPlayArgs",
+                    function: "getPlayback",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any,
@@ -609,7 +609,7 @@ public struct Bilibili: LiveParse {
             do {
                 let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "bilibili",
-                    function: "getLiveLastestInfo",
+                    function: "getRoomDetail",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any,
@@ -709,7 +709,7 @@ public struct Bilibili: LiveParse {
             do {
                 let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "bilibili",
-                    function: "searchRooms",
+                    function: "search",
                     payload: [
                         "keyword": keyword,
                         "page": page,
@@ -885,7 +885,7 @@ public struct Bilibili: LiveParse {
             do {
                 let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "bilibili",
-                    function: "getRoomInfoFromShareCode",
+                    function: "resolveShare",
                     payload: [
                         "shareCode": shareCode,
                         "cookie": BiliBiliCookie.cookie,
@@ -1069,7 +1069,7 @@ public struct Bilibili: LiveParse {
             do {
                 let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "bilibili",
-                    function: "getDanmukuArgs",
+                    function: "getDanmaku",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any,

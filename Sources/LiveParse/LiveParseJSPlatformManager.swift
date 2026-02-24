@@ -8,7 +8,6 @@ public enum LiveParseJSPlatform: String, CaseIterable, Codable, Sendable {
     case cc
     case ks
     case yy
-    case youtube
 
     public var pluginId: String {
         rawValue
@@ -30,8 +29,6 @@ public enum LiveParseJSPlatform: String, CaseIterable, Codable, Sendable {
             return .ks
         case .yy:
             return .yy
-        case .youtube:
-            return .youtube
         }
     }
 
@@ -48,8 +45,8 @@ public struct LiveParseJSPlatformInfo: Codable, Sendable {
 }
 
 public enum LiveParseJSPlatformManager {
-    /// 按产品展示顺序声明 8 个可用平台。
-    public static let availablePlatforms: [LiveParseJSPlatform] = [.bilibili, .huya, .douyin, .douyu, .cc, .ks, .yy, .youtube]
+    /// 按产品展示顺序声明 7 个可用平台。
+    public static let availablePlatforms: [LiveParseJSPlatform] = [.bilibili, .huya, .douyin, .douyu, .cc, .ks, .yy]
 
     public static func availablePlatformInfos() -> [LiveParseJSPlatformInfo] {
         availablePlatforms.map {
@@ -70,13 +67,16 @@ public enum LiveParseJSPlatformManager {
         availablePlatforms.contains(platform)
     }
 
+    // MARK: - Plugin API (v2 method names, with v1 fallback)
+
     public static func getCategoryList(
         platform: LiveParseJSPlatform,
         context: [String: Any] = [:]
     ) async throws -> [LiveMainListModel] {
-        try await callDecodable(
+        try await callWithFallback(
             platform: platform,
-            function: "getCategoryList",
+            function: "getCategories",
+            fallback: "getCategoryList",
             payload: context
         )
     }
@@ -88,9 +88,10 @@ public enum LiveParseJSPlatformManager {
         page: Int,
         context: [String: Any] = [:]
     ) async throws -> [LiveModel] {
-        let rooms: [PluginRoomDTO] = try await callDecodable(
+        let rooms: [PluginRoomDTO] = try await callWithFallback(
             platform: platform,
-            function: "getRoomList",
+            function: "getRooms",
+            fallback: "getRoomList",
             payload: mergePayload(context, [
                 "id": id,
                 "parentId": parentId,
@@ -106,9 +107,10 @@ public enum LiveParseJSPlatformManager {
         userId: String?,
         context: [String: Any] = [:]
     ) async throws -> [LiveQualityModel] {
-        try await callDecodable(
+        try await callWithFallback(
             platform: platform,
-            function: "getPlayArgs",
+            function: "getPlayback",
+            fallback: "getPlayArgs",
             payload: mergePayload(context, [
                 "roomId": roomId,
                 "userId": userId
@@ -122,9 +124,10 @@ public enum LiveParseJSPlatformManager {
         page: Int,
         context: [String: Any] = [:]
     ) async throws -> [LiveModel] {
-        let rooms: [PluginRoomDTO] = try await callDecodable(
+        let rooms: [PluginRoomDTO] = try await callWithFallback(
             platform: platform,
-            function: "searchRooms",
+            function: "search",
+            fallback: "searchRooms",
             payload: mergePayload(context, [
                 "keyword": keyword,
                 "page": page
@@ -139,9 +142,10 @@ public enum LiveParseJSPlatformManager {
         userId: String?,
         context: [String: Any] = [:]
     ) async throws -> LiveModel {
-        let room: PluginRoomDTO = try await callDecodable(
+        let room: PluginRoomDTO = try await callWithFallback(
             platform: platform,
-            function: "getLiveLastestInfo",
+            function: "getRoomDetail",
+            fallback: "getLiveLastestInfo",
             payload: mergePayload(context, [
                 "roomId": roomId,
                 "userId": userId
@@ -177,9 +181,10 @@ public enum LiveParseJSPlatformManager {
         shareCode: String,
         context: [String: Any] = [:]
     ) async throws -> LiveModel {
-        let room: PluginRoomDTO = try await callDecodable(
+        let room: PluginRoomDTO = try await callWithFallback(
             platform: platform,
-            function: "getRoomInfoFromShareCode",
+            function: "resolveShare",
+            fallback: "getRoomInfoFromShareCode",
             payload: mergePayload(context, [
                 "shareCode": shareCode
             ])
@@ -193,9 +198,10 @@ public enum LiveParseJSPlatformManager {
         userId: String?,
         context: [String: Any] = [:]
     ) async throws -> ([String: String], [String: String]?) {
-        let result: PluginDanmukuResult = try await callDecodable(
+        let result: PluginDanmukuResult = try await callWithFallback(
             platform: platform,
-            function: "getDanmukuArgs",
+            function: "getDanmaku",
+            fallback: "getDanmukuArgs",
             payload: mergePayload(context, [
                 "roomId": roomId,
                 "userId": userId
@@ -203,6 +209,8 @@ public enum LiveParseJSPlatformManager {
         )
         return (result.args, result.headers)
     }
+
+    // MARK: - Internal
 
     public static func callDecodable<ResultType: Decodable>(
         platform: LiveParseJSPlatform,
@@ -214,6 +222,32 @@ public enum LiveParseJSPlatformManager {
             function: function,
             payload: payload
         )
+    }
+
+    /// 尝试调用 v2 方法名，如果插件未实现则回退到 v1 方法名
+    private static func callWithFallback<ResultType: Decodable>(
+        platform: LiveParseJSPlatform,
+        function: String,
+        fallback: String,
+        payload: [String: Any] = [:]
+    ) async throws -> ResultType {
+        do {
+            return try await LiveParsePlugins.shared.callDecodable(
+                pluginId: platform.pluginId,
+                function: function,
+                payload: payload
+            )
+        } catch let error as LiveParsePluginError {
+            // 仅当函数不存在时回退，其他错误直接抛出
+            if case .invalidReturnValue(let msg) = error, msg.contains("Missing function") {
+                return try await LiveParsePlugins.shared.callDecodable(
+                    pluginId: platform.pluginId,
+                    function: fallback,
+                    payload: payload
+                )
+            }
+            throw error
+        }
     }
 
     private static func mergePayload(_ base: [String: Any], _ extra: [String: Any?]) -> [String: Any] {

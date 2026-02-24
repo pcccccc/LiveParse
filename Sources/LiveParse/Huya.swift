@@ -176,7 +176,7 @@ public struct Huya: LiveParse {
             do {
                 let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "huya",
-                    function: "getCategoryList",
+                    function: "getCategories",
                     payload: [:]
                 )
                 logInfo("Huya.getCategoryList 使用 JS 插件返回 \(result.count) 个主分类")
@@ -228,7 +228,7 @@ public struct Huya: LiveParse {
             do {
                 let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "huya",
-                    function: "getRoomList",
+                    function: "getRooms",
                     payload: [
                         "id": id,
                         "parentId": parentId as Any,
@@ -290,7 +290,7 @@ public struct Huya: LiveParse {
             do {
                 let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "huya",
-                    function: "getPlayArgs",
+                    function: "getPlayback",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any
@@ -547,7 +547,7 @@ public struct Huya: LiveParse {
             do {
                 let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "huya",
-                    function: "getLiveLastestInfo",
+                    function: "getRoomDetail",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any
@@ -706,7 +706,7 @@ public struct Huya: LiveParse {
             do {
                 let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "huya",
-                    function: "searchRooms",
+                    function: "search",
                     payload: [
                         "keyword": keyword,
                         "page": page
@@ -914,7 +914,7 @@ public struct Huya: LiveParse {
             do {
                 let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "huya",
-                    function: "getRoomInfoFromShareCode",
+                    function: "resolveShare",
                     payload: [
                         "shareCode": shareCode
                     ]
@@ -1013,7 +1013,7 @@ public struct Huya: LiveParse {
             do {
                 let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "huya",
-                    function: "getDanmukuArgs",
+                    function: "getDanmaku",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any

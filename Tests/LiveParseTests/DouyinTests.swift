@@ -2,12 +2,34 @@ import Foundation
 import Testing
 @testable import LiveParse
 
+// MARK: - Douyin Test Cookie
+
+/// 手动填入抖音 Cookie，留空则跳过需要 Cookie 的测试
+private let douyinTestCookie = ""
+
 // MARK: - Douyin Core Functions Tests
 
 private func prepareDouyinTestEnvironment() {
     LiveParseConfig.logLevel = .debug
     LiveParseConfig.includeDetailedNetworkInfo = true
     assertPurePluginMode(platform: "Douyin")
+}
+
+/// 注入 Cookie 到抖音 JS 插件运行时，返回 false 表示无 Cookie 可用
+private func injectDouyinCookieIfNeeded() async -> Bool {
+    let cookie = douyinTestCookie.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !cookie.isEmpty else { return false }
+    do {
+        let plugin = try LiveParsePlugins.shared.resolve(pluginId: "douyin")
+        try await plugin.load()
+        let escaped = cookie.replacingOccurrences(of: "'", with: "\\'")
+        try await plugin.runtime.evaluate(script: "_dy_setRuntimeCookie('\(escaped)')")
+        print("🍪 已注入抖音测试 Cookie")
+        return true
+    } catch {
+        print("⚠️ 注入抖音 Cookie 失败: \(error)")
+        return false
+    }
 }
 
 @Test("获取抖音分类列表")
@@ -30,6 +52,10 @@ func douyinGetCategoryList() async throws {
 @Test("获取抖音房间列表")
 func douyinGetRoomList() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音测试 2: 获取房间列表")
 
@@ -56,6 +82,10 @@ func douyinGetRoomList() async throws {
 @Test("获取抖音播放地址")
 func douyinGetPlayArgs() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音测试 3: 获取播放地址")
 
@@ -88,6 +118,10 @@ func douyinGetPlayArgs() async throws {
 @Test("获取抖音房间状态")
 func douyinGetLiveState() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音测试 4: 获取房间状态")
 
@@ -118,6 +152,10 @@ func douyinGetLiveState() async throws {
 @Test("获取抖音房间详情")
 func douyinGetLiveLastestInfo() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音测试 5: 获取房间详情")
 
@@ -149,6 +187,10 @@ func douyinGetLiveLastestInfo() async throws {
 @Test("抖音搜索房间")
 func douyinSearchRooms() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音测试 6: 搜索房间")
 
@@ -173,6 +215,10 @@ func douyinSearchRooms() async throws {
 @Test("抖音分享码解析")
 func douyinGetRoomInfoFromShareCode() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音测试 7: 分享码解析")
 
@@ -203,6 +249,10 @@ func douyinGetRoomInfoFromShareCode() async throws {
 @Test("获取抖音弹幕参数")
 func douyinGetDanmukuArgs() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音测试 8: 弹幕参数")
 
@@ -237,6 +287,10 @@ func douyinGetDanmukuArgs() async throws {
 @Test("抖音完整集成测试")
 func douyinFullIntegration() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音完整流程测试")
 
@@ -288,6 +342,10 @@ func douyinFullIntegration() async throws {
 @Test("抖音错误处理-无效房间号")
 func douyinErrorHandling_InvalidRoomId() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音错误处理：无效房间号")
 
@@ -307,6 +365,10 @@ func douyinErrorHandling_InvalidRoomId() async throws {
 @Test("抖音错误处理-无效分享码")
 func douyinErrorHandling_InvalidShareCode() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音错误处理：无效分享码")
 
@@ -326,6 +388,10 @@ func douyinErrorHandling_InvalidShareCode() async throws {
 @Test("抖音错误处理-网络详情")
 func douyinErrorHandling_NetworkDetails() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音错误处理：检查网络详情")
 
@@ -348,6 +414,10 @@ func douyinErrorHandling_NetworkDetails() async throws {
 @Test("测试多机位 camera_id 作为弹幕 roomId")
 func douyinTestCameraIdAsDanmukuRoomId() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音测试：camera_id 作为弹幕 roomId")
 
@@ -376,6 +446,10 @@ func douyinTestCameraIdAsDanmukuRoomId() async throws {
 @Test("抖音性能测试-批量请求")
 func douyinPerformance_BatchRequests() async throws {
     prepareDouyinTestEnvironment()
+    guard await injectDouyinCookieIfNeeded() else {
+        print("⏭️ 跳过：未配置抖音 Cookie")
+        return
+    }
 
     print("📋 抖音性能测试：批量请求")
 

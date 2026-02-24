@@ -28,6 +28,18 @@ public actor LiveParseLoadedPlugin {
             return
         }
 
+        // 预加载依赖脚本
+        if let preloadScripts = manifest.preloadScripts {
+            for scriptName in preloadScripts {
+                let scriptURL = rootDirectory.appendingPathComponent(scriptName, isDirectory: false)
+                if FileManager.default.fileExists(atPath: scriptURL.path) {
+                    try await runtime.evaluate(contentsOf: scriptURL)
+                } else {
+                    throw LiveParsePluginError.missingEntryFile("preload: \(scriptName)")
+                }
+            }
+        }
+
         guard FileManager.default.fileExists(atPath: entryFileURL.path) else {
             throw LiveParsePluginError.missingEntryFile(manifest.entry)
         }

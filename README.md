@@ -2,7 +2,7 @@
 
 ## 介绍： 
 
-解析 Bilibili/Douyu/Huya/NeteaseCC/YY/KuaiShou/Douyin/YouTube 直播相关内容的 Swift Package（当前为纯 JS 插件解析模式）。
+解析 Bilibili/Douyu/Huya/NeteaseCC/YY/KuaiShou/Douyin 直播相关内容的 Swift Package（当前为纯 JS 插件解析模式）。
 
 ## 功能：
 
@@ -10,11 +10,11 @@
 
 > 当前默认运行模式：**仅 JS 插件模式**（`enableJSPlugins = true`，`pluginFallbackToSwiftImplementation = false`）。
 
-## 纯 JS 测试进度（2026-02-15）
+## 纯 JS 测试进度（2026-02-23）
 
-- 已跑通：`bilibili`（16/16）、`douyin`（14/14）、`cc`（10/10）、`yy`（9/9）
+- 已跑通：`bilibili`（16/16）、`douyin`（14/14，需手动填 Cookie）、`cc`（10/10）、`yy`（9/9）、`huya`、`douyu`、`ks`
 - 已启用纯 JS 断言的平台测试：`huya`、`douyu`、`ks`、`bilibili`、`douyin`、`cc`、`yy`
-- `youtube` 当前仅覆盖插件加载测试，平台级功能回归待补充
+- YouTube 已移除
 
 ## Swift Package Manager：
 ```swift
@@ -92,10 +92,9 @@ extension ViewModel: WebSocketConnectionDelegate {
 |  斗鱼   |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ✅       |
 |  虎牙   |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ✅       |
 |  抖音   |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ✅       |
-|  快手   |    ✅     |    ✅     |    ✅     |  ❌   |      ✅      |      ❌       |
+|  快手   |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ❌       |
 |   YY    |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ❌       |
 | 网易CC  |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ❌       |
-| Youtube |    ❌     |    ❌     |    ✅     |  ❌   |      ✅      |      ❌       |
 
 
 
@@ -111,8 +110,6 @@ extension ViewModel: WebSocketConnectionDelegate {
 [ihmily/DouyinLiveRecorder](https://github.com/ihmily/DouyinLiveRecorder)
 
 [wbt5/real-url](https://github.com/wbt5/real-url)
-
-[YoutubeKit](https://github.com/alexeichhorn/YouTubeKit)
 
 ## 声明：
 

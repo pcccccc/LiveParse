@@ -1,6 +1,6 @@
-const __lp_cc_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
+const _cc_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
 
-function __lp_cc_throw(code, message, context) {
+function _cc_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
     Host.raise(code, message, context || {});
   }
@@ -10,31 +10,31 @@ function __lp_cc_throw(code, message, context) {
   throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
 }
 
-function __lp_cc_firstMatch(text, re) {
+function _cc_firstMatch(text, re) {
   const m = String(text || "").match(re);
   if (!m || !m[1]) return "";
   return String(m[1]);
 }
 
-function __lp_cc_formatId(input) {
+function _cc_formatId(input) {
   const m = String(input || "").match(/\d+/);
   return m ? String(m[0]) : String(input || "");
 }
 
-function __lp_cc_sanitizeId(value) {
+function _cc_sanitizeId(value) {
   const s = String(value || "");
-  if (s.includes("Optional")) return __lp_cc_formatId(s);
+  if (s.includes("Optional")) return _cc_formatId(s);
   return s;
 }
 
-function __lp_cc_isLive(room) {
+function _cc_isLive(room) {
   return Number(room && room.cuteid ? room.cuteid : 0) > 0;
 }
 
-function __lp_cc_roomToLiveModel(room, fallbackRoomId) {
+function _cc_toRoomModel(room, fallbackRoomId) {
   const resolvedRoomId = String((room && room.cuteid) || (room && room.roomid) || fallbackRoomId || 0);
   const resolvedUserId = String((room && room.channel_id) || 0);
-  const isLive = __lp_cc_isLive(room);
+  const isLive = _cc_isLive(room);
 
   return {
     userName: String((room && room.nickname) || ""),
@@ -49,12 +49,12 @@ function __lp_cc_roomToLiveModel(room, fallbackRoomId) {
   };
 }
 
-async function __lp_cc_getCategorySubList(id) {
+async function _cc_getCategorySubList(id) {
   const resp = await Host.http.request({
     url: `https://api.cc.163.com/v1/wapcc/gamecategory?catetype=${encodeURIComponent(String(id))}`,
     method: "GET",
     headers: {
-      "User-Agent": __lp_cc_ua
+      "User-Agent": _cc_ua
     },
     timeout: 20
   });
@@ -71,23 +71,23 @@ async function __lp_cc_getCategorySubList(id) {
   });
 }
 
-async function __lp_cc_fetchRoomDetail(roomId, userId) {
-  const sanitized = __lp_cc_sanitizeId(String(userId || roomId || ""));
+async function _cc_fetchRoomDetail(roomId, userId) {
+  const sanitized = _cc_sanitizeId(String(userId || roomId || ""));
   const resp = await Host.http.request({
     url: `https://cc.163.com/live/channel/?channelids=${encodeURIComponent(String(sanitized))}`,
     method: "GET",
     headers: {
-      "User-Agent": __lp_cc_ua
+      "User-Agent": _cc_ua
     },
     timeout: 20
   });
   const obj = JSON.parse(resp.bodyText || "{}");
   const list = (obj && obj.data) || [];
   const room = list && list.length > 0 ? list[0] : null;
-  if (!room) __lp_cc_throw("NOT_FOUND", "room not found", { roomId: String(roomId || ""), userId: String(userId || "") });
+  if (!room) _cc_throw("NOT_FOUND", "room not found", { roomId: String(roomId || ""), userId: String(userId || "") });
 
   const resolvedChannelId = String(room.channel_id || parseInt(String(sanitized), 10) || 0);
-  const resolvedRoomId = String(room.cuteid || room.roomid || __lp_cc_formatId(String(roomId || "")) || 0);
+  const resolvedRoomId = String(room.cuteid || room.roomid || _cc_formatId(String(roomId || "")) || 0);
 
   return {
     room,
@@ -96,7 +96,7 @@ async function __lp_cc_fetchRoomDetail(roomId, userId) {
   };
 }
 
-function __lp_cc_buildQualityModel(label, resolution, roomId) {
+function _cc_buildQualityModel(label, resolution, roomId) {
   if (!resolution || !resolution.cdn) return null;
 
   const cdn = resolution.cdn;
@@ -132,11 +132,11 @@ function __lp_cc_buildQualityModel(label, resolution, roomId) {
   };
 }
 
-async function __lp_cc_getPlayArgs(roomId, userId) {
-  const detail = await __lp_cc_fetchRoomDetail(roomId, userId);
+async function _cc_getPlayback(roomId, userId) {
+  const detail = await _cc_fetchRoomDetail(roomId, userId);
   const room = detail.room;
   const resolution = room && room.quickplay && room.quickplay.resolution;
-  if (!resolution) __lp_cc_throw("INVALID_RESPONSE", "missing quickplay resolution", { roomId: String(roomId || "") });
+  if (!resolution) _cc_throw("INVALID_RESPONSE", "missing quickplay resolution", { roomId: String(roomId || "") });
 
   const mapping = [
     ["原画", resolution.original],
@@ -149,13 +149,13 @@ async function __lp_cc_getPlayArgs(roomId, userId) {
 
   const out = [];
   for (const pair of mapping) {
-    const model = __lp_cc_buildQualityModel(pair[0], pair[1], detail.roomId);
+    const model = _cc_buildQualityModel(pair[0], pair[1], detail.roomId);
     if (model) out.push(model);
   }
   return out;
 }
 
-async function __lp_cc_search(keyword, page) {
+async function _cc_search(keyword, page) {
   const qs = [
     `query=${encodeURIComponent(String(keyword))}`,
     `page=${encodeURIComponent(String(page))}`,
@@ -166,18 +166,18 @@ async function __lp_cc_search(keyword, page) {
     url: `https://cc.163.com/search/anchor?${qs}`,
     method: "GET",
     headers: {
-      "User-Agent": __lp_cc_ua
+      "User-Agent": _cc_ua
     },
     timeout: 20
   });
   const obj = JSON.parse(resp.bodyText || "{}");
   const list = (((obj || {}).webcc_anchor || {}).result) || [];
   return list.map(function (item) {
-    return __lp_cc_roomToLiveModel(item, 0);
+    return _cc_toRoomModel(item, 0);
   });
 }
 
-function __lp_cc_extractShareIds(text) {
+function _cc_extractShareIds(text) {
   const source = String(text || "");
 
   let m = source.match(/https:\/\/h5\.cc\.163\.com\/cc\/(\d+)\?rid=(\d+)&cid=(\d+)/);
@@ -199,12 +199,12 @@ function __lp_cc_extractShareIds(text) {
   return null;
 }
 
-async function __lp_cc_getDanmukuArgs(roomId) {
+async function _cc_getDanmaku(roomId) {
   const resp = await Host.http.request({
     url: `https://api.cc.163.com/v1/activitylives/anchor/lives?anchor_ccid=${encodeURIComponent(String(roomId))}`,
     method: "GET",
     headers: {
-      "User-Agent": __lp_cc_ua
+      "User-Agent": _cc_ua
     },
     timeout: 20
   });
@@ -231,7 +231,7 @@ async function __lp_cc_getDanmukuArgs(roomId) {
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
 
-  async getCategoryList() {
+  async getCategories() {
     const main = [
       { id: "1", title: "网游" },
       { id: "2", title: "单机" },
@@ -241,7 +241,7 @@ globalThis.LiveParsePlugin = {
 
     const out = [];
     for (const item of main) {
-      const subList = await __lp_cc_getCategorySubList(item.id);
+      const subList = await _cc_getCategorySubList(item.id);
       out.push({
         id: item.id,
         title: item.title,
@@ -253,10 +253,10 @@ globalThis.LiveParsePlugin = {
     return out;
   },
 
-  async getRoomList(payload) {
+  async getRooms(payload) {
     const id = String(payload && payload.id ? payload.id : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!id) __lp_cc_throw("INVALID_ARGS", "id is required", { field: "id" });
+    if (!id) _cc_throw("INVALID_ARGS", "id is required", { field: "id" });
 
     const qs = [
       "format=json",
@@ -269,7 +269,7 @@ globalThis.LiveParsePlugin = {
       url: `https://cc.163.com/api/category/${encodeURIComponent(String(id))}?${qs}`,
       method: "GET",
       headers: {
-        "User-Agent": __lp_cc_ua
+        "User-Agent": _cc_ua
       },
       timeout: 20
     });
@@ -277,65 +277,65 @@ globalThis.LiveParsePlugin = {
     const obj = JSON.parse(resp.bodyText || "{}");
     const lives = (obj && obj.lives) || [];
     return lives.map(function (item) {
-      return __lp_cc_roomToLiveModel(item, 0);
+      return _cc_toRoomModel(item, 0);
     });
   },
 
-  async getLiveLastestInfo(payload) {
+  async getRoomDetail(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     const userId = payload && payload.userId ? String(payload.userId) : null;
-    if (!roomId) __lp_cc_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    if (!roomId) _cc_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
-    const detail = await __lp_cc_fetchRoomDetail(roomId, userId);
-    return __lp_cc_roomToLiveModel(detail.room, detail.roomId);
+    const detail = await _cc_fetchRoomDetail(roomId, userId);
+    return _cc_toRoomModel(detail.room, detail.roomId);
   },
 
-  async getPlayArgs(payload) {
+  async getPlayback(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     const userId = payload && payload.userId ? String(payload.userId) : null;
-    if (!roomId) __lp_cc_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    return await __lp_cc_getPlayArgs(roomId, userId);
+    if (!roomId) _cc_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    return await _cc_getPlayback(roomId, userId);
   },
 
-  async searchRooms(payload) {
+  async search(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!keyword) __lp_cc_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
-    return await __lp_cc_search(keyword, page);
+    if (!keyword) _cc_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
+    return await _cc_search(keyword, page);
   },
 
   async getLiveState(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     const userId = payload && payload.userId ? String(payload.userId) : null;
-    if (!roomId) __lp_cc_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    const info = await this.getLiveLastestInfo({ roomId, userId });
+    if (!roomId) _cc_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    const info = await this.getRoomDetail({ roomId, userId });
     return {
       liveState: String(info && info.liveState ? info.liveState : "3")
     };
   },
 
-  async getRoomInfoFromShareCode(payload) {
+  async resolveShare(payload) {
     const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
-    if (!shareCode) __lp_cc_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
+    if (!shareCode) _cc_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
 
-    const ids = __lp_cc_extractShareIds(shareCode);
+    const ids = _cc_extractShareIds(shareCode);
     if (ids) {
-      return await this.getLiveLastestInfo({
+      return await this.getRoomDetail({
         roomId: String(ids.roomId),
         userId: ids.channelId ? String(ids.channelId) : null
       });
     }
 
-    const resolved = __lp_cc_formatId(shareCode);
+    const resolved = _cc_formatId(shareCode);
     if (!resolved || !/^\d+$/.test(resolved)) {
-      __lp_cc_throw("PARSE", `cannot parse shareCode: ${shareCode}`, { shareCode: String(shareCode || "") });
+      _cc_throw("PARSE", `cannot parse shareCode: ${shareCode}`, { shareCode: String(shareCode || "") });
     }
-    return await this.getLiveLastestInfo({ roomId: resolved, userId: null });
+    return await this.getRoomDetail({ roomId: resolved, userId: null });
   },
 
-  async getDanmukuArgs(payload) {
+  async getDanmaku(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_cc_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    return await __lp_cc_getDanmukuArgs(roomId);
+    if (!roomId) _cc_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    return await _cc_getDanmaku(roomId);
   }
 };

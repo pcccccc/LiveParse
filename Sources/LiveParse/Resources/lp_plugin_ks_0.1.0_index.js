@@ -5,7 +5,7 @@ const __lp_ks_searchOverviewURL = "https://live.kuaishou.com/live_api/search/ove
 const __lp_ks_searchAuthorURL = "https://live.kuaishou.com/live_api/search/author";
 const __lp_ks_searchLiveStreamURL = "https://live.kuaishou.com/live_api/search/liveStream";
 const __lp_ks_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
-function __lp_ks_throw(code, message, context) {
+function _ks_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
     Host.raise(code, message, context || {});
   }
@@ -15,30 +15,30 @@ function __lp_ks_throw(code, message, context) {
   throw new Error(`LP_PLUGIN_ERROR:${JSON.stringify({ code: String(code || "UNKNOWN"), message: String(message || ""), context: context || {} })}`);
 }
 
-function __lp_ks_firstMatch(text, re) {
+function _ks_firstMatch(text, re) {
   const m = String(text || "").match(re);
   if (!m || !m[1]) return "";
   return String(m[1]);
 }
 
-function __lp_ks_extractShortLink(text) {
+function _ks_extractShortLink(text) {
   const m = String(text || "").match(/https:\/\/v\.kuaishou\.com\/[A-Za-z0-9]+/);
   return m ? String(m[0]) : "";
 }
 
-function __lp_ks_extractUserId(text) {
-  return __lp_ks_firstMatch(text, /\/u\/([A-Za-z0-9_-]+)/);
+function _ks_extractUserId(text) {
+  return _ks_firstMatch(text, /\/u\/([A-Za-z0-9_-]+)/);
 }
 
-function __lp_ks_extractLiveId(text) {
-  return __lp_ks_firstMatch(text, /\/live\/([A-Za-z0-9_-]+)/);
+function _ks_extractLiveId(text) {
+  return _ks_firstMatch(text, /\/live\/([A-Za-z0-9_-]+)/);
 }
 
-function __lp_ks_isValidRoomId(roomId) {
+function _ks_isValidRoomId(roomId) {
   return /^[A-Za-z0-9_-]{3,}$/.test(String(roomId || ""));
 }
 
-function __lp_ks_roomListItemToLiveModel(item) {
+function _ks_toRoomModel(item) {
   const author = item && item.author ? item.author : {};
   const isLiving = !!(item && item.living);
   const id = String((author && author.id) || (item && item.id) || "");
@@ -55,7 +55,7 @@ function __lp_ks_roomListItemToLiveModel(item) {
   };
 }
 
-function __lp_ks_makeQualityDetails(playUrl, roomId) {
+function _ks_makeQualityDetails(playUrl, roomId) {
   const adaptationSet = playUrl && playUrl.adaptationSet;
   const representation = adaptationSet && adaptationSet.representation;
   if (!Array.isArray(representation)) return [];
@@ -72,7 +72,7 @@ function __lp_ks_makeQualityDetails(playUrl, roomId) {
   }).filter(function (item) { return !!item.url; });
 }
 
-function __lp_ks_searchItemToLiveModel(item) {
+function _ks_searchToRoomModel(item) {
   const source = item && typeof item === "object" ? item : {};
   const author = source.author && typeof source.author === "object" ? source.author : {};
   const roomId = String(source.id || source.liveStreamId || source.roomId || "");
@@ -96,7 +96,7 @@ function __lp_ks_searchItemToLiveModel(item) {
   };
 }
 
-function __lp_ks_pickHeaders(cookie, referer) {
+function _ks_pickHeaders(cookie, referer) {
   const out = {
     "User-Agent": __lp_ks_ua,
     "Accept": "application/json, text/plain, */*",
@@ -107,7 +107,7 @@ function __lp_ks_pickHeaders(cookie, referer) {
   return out;
 }
 
-function __lp_ks_toQueryString(params) {
+function _ks_toQueryString(params) {
   const parts = [];
   const source = params && typeof params === "object" ? params : {};
   for (const key of Object.keys(source)) {
@@ -118,25 +118,25 @@ function __lp_ks_toQueryString(params) {
   return parts.join("&");
 }
 
-async function __lp_ks_getSearchData(url, params, cookie, referer) {
-  const qs = __lp_ks_toQueryString(params);
+async function _ks_getSearchData(url, params, cookie, referer) {
+  const qs = _ks_toQueryString(params);
   const reqURL = qs ? `${url}?${qs}` : url;
   const resp = await Host.http.request({
     url: reqURL,
     method: "GET",
-    headers: __lp_ks_pickHeaders(cookie, referer),
+    headers: _ks_pickHeaders(cookie, referer),
     timeout: 20
   });
   const obj = JSON.parse(resp.bodyText || "{}");
   const data = obj && obj.data ? obj.data : {};
   const resultCode = Number(data && data.result !== undefined ? data.result : 0);
   if (resultCode !== 1) {
-    __lp_ks_throw("UPSTREAM", `kuaishou search api failed: result=${resultCode}`, { url: reqURL, result: String(resultCode) });
+    _ks_throw("UPSTREAM", `kuaishou search api failed: result=${resultCode}`, { url: reqURL, result: String(resultCode) });
   }
   return data;
 }
 
-async function __lp_ks_getKSLiveRoom(roomId) {
+async function _ks_getLiveRoom(roomId) {
   const url = `https://live.kuaishou.com/u/${encodeURIComponent(String(roomId))}`;
   const resp = await Host.http.request({
     url,
@@ -150,7 +150,7 @@ async function __lp_ks_getKSLiveRoom(roomId) {
   const html = String(resp.bodyText || "");
   const m = html.match(/<script>window\.__INITIAL_STATE__=\s*(.*?)\;/s);
   if (!m || !m[1]) {
-    __lp_ks_throw("PARSE", "__INITIAL_STATE__ not found");
+    _ks_throw("PARSE", "__INITIAL_STATE__ not found");
   }
 
   let jsonText = String(m[1]);
@@ -162,7 +162,7 @@ async function __lp_ks_getKSLiveRoom(roomId) {
   return JSON.parse(jsonText);
 }
 
-async function __lp_ks_getCategorySubList(id) {
+async function _ks_getCategorySubList(id) {
   let page = 1;
   let hasMore = true;
   const categoryList = [];
@@ -201,7 +201,7 @@ async function __lp_ks_getCategorySubList(id) {
   return categoryList;
 }
 
-async function __lp_ks_getRoomList(id, page) {
+async function _ks_getRooms(id, page) {
   const isNonGame = String(id || "").length >= 7;
   const url = isNonGame ? __lp_ks_nonGameListURL : __lp_ks_gameListURL;
   const qs = [
@@ -218,10 +218,10 @@ async function __lp_ks_getRoomList(id, page) {
   });
   const obj = JSON.parse(resp.bodyText || "{}");
   const list = obj && obj.data && obj.data.list ? obj.data.list : [];
-  return list.map(__lp_ks_roomListItemToLiveModel);
+  return list.map(_ks_toRoomModel);
 }
 
-async function __lp_ks_searchRooms(keyword, page, cookie) {
+async function _ks_search(keyword, page, cookie) {
   const keywordText = String(keyword || "").trim();
   if (!keywordText) return [];
   const pageNo = Number(page) > 0 ? Number(page) : 1;
@@ -229,14 +229,14 @@ async function __lp_ks_searchRooms(keyword, page, cookie) {
   const searchReferer = `https://live.kuaishou.com/search/${encodeURIComponent(keywordText)}`;
 
   // 先打 overview，让站点侧建立搜索会话。
-  await __lp_ks_getSearchData(
+  await _ks_getSearchData(
     __lp_ks_searchOverviewURL,
     { keyword: keywordText, ussid: "" },
     normalizedCookie,
     searchReferer
   );
 
-  const authorData = await __lp_ks_getSearchData(
+  const authorData = await _ks_getSearchData(
     __lp_ks_searchAuthorURL,
     {
       key: keywordText,
@@ -251,7 +251,7 @@ async function __lp_ks_searchRooms(keyword, page, cookie) {
   );
 
   const ussid = String(authorData.ussid || "");
-  const liveData = await __lp_ks_getSearchData(
+  const liveData = await _ks_getSearchData(
     __lp_ks_searchLiveStreamURL,
     {
       keyword: keywordText,
@@ -273,19 +273,19 @@ async function __lp_ks_searchRooms(keyword, page, cookie) {
 
   const liveList = Array.isArray(liveData.list) ? liveData.list : [];
   for (const item of liveList) {
-    const model = __lp_ks_searchItemToLiveModel(item);
+    const model = _ks_searchToRoomModel(item);
     if (model) pushModel(model);
   }
 
   return out;
 }
 
-async function __lp_ks_getLiveLatestInfo(roomId) {
-  const liveData = await __lp_ks_getKSLiveRoom(roomId);
+async function _ks_getRoomDetail(roomId) {
+  const liveData = await _ks_getLiveRoom(roomId);
   const playList = liveData && liveData.liveroom && liveData.liveroom.playList;
   const current = Array.isArray(playList) && playList.length > 0 ? playList[0] : null;
   if (!current) {
-    __lp_ks_throw("NOT_FOUND", `room not found: ${roomId}`, { roomId: String(roomId) });
+    _ks_throw("NOT_FOUND", `room not found: ${roomId}`, { roomId: String(roomId) });
   }
 
   const author = current.author || {};
@@ -313,38 +313,38 @@ async function __lp_ks_getLiveLatestInfo(roomId) {
   };
 }
 
-async function __lp_ks_getPlayArgs(roomId) {
-  const liveData = await __lp_ks_getKSLiveRoom(roomId);
+async function _ks_getPlayback(roomId) {
+  const liveData = await _ks_getLiveRoom(roomId);
   const playList = liveData && liveData.liveroom && liveData.liveroom.playList;
   const current = Array.isArray(playList) && playList.length > 0 ? playList[0] : null;
   if (!current) {
-    __lp_ks_throw("BLOCKED", "room not live or verification needed", { roomId: String(roomId) });
+    _ks_throw("BLOCKED", "room not live or verification needed", { roomId: String(roomId) });
   }
 
   const playUrls = current.liveStream && current.liveStream.playUrls;
   if (!playUrls) {
-    __lp_ks_throw("INVALID_RESPONSE", "playUrls is empty", { roomId: String(roomId) });
+    _ks_throw("INVALID_RESPONSE", "playUrls is empty", { roomId: String(roomId) });
   }
 
   let qualityDetails = [];
   if (playUrls.h264) {
-    qualityDetails = qualityDetails.concat(__lp_ks_makeQualityDetails(playUrls.h264, roomId));
+    qualityDetails = qualityDetails.concat(_ks_makeQualityDetails(playUrls.h264, roomId));
   }
   if (playUrls.hevc) {
-    qualityDetails = qualityDetails.concat(__lp_ks_makeQualityDetails(playUrls.hevc, roomId));
+    qualityDetails = qualityDetails.concat(_ks_makeQualityDetails(playUrls.hevc, roomId));
   }
 
   if (qualityDetails.length === 0) {
-    __lp_ks_throw("INVALID_RESPONSE", "empty quality details", { roomId: String(roomId) });
+    _ks_throw("INVALID_RESPONSE", "empty quality details", { roomId: String(roomId) });
   }
   return [{ cdn: "线路1", qualitys: qualityDetails }];
 }
 
-async function __lp_ks_resolveRoomInfoFromShareCode(shareCode) {
+async function _ks_resolveShare(shareCode) {
   const trimmed = String(shareCode || "").trim();
-  if (!trimmed) __lp_ks_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
+  if (!trimmed) _ks_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
 
-  const shortUrl = __lp_ks_extractShortLink(trimmed);
+  const shortUrl = _ks_extractShortLink(trimmed);
   if (shortUrl) {
     const resp = await Host.http.request({
       url: shortUrl,
@@ -353,34 +353,34 @@ async function __lp_ks_resolveRoomInfoFromShareCode(shareCode) {
     });
     const finalUrl = String(resp.url || shortUrl);
 
-    const liveId = __lp_ks_extractLiveId(finalUrl);
-    if (liveId) return await __lp_ks_getLiveLatestInfo(liveId);
+    const liveId = _ks_extractLiveId(finalUrl);
+    if (liveId) return await _ks_getRoomDetail(liveId);
 
-    const userId = __lp_ks_extractUserId(finalUrl);
-    if (userId) return await __lp_ks_getLiveLatestInfo(userId);
+    const userId = _ks_extractUserId(finalUrl);
+    if (userId) return await _ks_getRoomDetail(userId);
 
-    __lp_ks_throw("NOT_FOUND", "cannot resolve room id from short link", { finalUrl: String(finalUrl) });
+    _ks_throw("NOT_FOUND", "cannot resolve room id from short link", { finalUrl: String(finalUrl) });
   }
 
   if (trimmed.includes("live.kuaishou.com")) {
-    const userId = __lp_ks_extractUserId(trimmed);
-    if (userId) return await __lp_ks_getLiveLatestInfo(userId);
+    const userId = _ks_extractUserId(trimmed);
+    if (userId) return await _ks_getRoomDetail(userId);
 
-    const liveId = __lp_ks_extractLiveId(trimmed);
-    if (liveId) return await __lp_ks_getLiveLatestInfo(liveId);
+    const liveId = _ks_extractLiveId(trimmed);
+    if (liveId) return await _ks_getRoomDetail(liveId);
   }
 
-  if (__lp_ks_isValidRoomId(trimmed)) {
-    return await __lp_ks_getLiveLatestInfo(trimmed);
+  if (_ks_isValidRoomId(trimmed)) {
+    return await _ks_getRoomDetail(trimmed);
   }
 
-  __lp_ks_throw("NOT_FOUND", "cannot resolve room id from shareCode", { shareCode: String(shareCode || "") });
+  _ks_throw("NOT_FOUND", "cannot resolve room id from shareCode", { shareCode: String(shareCode || "") });
 }
 
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
 
-  async getCategoryList() {
+  async getCategories() {
     const categories = [
       ["1", "热门"],
       ["2", "网游"],
@@ -396,55 +396,55 @@ globalThis.LiveParsePlugin = {
     for (const item of categories) {
       const id = item[0];
       const title = item[1];
-      const subList = await __lp_ks_getCategorySubList(id);
+      const subList = await _ks_getCategorySubList(id);
       result.push({ id, title, icon: "", biz: "", subList });
     }
     return result;
   },
 
-  async getRoomList(payload) {
+  async getRooms(payload) {
     const id = String(payload && payload.id ? payload.id : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    if (!id) __lp_ks_throw("INVALID_ARGS", "id is required", { field: "id" });
-    return await __lp_ks_getRoomList(id, page);
+    if (!id) _ks_throw("INVALID_ARGS", "id is required", { field: "id" });
+    return await _ks_getRooms(id, page);
   },
 
-  async getPlayArgs(payload) {
+  async getPlayback(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    return await __lp_ks_getPlayArgs(roomId);
+    if (!roomId) _ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    return await _ks_getPlayback(roomId);
   },
 
-  async searchRooms(payload) {
+  async search(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
     const cookie = String(payload && payload.cookie ? payload.cookie : "");
-    return await __lp_ks_searchRooms(keyword, page, cookie);
+    return await _ks_search(keyword, page, cookie);
   },
 
-  async getLiveLastestInfo(payload) {
+  async getRoomDetail(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    return await __lp_ks_getLiveLatestInfo(roomId);
+    if (!roomId) _ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    return await _ks_getRoomDetail(roomId);
   },
 
   async getLiveState(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     const userId = String(payload && payload.userId ? payload.userId : "");
-    if (!roomId) __lp_ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    const info = await this.getLiveLastestInfo({ roomId, userId });
+    if (!roomId) _ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    const info = await this.getRoomDetail({ roomId, userId });
     return { liveState: String(info && info.liveState ? info.liveState : "3") };
   },
 
-  async getRoomInfoFromShareCode(payload) {
+  async resolveShare(payload) {
     const shareCode = String(payload && payload.shareCode ? payload.shareCode : "");
-    if (!shareCode) __lp_ks_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
-    return await __lp_ks_resolveRoomInfoFromShareCode(shareCode);
+    if (!shareCode) _ks_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
+    return await _ks_resolveShare(shareCode);
   },
 
-  async getDanmukuArgs(payload) {
+  async getDanmaku(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
-    if (!roomId) __lp_ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    if (!roomId) _ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     return {
       args: {},
       headers: null

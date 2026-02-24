@@ -576,7 +576,7 @@ extension Douyin {
             do {
                 let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "douyin",
-                    function: "getCategoryList",
+                    function: "getCategories",
                     payload: [:]
                 )
                 logInfo("Douyin.getCategoryList 使用 JS 插件返回 \(result.count) 个主分类")
@@ -739,7 +739,7 @@ extension Douyin {
             do {
                 let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "douyin",
-                    function: "getRoomList",
+                    function: "getRooms",
                     payload: [
                         "id": id,
                         "parentId": parentId as Any,
@@ -852,7 +852,7 @@ extension Douyin {
             do {
                 let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "douyin",
-                    function: "getPlayArgs",
+                    function: "getPlayback",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any
@@ -1071,7 +1071,7 @@ extension Douyin {
             do {
                 let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "douyin",
-                    function: "searchRooms",
+                    function: "search",
                     payload: [
                         "keyword": keyword,
                         "page": page
@@ -1239,7 +1239,7 @@ extension Douyin {
             do {
                 let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "douyin",
-                    function: "getLiveLastestInfo",
+                    function: "getRoomDetail",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any
@@ -1481,7 +1481,7 @@ extension Douyin {
             do {
                 let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "douyin",
-                    function: "getRoomInfoFromShareCode",
+                    function: "resolveShare",
                     payload: [
                         "shareCode": shareCode
                     ]
@@ -1617,7 +1617,7 @@ extension Douyin {
             do {
                 let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "douyin",
-                    function: "getDanmukuArgs",
+                    function: "getDanmaku",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any
@@ -1684,7 +1684,7 @@ extension Douyin {
 
             let headerPayload: [String: String] = [
                 "cookie": headers["cookie"] ?? "",
-                "User-Agnet": dyua
+                "User-Agent": dyua
             ]
 
             logInfo("生成抖音弹幕参数成功，房间ID: \(finalUserId)")

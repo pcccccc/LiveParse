@@ -123,6 +123,14 @@ private extension JSRuntime {
         // 给插件提供一个稳定的 Host API 表层（底层由 __lp_* 提供）。
         let script = """
         (function () {
+          // 提供最小浏览器环境 shim，供依赖 window/document/navigator 的第三方脚本使用
+          if (typeof globalThis.document === "undefined") globalThis.document = {};
+          if (typeof globalThis.window === "undefined") globalThis.window = {};
+          if (typeof globalThis.navigator === "undefined") globalThis.navigator = {};
+          if (!globalThis.navigator.userAgent) {
+            globalThis.navigator.userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
+          }
+
           globalThis.Host = globalThis.Host || {};
           Host.makeError = function (code, message, context) {
             var normalizedContext = {};

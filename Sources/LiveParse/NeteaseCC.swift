@@ -114,7 +114,7 @@ public struct NeteaseCC: LiveParse {
             do {
                 let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "cc",
-                    function: "getCategoryList",
+                    function: "getCategories",
                     payload: [:]
                 )
                 logInfo("NeteaseCC.getCategoryList 使用 JS 插件返回 \(result.count) 个主分类")
@@ -185,7 +185,7 @@ public struct NeteaseCC: LiveParse {
             do {
                 let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "cc",
-                    function: "getRoomList",
+                    function: "getRooms",
                     payload: [
                         "id": id,
                         "parentId": parentId as Any,
@@ -276,7 +276,7 @@ public struct NeteaseCC: LiveParse {
             do {
                 let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "cc",
-                    function: "getLiveLastestInfo",
+                    function: "getRoomDetail",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any
@@ -323,7 +323,7 @@ public struct NeteaseCC: LiveParse {
             do {
                 let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "cc",
-                    function: "getPlayArgs",
+                    function: "getPlayback",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any
@@ -390,7 +390,7 @@ public struct NeteaseCC: LiveParse {
             do {
                 let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "cc",
-                    function: "searchRooms",
+                    function: "search",
                     payload: [
                         "keyword": keyword,
                         "page": page
@@ -525,7 +525,7 @@ public struct NeteaseCC: LiveParse {
             do {
                 let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "cc",
-                    function: "getRoomInfoFromShareCode",
+                    function: "resolveShare",
                     payload: [
                         "shareCode": shareCode
                     ]
@@ -578,7 +578,7 @@ public struct NeteaseCC: LiveParse {
             do {
                 let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "cc",
-                    function: "getDanmukuArgs",
+                    function: "getDanmaku",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any

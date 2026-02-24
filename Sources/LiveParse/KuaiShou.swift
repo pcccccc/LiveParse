@@ -288,7 +288,7 @@ public struct KuaiShou: LiveParse {
             do {
                 let result: [LiveMainListModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "ks",
-                    function: "getCategoryList",
+                    function: "getCategories",
                     payload: [:]
                 )
                 logInfo("KuaiShou.getCategoryList 使用 JS 插件返回 \(result.count) 个主分类")
@@ -390,7 +390,7 @@ public struct KuaiShou: LiveParse {
             do {
                 let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "ks",
-                    function: "getRoomList",
+                    function: "getRooms",
                     payload: [
                         "id": id,
                         "parentId": parentId as Any,
@@ -466,7 +466,7 @@ public struct KuaiShou: LiveParse {
             do {
                 let result: [LiveQualityModel] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "ks",
-                    function: "getPlayArgs",
+                    function: "getPlayback",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any
@@ -543,7 +543,7 @@ public struct KuaiShou: LiveParse {
             do {
                 let rooms: [PluginRoom] = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "ks",
-                    function: "searchRooms",
+                    function: "search",
                     payload: [
                         "keyword": keyword,
                         "page": page
@@ -592,7 +592,7 @@ public struct KuaiShou: LiveParse {
             do {
                 let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "ks",
-                    function: "getLiveLastestInfo",
+                    function: "getRoomDetail",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any
@@ -754,7 +754,7 @@ public struct KuaiShou: LiveParse {
             do {
                 let info: PluginLiveInfo = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "ks",
-                    function: "getRoomInfoFromShareCode",
+                    function: "resolveShare",
                     payload: [
                         "shareCode": shareCode
                     ]
@@ -832,7 +832,7 @@ public struct KuaiShou: LiveParse {
             do {
                 let result: PluginResult = try await LiveParsePlugins.shared.callDecodable(
                     pluginId: "ks",
-                    function: "getDanmukuArgs",
+                    function: "getDanmaku",
                     payload: [
                         "roomId": roomId,
                         "userId": userId as Any
