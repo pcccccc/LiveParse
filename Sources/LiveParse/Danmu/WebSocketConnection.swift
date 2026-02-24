@@ -48,6 +48,8 @@ public class WebSocketConnection {
                 URL(string: "wss://danmuproxy.douyu.com:8506/")!
             case .cc:
                 URL(string: "wss://weblink.cc.163.com/")!
+            case .soop:
+                URL(string: parameters?["ws_url"] ?? "wss://chat.sooplive.co.kr:8001/Websocket")!
             default:
                 URL(string: "wss://broadcastlv.chat.bilibili.com:443/sub")!
         }
@@ -64,6 +66,8 @@ public class WebSocketConnection {
                 DouyuSocketDataParser()
             case .cc:
                 CCSocketDataParser()
+            case .soop:
+                SoopSocketDataParser()
             default:
                 BilibiliSocketDataParser()
         }
@@ -87,6 +91,9 @@ public class WebSocketConnection {
         }else if liveType == .bilibili {
             request = URLRequest(url: URL(string: parameters?["ws_url"] ?? "")!)
             request.headers = ["user-agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"]
+        }else if liveType == .soop {
+            request = URLRequest(url: URL(string: parameters?["ws_url"] ?? "")!)
+            request.headers = ["user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"]
         }
         
         socket = WebSocket(request: request)
@@ -136,7 +143,10 @@ extension WebSocketConnection: WebSocketDelegate {
                 let error = NSError(domain: reason, code: Int(code), userInfo: ["reason" : reason])
                 delegate?.webSocketDidDisconnect(error: error)
                 reConnect()
-            case .text(let string): break
+            case .text(let string):
+                if liveType == .soop, let soopParser = parser as? SoopSocketDataParser {
+                    soopParser.parseText(text: string, connection: self)
+                }
             case .binary(let data):
                 parser.parse(data: data, connection: self)
             case .error(let error):

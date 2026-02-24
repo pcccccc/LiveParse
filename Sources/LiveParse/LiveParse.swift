@@ -162,6 +162,8 @@ public final class LiveParseTools {
             return "快手"
         case .yy:
             return "YY直播"
+        case .soop:
+            return "SOOP"
         }
     }
 
@@ -173,7 +175,8 @@ public final class LiveParseTools {
             .douyu: "每个人的直播平台",
             .cc: "网易游戏直播(暂无弹幕)",
             .ks: "无法播放请手动打开任意直播间通过滑块验证码(暂无弹幕)",
-            .yy: "全民娱乐的互动直播平台(暂无弹幕)"
+            .yy: "全民娱乐的互动直播平台(暂无弹幕)",
+            .soop: "韩国直播平台(原AfreecaTV)"
         ]
 
         return LiveParseJSPlatformManager.availablePlatforms.map { platform in

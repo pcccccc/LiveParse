@@ -8,6 +8,7 @@ public enum LiveParseJSPlatform: String, CaseIterable, Codable, Sendable {
     case cc
     case ks
     case yy
+    case soop
 
     public var pluginId: String {
         rawValue
@@ -29,6 +30,8 @@ public enum LiveParseJSPlatform: String, CaseIterable, Codable, Sendable {
             return .ks
         case .yy:
             return .yy
+        case .soop:
+            return .soop
         }
     }
 
@@ -46,7 +49,7 @@ public struct LiveParseJSPlatformInfo: Codable, Sendable {
 
 public enum LiveParseJSPlatformManager {
     /// 按产品展示顺序声明 7 个可用平台。
-    public static let availablePlatforms: [LiveParseJSPlatform] = [.bilibili, .huya, .douyin, .douyu, .cc, .ks, .yy]
+    public static let availablePlatforms: [LiveParseJSPlatform] = [.bilibili, .huya, .douyin, .douyu, .cc, .ks, .yy, .soop]
 
     public static func availablePlatformInfos() -> [LiveParseJSPlatformInfo] {
         availablePlatforms.map {

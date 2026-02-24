@@ -124,7 +124,8 @@ public enum LiveType: String, Codable, Sendable {
          douyu = "3",
          cc = "4",
          ks = "5",
-         yy = "6"
+         yy = "6",
+         soop = "8"
 }
 
 public enum LiveState: String, Codable {

@@ -1,0 +1,8 @@
+{
+  "pluginId": "soop",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayName": "SOOP (JS PoC)",
+  "liveTypes": ["8"],
+  "entry": "lp_plugin_soop_0.1.0_index.js"
+}
