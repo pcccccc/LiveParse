@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-LiveParse 是一个 Swift Package，负责解析 7 个国内直播平台的 API（哔哩哔哩、斗鱼、虎牙、抖音、快手、YY、网易CC）。当前运行模式为**纯 JS 插件模式**。
+LiveParse 是一个 Swift Package，负责解析 8 个直播平台的 API（哔哩哔哩、斗鱼、虎牙、抖音、快手、YY、网易CC、SOOP）。当前运行模式为**纯 JS 插件模式**，所有平台解析逻辑均由 JavaScript 插件实现。
 
 ## 构建与测试
 
@@ -19,26 +19,43 @@ swift test
 
 ### 运行模式
 
-纯 JS 插件模式（`enableJSPlugins = true`，`pluginFallbackToSwiftImplementation = false`）。各平台的 Swift 文件（如 `Douyin.swift`）为旧原生实现，将逐步删除。
+纯 JS 插件模式（`enableJSPlugins = true`，`pluginFallbackToSwiftImplementation = false`）。旧平台 Swift 解析文件（`Douyin.swift` 等）已全部删除。
 
 ### 目录结构
 
 ```
 Sources/LiveParse/
-├── Plugin/                          # 插件基础设施
-│   ├── JSRuntime.swift              # JavaScriptCore 运行时封装
-│   ├── LiveParsePluginManager.swift # 插件加载、解析、调用管理
-│   ├── LiveParseLoadedPlugin.swift  # 已加载插件实例（actor）
-│   ├── LiveParsePluginManifest.swift# manifest.json 模型
-│   ├── LiveParsePlugins.swift       # 全局共享入口 LiveParsePlugins.shared
-│   └── ...
-├── Resources/                       # JS 插件资源
+├── Plugin/                              # 插件基础设施
+│   ├── JSRuntime.swift                  # JavaScriptCore 运行时封装（DispatchQueue 隔离）
+│   ├── LiveParsePluginManager.swift     # 插件加载、解析、调用管理
+│   ├── LiveParseLoadedPlugin.swift      # 已加载插件实例（actor）
+│   ├── LiveParsePluginManifest.swift    # manifest.json 模型
+│   ├── LiveParsePlugins.swift           # 全局共享入口 LiveParsePlugins.shared
+│   ├── LiveParsePluginError.swift       # 错误类型与标准错误码
+│   ├── LiveParsePluginStorage.swift     # 插件持久化（沙盒目录管理）
+│   ├── LiveParsePluginState.swift       # 插件状态模型
+│   ├── LiveParsePluginInstaller.swift   # 插件安装
+│   ├── LiveParsePluginUpdater.swift     # 插件更新
+│   └── LiveParseRemotePluginIndex.swift # 远端索引
+├── Danmu/                               # 弹幕 WebSocket 连接与协议解析
+│   ├── WebSocketConnection.swift        # WebSocket 客户端（支持 6 个平台弹幕）
+│   ├── Bilibili/                        # Protobuf 解析
+│   ├── Douyin/                          # Protobuf 解析
+│   ├── Douyu/                           # 自定义协议解析
+│   ├── Huya/                            # Tars 协议解析
+│   ├── CC/                              # 自定义协议解析
+│   └── Soop/                            # 文本帧协议解析
+├── Resources/                           # JS 插件资源
 │   ├── lp_plugin_{平台}_{版本}_manifest.json
 │   ├── lp_plugin_{平台}_{版本}_index.js
-│   └── webmssdk.js                  # 抖音签名依赖
-├── {Platform}.swift                 # 各平台 Swift 原生实现（旧，待删除）
-├── LiveParseJSPlatformManager.swift # v1→v2 方法名兼容层
-└── LiveModel.swift                  # 公共数据模型
+│   └── webmssdk.js                      # 抖音签名依赖（preloadScript）
+├── LiveParse.swift                      # 公共 API 入口、平台名称映射
+├── LiveModel.swift                      # 数据模型（LiveModel, LiveQualityModel, LiveState）
+├── LiveParseJSPlatformManager.swift     # JS 平台调度层（v1→v2 方法名兼容）
+├── LiveParseError+Enhanced.swift        # 增强错误报告
+├── BiliBiliCookie.swift                 # Bilibili Cookie 管理
+├── NetworkRequestHelper.swift           # HTTP 工具
+└── String+Extension.swift               # 字符串扩展
 ```
 
 ### 插件 API（v2 方法名）
@@ -60,22 +77,61 @@ Sources/LiveParse/
 
 - **preloadScripts**：manifest 中声明预加载脚本，在入口脚本之前执行（如抖音的 `webmssdk.js`）
 - **浏览器环境 shim**：JSRuntime 启动时注入 `window`/`document`/`navigator` 全局对象
-- **Cookie 流**：JS 插件通过 `payload.cookie` 或 `_dy_runtime.cookie` 获取；抖音插件中 `_dy_requireCookie()` 强制校验
-- **Host 桥接**：JS 通过 `Host.http.request()` 发网络请求，`Host.crypto.md5()` 计算 MD5
+- **Cookie 流**：
+  - 抖音：通过 `setCookie`/`clearCookie` 管理 runtime cookie，API 调用使用匿名 ttwid cookie 避免 444
+  - B站：通过 `payload.cookie` 传入（`injectCookieIfNeeded` 自动注入）
+  - 其他平台：无需 Cookie
+- **Host 桥接**：
+  - `Host.http.request(options)` — 网络请求（Promise）
+  - `Host.crypto.md5(input)` — MD5 计算
+  - `Host.storage.get/set` — 键值存储
+  - `Host.time.nowMillis()` — 时间戳
+  - `Host.raise(code, msg, ctx)` / `Host.makeError(code, msg, ctx)` — 错误上报
+- **签名机制**：抖音使用 ABogus 签名（SM3 + RC4 + bigArray transform），弹幕使用 webmssdk 的 X-Bogus 签名
 
 ## 平台要求
 
 - Swift 6.2（swift-tools-version）
 - macOS 13+ / iOS 16+ / tvOS 16+
 
+## 依赖
+
+- **Alamofire** — HTTP 网络
+- **SwiftyJSON** — JSON 解析
+- **Starscream** — WebSocket 客户端
+- **SWCompression** — 压缩/解压
+- **SwiftProtobuf** — Protobuf（B站/抖音弹幕）
+- **GMObjC** — 加密工具
+- **JavaScriptCore**（系统框架）— JS 运行时
+
 ## 支持的平台
 
-| 平台 | 分类 | 房间 | 播放 | 搜索 | 分享码 | 弹幕 | 需要 Cookie |
-|------|------|------|------|------|--------|------|-------------|
-| 哔哩哔哩 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否 |
-| 斗鱼 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否 |
-| 虎牙 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否 |
-| 抖音 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 是 |
-| 快手 | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 否 |
-| YY | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 否 |
-| 网易CC | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 否 |
+| 平台 | 分类 | 房间 | 播放 | 搜索 | 详情 | 状态 | 分享码 | 弹幕 | 需要 Cookie |
+|------|------|------|------|------|------|------|--------|------|-------------|
+| 哔哩哔哩 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否（超清需要） |
+| 斗鱼 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否 |
+| 虎牙 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否 |
+| 抖音 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 是 |
+| 快手 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 否 |
+| YY | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 否 |
+| 网易CC | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 否 |
+| SOOP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否（登录待开发） |
+
+## 测试
+
+```bash
+# 全量测试
+swift test
+
+# 按平台测试
+swift test --filter BilibiliTests
+swift test --filter DouyinTests     # 需要手动填 Cookie
+swift test --filter HuyaTests
+swift test --filter DouyuTests
+swift test --filter KuaiShouTests
+swift test --filter NeteaseCCTests
+swift test --filter YYTests
+
+# 插件系统测试
+swift test --filter PluginSystemTests
+```

@@ -163,39 +163,39 @@ globalThis.LiveParsePlugin = {
 - JS 运行时错误：应携带 stack、行号、插件版本等信息。
 - 插件加载事件：安装成功/失败、回滚原因、当前选中版本。
 
-## 当前迁移进度（2026-02-13）
+## 当前迁移进度（2026-02-25）
 
-当前仓库已落地“全平台内置插件 + 仅插件模式（无 Swift fallback）”。
+当前仓库已落地"全平台内置插件 + 仅插件模式（无 Swift fallback）"。旧平台 Swift 解析文件已全部删除。YouTube 已移除，新增 SOOP 平台。
 
-### 已完成平台
+### 已完成平台（8 个）
 
-- `huya`
-- `douyu`
-- `cc`（NeteaseCC）
-- `yy`
-- `ks`（KuaiShou）
 - `bilibili`
+- `douyu`
+- `huya`
 - `douyin`
-- `youtube`
+- `ks`（KuaiShou）
+- `yy`
+- `cc`（NeteaseCC）
+- `soop`（原 AfreecaTV）
 
 以上平台均已：
 - 提供内置插件资源（`lp_plugin_<id>_<ver>_manifest.json/index.js`）
 - 在 Swift 8 大核心方法中接入插件调用
 - 默认强制插件模式（`enableJSPlugins = true`，`pluginFallbackToSwiftImplementation = false`）
+- 旧平台 Swift 解析文件已删除
 
-### 纯 JS 测试进度（2026-02-15）
+### 纯 JS 测试进度
 
 - 已跑通平台回归（纯 JS 模式）：
   - `bilibili`（16/16）
-  - `douyin`（14/14）
+  - `douyin`（14/14，需手动填 Cookie）
   - `cc`（10/10）
   - `yy`（9/9）
 - 已启用纯 JS 断言（`assertPurePluginMode`）的平台测试：
   - `huya`、`douyu`、`ks`、`bilibili`、`douyin`、`cc`、`yy`
-- `youtube` 当前仅覆盖插件可加载校验（`PluginSystemTests.builtInYoutubePluginResolvable`），
-  尚未补齐独立平台功能回归（`YoutubeTests`）。
 
-### 下一步（收口阶段）
+### 下一步
 
-1. 补齐 `youtube` 平台级纯 JS 功能测试（分类/房间/播放/搜索/分享/弹幕按能力覆盖）。
-2. 完成 8 平台统一回归后，删除平台 Swift 解析实现，仅保留宿主能力：`Host.http`、`Host.crypto`、`Host.storage`（及必要扩展）。
+1. 补齐 `soop` 平台级纯 JS 功能测试。
+2. SOOP 平台登录功能开发（详见 `Sources/LiveParse/SOOP_INTEGRATION.md`）。
+3. 插件热更新机制落地（远端索引、zip 下载、版本回滚）。

@@ -1,107 +1,146 @@
-# LiveParse ![GitHub release](https://img.shields.io/badge/release-v1.2.7-green.svg)
+# LiveParse
 
-## 介绍： 
+## 介绍
 
-解析 Bilibili/Douyu/Huya/NeteaseCC/YY/KuaiShou/Douyin 直播相关内容的 Swift Package（当前为纯 JS 插件解析模式）。
+解析 Bilibili/Douyu/Huya/Douyin/KuaiShou/YY/NeteaseCC/SOOP 直播相关内容的 Swift Package。
 
-## 功能：
+当前默认运行模式：**纯 JS 插件模式**（所有平台 API 解析均通过 JavaScriptCore 插件实现）。
 
-获取直播分类、对应分类主播列表、主播信息、直播源地址、模糊搜索、通过分享链接识别主播信息。
+## 功能
 
-> 当前默认运行模式：**仅 JS 插件模式**（`enableJSPlugins = true`，`pluginFallbackToSwiftImplementation = false`）。
+获取直播分类、对应分类主播列表、主播信息、直播源地址、模糊搜索、通过分享链接识别主播信息、弹幕连接。
 
-## 纯 JS 测试进度（2026-02-23）
+## Swift Package Manager
 
-- 已跑通：`bilibili`（16/16）、`douyin`（14/14，需手动填 Cookie）、`cc`（10/10）、`yy`（9/9）、`huya`、`douyu`、`ks`
-- 已启用纯 JS 断言的平台测试：`huya`、`douyu`、`ks`、`bilibili`、`douyin`、`cc`、`yy`
-- YouTube 已移除
-
-## Swift Package Manager：
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pcccccc/LiveParse.git", .upToNextMajor(from:"1.2.7"))
+    .package(url: "https://github.com/pcccccc/LiveParse.git", .upToNextMajor(from: "1.2.7"))
 ]
 ```
-## 使用：
 
-获取Bilibili所有分类列表：
+## 使用示例
 
-```swift
-do {
-    let list = try await Bilibili.getCategoryList()
-}catch let error {
-    print(error)
-}
-```
-
-通过抖音分享码获取直播地址：
+### 获取分类列表
 
 ```swift
-do {
-    try await Douyin.getRequestHeaders()
-    let liveInfo = try await Douyin.getRoomInfoFromShareCode(shareCode: "2- #在抖音，记录美好生活#【交个朋友直播间】正在直播，来和我一起支持Ta吧。复制下方链接，打开【抖音】，直接观看直播！ https://v.douyin.com/i8rhQQ2t/ 2@4.com 12/18")
-    let liveQualitys = try await Douyin.getPlayArgs(roomId: liveInfo.roomId, userId: nil)
-    print(liveQualitys.debugDescription)
-}catch let error {
-    print(error)
-}
+import LiveParse
+
+let categories = try await LiveParseJSPlatformManager.getCategoryList(platform: .bilibili)
 ```
 
-通过抖音分享码获取弹幕信息：
+### 获取房间列表
 
 ```swift
-class ViewModel: ObservableObject {
-    
-    var socketConnection: WebSocketConnection?
-    
-    func getDanmuInfo() {
-        Task {
-
-            let room = try await Douyin.getRoomInfoFromShareCode(shareCode: "2- #在抖音，记录美好生活#【中标标院】正在直播，来和我一起支持Ta吧。复制下方链接，打开【抖音】，直接观看直播！ https://v.douyin.com/i8gXjg1D/ 4@0.com 08/22")
-            print(try await Douyin.getPlayArgs(roomId: room.roomId, userId: room.userId))
-            let danmuArgs = try await Douyin.getDanmukuArgs(roomId: room.roomId)
-            socketConnection = WebSocketConnection(parameters: danmuArgs.0, headers: danmuArgs.1, liveType: room.liveType)
-            socketConnection!.delegate = self
-            socketConnection!.connect()
-//            //断开
-//            socketConnection!.disconnect()
-        }
-    }
-}
-
-extension ViewModel: WebSocketConnectionDelegate {
-    func webSocketDidConnect() {//连接成功
-        
-    }
-
-    func webSocketDidDisconnect(error: Error?) {//连接失败
-        
-    }
-    /// 接收到消息后的回调(String)
-    func webSocketDidReceiveMessage(text: String, color: UInt32) {
-        print("弹幕：==>\(text)" )
-    }
-}
+let rooms = try await LiveParseJSPlatformManager.getRoomList(
+    platform: .bilibili,
+    id: "2",          // 分类 ID
+    parentId: "2",    // 父分类 ID
+    page: 1
+)
 ```
 
-## 各平台功能概览：
+### 获取播放地址
 
-|  平台   | 分类列表 | 房间列表 | 地址解析 | 搜索 | 分享码/链接 | 弹幕（评论） |
-| :-----: | :------: | :------: | :------: | :--: | :---------: | :----------: |
-| B站直播 |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ✅       |
-|  斗鱼   |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ✅       |
-|  虎牙   |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ✅       |
-|  抖音   |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ✅       |
-|  快手   |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ❌       |
-|   YY    |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ❌       |
-| 网易CC  |    ✅     |    ✅     |    ✅     |  ✅   |      ✅      |      ❌       |
+```swift
+let qualitys = try await LiveParseJSPlatformManager.getPlayArgs(
+    platform: .douyu,
+    roomId: "9999",
+    userId: nil
+)
+```
 
+### 搜索主播
 
+```swift
+let results = try await LiveParseJSPlatformManager.searchRooms(
+    platform: .huya,
+    keyword: "王者荣耀",
+    page: 1
+)
+```
 
+### 通过分享码获取主播信息
 
-## 参考及引用：
+```swift
+let liveInfo = try await LiveParseJSPlatformManager.getRoomInfoFromShareCode(
+    platform: .douyin,
+    shareCode: "https://v.douyin.com/i8rhQQ2t/"
+)
+```
 
-[dart_simple_live](https://github.com/xiaoyaocz/dart_simple_live/) 
+### 获取弹幕连接参数
+
+```swift
+let (args, headers) = try await LiveParseJSPlatformManager.getDanmukuArgs(
+    platform: .bilibili,
+    roomId: "21452505",
+    userId: nil
+)
+let connection = WebSocketConnection(
+    parameters: args,
+    headers: headers,
+    liveType: .bilibili
+)
+connection.delegate = self
+connection.connect()
+```
+
+### 抖音（需要 Cookie）
+
+抖音平台需要先设置 Cookie：
+
+```swift
+// 设置 Cookie（通常由宿主 App 的登录流程提供）
+_ = try await LiveParsePlugins.shared.call(
+    pluginId: "douyin",
+    function: "setCookie",
+    payload: ["cookie": douyinCookie]
+)
+
+// 之后正常调用
+let rooms = try await LiveParseJSPlatformManager.searchRooms(
+    platform: .douyin,
+    keyword: "游戏",
+    page: 1
+)
+```
+
+## 各平台功能概览
+
+| 平台 | 分类列表 | 房间列表 | 播放地址 | 搜索 | 主播详情 | 直播状态 | 分享码解析 | 弹幕 |
+| :---: | :------: | :------: | :------: | :--: | :------: | :------: | :--------: | :--: |
+| B站直播 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 斗鱼 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 虎牙 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 抖音 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 快手 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| YY | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| 网易CC | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| SOOP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+## 插件架构
+
+每个平台的 API 解析通过独立的 JS 插件实现，运行在 JavaScriptCore 中：
+
+```
+Swift 宿主 (Host)                    JS 插件 (JavaScriptCore)
+┌─────────────────────┐             ┌─────────────────────────┐
+│ LiveParsePlugins    │             │ globalThis.LiveParsePlugin │
+│   .shared           │ ──调用──→  │   .getCategories()       │
+│                     │             │   .getRooms()            │
+│ Host.http.request() │ ←──桥接──  │   .getPlayback()         │
+│ Host.crypto.md5()   │             │   .search()              │
+│ Host.storage.*      │             │   .getRoomDetail()       │
+└─────────────────────┘             └─────────────────────────┘
+```
+
+插件文件位于 `Sources/LiveParse/Resources/`：
+- `lp_plugin_{平台}_{版本}_manifest.json` — 插件清单
+- `lp_plugin_{平台}_{版本}_index.js` — 插件入口脚本
+
+## 参考及引用
+
+[dart_simple_live](https://github.com/xiaoyaocz/dart_simple_live/)
 
 [iceking2nd/real-url](https://github.com/iceking2nd/real-url) `虎牙解析参考`
 
@@ -109,9 +148,7 @@ extension ViewModel: WebSocketConnectionDelegate {
 
 [ihmily/DouyinLiveRecorder](https://github.com/ihmily/DouyinLiveRecorder)
 
-[wbt5/real-url](https://github.com/wbt5/real-url)
-
-## 声明：
+## 声明
 
 本项目的所有功能都是基于互联网上公开的资料开发，无任何破解、逆向工程等行为。
 
