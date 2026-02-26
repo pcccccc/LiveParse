@@ -76,11 +76,13 @@ final class YYWebSocketClient: NSObject, @unchecked Sendable {
     // MARK: - Protocol Handling
 
     private func handleConnected() {
+        print("🔵 YY: Connection established, transitioning to waitingLogin state")
         state = .waitingLogin
         sendLogin()
     }
 
     private func sendLogin() {
+        print("🔵 YY: Skipping login, scheduling sendQueryStreams in 0.5s")
         // PLoginAp: appid=259, 登录匿名用户
         // 简化版本：直接跳过登录，等待 joinChannel 事件
         // YY 的登录比较复杂，但对于获取流地址，可以尝试直接查询
@@ -88,12 +90,16 @@ final class YYWebSocketClient: NSObject, @unchecked Sendable {
         // 根据文档，连接后服务器会触发 joinChannel
         // 我们直接发送查询流信息的请求
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.state = .waitingStreams
-            self?.sendQueryStreams()
+            guard let self else { return }
+            print("🔵 YY: Transitioning to waitingStreams state")
+            self.state = .waitingStreams
+            self.sendQueryStreams()
         }
     }
 
     private func sendQueryStreams() {
+        print("🔵 YY: Sending ChannelStreamsQueryRequest for roomId: \(roomId)")
+
         // ChannelStreamsQueryRequest (appid=259)
         // head (field 100)
         var headData = Data()
@@ -119,13 +125,18 @@ final class YYWebSocketClient: NSObject, @unchecked Sendable {
         requestData.append(YYBinaryProtocol.encodeMessage(field: 7, value: clientAttr))
         requestData.append(YYBinaryProtocol.encodeMessage(field: 8, value: avpParam))
 
+        print("🔵 YY: Request protobuf data (\(requestData.count) bytes): \(requestData.map { String(format: "%02x", $0) }.joined())")
+
         // 包装成 YYP 格式
         let yypData = YYBinaryProtocol.buildYYP(maxType: 1, minType: 1, data: requestData)
+        print("🔵 YY: YYP wrapped data (\(yypData.count) bytes): \(yypData.map { String(format: "%02x", $0) }.joined())")
 
         // 包装成外层帧 (appid=259 的 URI)
         let frameData = YYBinaryProtocol.buildFrame(uri: 0x00000259, payload: yypData)
+        print("🔵 YY: Final frame data (\(frameData.count) bytes): \(frameData.map { String(format: "%02x", $0) }.joined())")
 
         send(binary: frameData)
+        print("🔵 YY: Message sent, waiting for response...")
     }
 
     private func sendQueryGearLine(streamKey: String, ver: String) {
@@ -277,7 +288,23 @@ extension YYWebSocketClient: WebSocketDelegate {
             }
 
         case .binary(let data):
+            print("📦 YY: Received binary data (\(data.count) bytes): \(data.prefix(50).map { String(format: "%02x", $0) }.joined())...")
             handleBinaryMessage(data)
+
+        case .text(let text):
+            print("📝 YY: Received text message: \(text)")
+
+        case .ping:
+            print("🏓 YY: Received ping")
+
+        case .pong:
+            print("🏓 YY: Received pong")
+
+        case .viabilityChanged(let viable):
+            print("🔄 YY: Viability changed: \(viable)")
+
+        case .reconnectSuggested(let suggested):
+            print("🔄 YY: Reconnect suggested: \(suggested)")
 
         case .error(let error):
             print("❌ YY WebSocket error: \(error?.localizedDescription ?? "unknown")")
@@ -286,8 +313,9 @@ extension YYWebSocketClient: WebSocketDelegate {
         case .cancelled:
             disconnect(error: LiveParsePluginError.jsException("YY WebSocket cancelled"))
 
-        default:
-            break
+        case .peerClosed:
+            print("❌ YY: Peer closed connection")
+            disconnect(error: LiveParsePluginError.jsException("YY WebSocket peer closed"))
         }
     }
 }
