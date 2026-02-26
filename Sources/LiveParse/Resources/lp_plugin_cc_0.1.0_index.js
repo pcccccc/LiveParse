@@ -212,17 +212,17 @@ async function _cc_getDanmaku(roomId) {
   const data = (obj && obj.data) || {};
   const channelData = data[String(roomId)] || Object.values(data)[0] || null;
   if (!channelData || !channelData.channel_id || !channelData.room_id) {
-    return {
-      args: {},
-      headers: null
-    };
+    _cc_throw("NOT_FOUND", "channel_id not found", { roomId: String(roomId) });
   }
 
+  // 返回标准 WebSocket 配置（SockJS 底层就是 WebSocket）
+  const channelId = String(channelData.channel_id || "");
   return {
     args: {
-      cid: String(channelData.channel_id || ""),
-      gametype: String(channelData.gametype || 0),
-      roomId: String(channelData.room_id || "")
+      "url": "wss://wslink.cc.163.com/conn",
+      "channel_id": channelId,
+      "subscription_group": `roomchat_${channelId}`,
+      "heartbeat_interval": "60000"
     },
     headers: null
   };

@@ -47,7 +47,7 @@ public class WebSocketConnection {
             case .douyu:
                 URL(string: "wss://danmuproxy.douyu.com:8506/")!
             case .cc:
-                URL(string: "wss://weblink.cc.163.com/")!
+                URL(string: parameters?["url"] ?? "wss://wslink.cc.163.com/conn")!
             case .soop:
                 URL(string: parameters?["ws_url"] ?? "wss://chat.sooplive.co.kr:8001/Websocket")!
             default:
@@ -137,7 +137,15 @@ extension WebSocketConnection: WebSocketDelegate {
             case .connected(let headers):
                 print("WebSocket connected: \(headers)")
                 tryCount = 0
-                parser.performHandshake(connection: self)
+
+                // CC 平台使用 SockJS 协议，需要订阅
+                if liveType == .cc {
+                    subscribeCCDanmaku()
+                    startCCHeartbeat()
+                } else {
+                    parser.performHandshake(connection: self)
+                }
+
                 delegate?.webSocketDidConnect()
             case .disconnected(let reason, let code):
                 let error = NSError(domain: reason, code: Int(code), userInfo: ["reason" : reason])
@@ -146,6 +154,8 @@ extension WebSocketConnection: WebSocketDelegate {
             case .text(let string):
                 if liveType == .soop, let soopParser = parser as? SoopSocketDataParser {
                     soopParser.parseText(text: string, connection: self)
+                } else if liveType == .cc {
+                    parseCCMessage(text: string)
                 }
             case .binary(let data):
                 parser.parse(data: data, connection: self)
@@ -173,5 +183,109 @@ extension WebSocketConnection {
         }
         components.queryItems = items
         return components.url!
+    }
+
+    // MARK: - CC Platform SockJS Methods
+
+    /// 订阅 CC 平台弹幕
+    private func subscribeCCDanmaku() {
+        guard let subscriptionGroup = parameters?["subscription_group"] else {
+            print("⚠️ CC 订阅 group 为空")
+            return
+        }
+
+        let subscribeMessage: [String: Any] = [
+            "cmd": "sub",
+            "data": [
+                "groups": [subscriptionGroup]
+            ]
+        ]
+        sendCCJSON(subscribeMessage)
+        print("✅ CC 已订阅: \(subscriptionGroup)")
+    }
+
+    /// 开始 CC 平台心跳
+    private func startCCHeartbeat() {
+        let interval = Double(parameters?["heartbeat_interval"] ?? "60000")! / 1000.0
+
+        heartbeatTimer?.invalidate()
+        heartbeatTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            self?.sendCCHeartbeat()
+        }
+        if let timer = heartbeatTimer {
+            RunLoop.current.add(timer, forMode: .common)
+        }
+    }
+
+    /// 发送 CC 心跳
+    private func sendCCHeartbeat() {
+        let heartbeatMessage: [String: Any] = ["cmd": "heartbeat"]
+        sendCCJSON(heartbeatMessage)
+    }
+
+    /// 发送 CC JSON 消息
+    private func sendCCJSON(_ message: [String: Any]) {
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: message, options: [])
+            let jsonString = String(data: jsonData, encoding: .utf8) ?? ""
+            socket?.write(string: jsonString)
+        } catch {
+            print("❌ CC JSON 序列化失败: \(error.localizedDescription)")
+        }
+    }
+
+    /// 解析 CC 平台消息
+    private func parseCCMessage(text: String) {
+        guard let jsonData = text.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
+            return
+        }
+
+        let cmd = json["cmd"] as? String ?? ""
+
+        // 处理弹幕推送
+        if cmd == "pub" {
+            guard let data = json["data"] as? [String: Any],
+                  let list = data["list"] as? [[String: Any]] else {
+                return
+            }
+
+            for item in list {
+                let msgBody = item["msg_body"] as? String ?? ""
+                let nick = item["nick"] as? String ?? ""
+
+                // 过滤 BBCode 标签
+                let cleanedMsg = filterBBCode(msgBody)
+
+                if !cleanedMsg.isEmpty {
+                    delegate?.webSocketDidReceiveMessage(
+                        text: cleanedMsg,
+                        nickname: nick,
+                        color: 0xFFFFFF
+                    )
+                }
+            }
+        }
+    }
+
+    /// 过滤 BBCode 标签
+    private func filterBBCode(_ text: String) -> String {
+        var result = text
+
+        let bbCodeTags = [
+            "emts", "wmp", "pic", "giftpic", "flash", "link", "roomlink",
+            "grouplink", "taillamp", "img", "comic", "font", "userCard", "jumplink"
+        ]
+
+        for tag in bbCodeTags {
+            let pattern = "\\[\(tag)\\].*?\\[/\(tag)\\]"
+            result = result.replacingOccurrences(
+                of: pattern,
+                with: "",
+                options: .regularExpression
+            )
+        }
+
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
