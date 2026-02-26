@@ -249,10 +249,16 @@ private extension JSRuntime {
                         return
                     }
 
-                    let headersDict: [String: String] = http.allHeaderFields.reduce(into: [:]) { acc, item in
+                    var headersDict: [String: String] = http.allHeaderFields.reduce(into: [:]) { acc, item in
                         if let k = item.key as? String {
                             acc[k] = String(describing: item.value)
                         }
+                    }
+                    // httpCookieAcceptPolicy=.never 会导致 allHeaderFields 过滤 Set-Cookie，
+                    // 但 JS 插件（如抖音 getCookie）需要读取它，因此单独补回。
+                    if headersDict["Set-Cookie"] == nil,
+                       let setCookie = http.value(forHTTPHeaderField: "Set-Cookie") {
+                        headersDict["Set-Cookie"] = setCookie
                     }
 
                     let bodyText = data.flatMap { String(data: $0, encoding: .utf8) }

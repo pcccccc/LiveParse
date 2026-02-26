@@ -65,16 +65,22 @@ async function _bili_getBuvid3And4() {
 async function _bili_getHeaders(payload) {
   const state = _bili_cookieStoreFromPayload(payload);
   let cookie = state.cookie;
+  console.log(`[bilibili] getHeaders: payload.cookie长度=${String(state.cookie || "").length}, uid=${state.uid}, hasSESSDATA=${String(state.cookie || "").includes("SESSDATA")}`);
 
   if (!cookie) {
     const buvids = await _bili_getBuvid3And4();
     cookie = `buvid3=${buvids.b3}; buvid4=${buvids.b4};DedeUserID=${Math.floor(Math.random() * 100000)}`;
+    console.log(`[bilibili] getHeaders: 无cookie, 生成匿名buvid`);
   } else if (!cookie.includes("buvid3")) {
     const buvids = await _bili_getBuvid3And4();
     const uid = state.uid || "0";
     cookie = `${cookie};buvid3=${buvids.b3}; buvid4=${buvids.b4};DedeUserID=${uid}`;
+    console.log(`[bilibili] getHeaders: 有cookie但无buvid3, 追加buvid`);
+  } else {
+    console.log(`[bilibili] getHeaders: cookie完整, 直接使用`);
   }
 
+  console.log(`[bilibili] getHeaders: 最终cookie长度=${cookie.length}`);
   return {
     cookie,
     "User-Agent": _bili_ua,
@@ -105,6 +111,7 @@ async function _bili_getWbiKeys() {
     timeout: 20
   });
   const obj = JSON.parse(resp.bodyText || "{}");
+  console.log(`[bilibili] nav response code=${obj && obj.code}, isLogin=${obj && obj.data && obj.data.isLogin}`);
   const imgURL = (((obj || {}).data || {}).wbi_img || {}).img_url || "";
   const subURL = (((obj || {}).data || {}).wbi_img || {}).sub_url || "";
 
@@ -126,10 +133,12 @@ function _bili_getMixinKey(orig) {
 
 async function _bili_wbiSign(param) {
   const keys = await _bili_getWbiKeys();
+  console.log(`[bilibili] wbiKeys: imgKey=${String(keys.imgKey || "").substring(0, 10)}..., subKey=${String(keys.subKey || "").substring(0, 10)}...`);
   const mixinKey = _bili_getMixinKey(String(keys.imgKey || "") + String(keys.subKey || ""));
 
   let params = _bili_parseQueryString(param);
-  params.wts = Math.round(Date.now());
+  params.wts = Math.floor(Date.now() / 1000);
+  console.log(`[bilibili] wbiSign wts=${params.wts}`);
 
   const sortedKeys = Object.keys(params).sort();
   const escaped = {};
@@ -146,6 +155,7 @@ async function _bili_wbiSign(param) {
 
   const wRid = _bili_md5(query + mixinKey);
   escaped.w_rid = wRid;
+  console.log(`[bilibili] wbiSign: w_rid=${wRid}, queryLen=${query.length}, mixinKeyLen=${mixinKey.length}`);
 
   return Object.keys(escaped)
     .map(function (key) { return `${key}=${escaped[key]}`; })
@@ -200,9 +210,17 @@ async function _bili_getCategoryList() {
 }
 
 async function _bili_getRoomList(id, parentId, page, headers) {
+  const cookieLen = String(headers && headers.cookie || "").length;
+  const hasSESSDATA = String(headers && headers.cookie || "").includes("SESSDATA");
+  const hasBuvid3 = String(headers && headers.cookie || "").includes("buvid3");
+  console.log(`[bilibili] getRoomList: id=${id}, page=${page}, cookieLen=${cookieLen}, hasSESSDATA=${hasSESSDATA}, hasBuvid3=${hasBuvid3}`);
+
   const accessId = await _bili_getAccessId(headers);
+  console.log(`[bilibili] accessId=${accessId}`);
+
   const query = await _bili_wbiSign(`area_id=${id}&page=${page}&parent_area_id=${parentId || ""}&platform=web&sort_type=&vajra_business_key=&web_location=444.43&w_webid=${accessId}`);
   const url = `https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?${query}`;
+  console.log(`[bilibili] getRoomList URL: ${url.substring(0, 200)}`);
 
   const resp = await Host.http.request({
     url,
@@ -214,6 +232,7 @@ async function _bili_getRoomList(id, parentId, page, headers) {
   const code = obj && Object.prototype.hasOwnProperty.call(obj, "code")
     ? Number(obj.code)
     : -1;
+  console.log(`[bilibili] getRoomList response code=${code}, msg=${(obj && (obj.message || obj.msg)) || ""}`);
   if (code !== 0) {
     _bili_throw("UPSTREAM", `apiError code=${obj && obj.code} msg=${(obj && (obj.message || obj.msg)) || ""}`, {
       code: String((obj && obj.code) || ""),

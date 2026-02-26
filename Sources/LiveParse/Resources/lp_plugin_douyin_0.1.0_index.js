@@ -1,4 +1,4 @@
-const _dy_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
+const _dy_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 const _dy_runtime = {
   cookie: "",
   searchId: "",
@@ -157,8 +157,10 @@ function _dy_parseEscapedStateFromScript(html) {
 
 function _dy_pickHeaders(cookie) {
   const out = {
-    "User-Agent": _dy_ua,
-    "Referer": "https://live.douyin.com/"
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7; application/json",
+    "Authority": "live.douyin.com",
+    "Referer": "https://live.douyin.com",
+    "User-Agent": _dy_ua
   };
   const normalizedCookie = _dy_normalizeCookie(cookie);
   if (normalizedCookie) out.Cookie = normalizedCookie;
@@ -592,18 +594,170 @@ function _dy_extractPlayArgs(roomData, roomId) {
   return [{ cdn: "线路 1", qualitys }];
 }
 
+function _dy_enrichCookie(cookie) {
+  let enriched = _dy_normalizeCookie(cookie);
+  if (!enriched) return enriched;
+  if (!_dy_getCookieValue(enriched, "__ac_nonce")) {
+    enriched = _dy_appendCookieKV(enriched, "__ac_nonce", _dy_randomString(21, "0123456789abcdef"));
+  }
+  if (!_dy_getCookieValue(enriched, "msToken")) {
+    enriched = _dy_appendCookieKV(enriched, "msToken", _dy_generateMsToken());
+  }
+  return enriched;
+}
+
+// 获取新鲜匿名 cookie（ttwid + __ac_nonce + msToken）
+// ttwid 通过 bytedance 注册接口获取，__ac_nonce 和 msToken 随机生成
+// 注意：不使用用户的 auth cookie 调用 API，否则会触发 444 反爬
+async function _dy_getCookie(roomId) {
+  let ttwid = "";
+  try {
+    const resp = await Host.http.request({
+      url: "https://ttwid.bytedance.com/ttwid/union/register/",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        region: "cn",
+        aid: 1768,
+        needFid: false,
+        service: "www.ixigua.com",
+        migrate_info: { ticket: "", source: "node" },
+        cbUrlProtocol: "https",
+        union: true
+      }),
+      timeout: 10
+    });
+    const setCookie = _dy_toString(resp && resp.headers && resp.headers["Set-Cookie"]);
+    console.log(`[douyin] _dy_getCookie: ttwid register status=${resp && resp.status}, Set-Cookie length=${setCookie.length}`);
+    if (setCookie) {
+      const parts = setCookie.split(";");
+      for (const part of parts) {
+        const kv = part.trim();
+        if (kv.startsWith("ttwid=")) {
+          ttwid = kv.split("=")[1];
+          break;
+        }
+      }
+    }
+  } catch (e) {
+    console.log(`[douyin] _dy_getCookie: ttwid register failed: ${_dy_toString(e && e.message)}`);
+  }
+
+  let dyCookie = "";
+  if (ttwid) {
+    dyCookie += "ttwid=" + ttwid + ";";
+  }
+  dyCookie += "__ac_nonce=" + _dy_randomString(21, "0123456789abcdef") + ";";
+  dyCookie += "msToken=" + _dy_generateMsToken() + ";";
+  console.log(`[douyin] _dy_getCookie: ttwid=${ttwid ? "yes" : "no"}, cookieLen=${dyCookie.length}`);
+  return dyCookie;
+}
+
+async function _dy_getRoomDataByApi(roomId, userId, cookie) {
+  const webRid = _dy_toString(roomId).trim();
+  const roomIdStr = _dy_toString(userId || roomId).trim();
+  if (!webRid) _dy_throw("INVALID_ARGS", "roomId is empty", { field: "roomId" });
+
+  // 始终使用匿名 cookie（ttwid + __ac_nonce + msToken），不使用用户 auth cookie
+  // 用户 auth cookie 会触发 444 反爬
+  const finalCookie = await _dy_getCookie(webRid);
+
+  // 和 Swift buildRequestUrl 完全一致：不 encode，直接拼接
+  const params = `aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_live&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Chrome&browser_version=140.0.0.0&web_rid=${webRid}&room_id_str=${roomIdStr}&enter_source=&is_need_double_stream=false&insert_task_id=&live_reason=`;
+
+  const aBogus = _dy_signDetail(params);
+  // Swift: url + "?\(urlParams)&a_bogus=\(signature)" — 不 encodeURIComponent
+  const requestURL = `https://live.douyin.com/webcast/room/web/enter/?${params}&a_bogus=${aBogus}`;
+
+  // Swift: var requestHeaders = headers; requestHeaders.add(name: "cookie", value: cookie); requestHeaders.add(name: "accept", value: "application/json, text/plain, */*")
+  const hdrs = _dy_pickHeaders(finalCookie);
+  hdrs["Accept"] = "application/json, text/plain, */*";
+
+  console.log(`[douyin] _dy_getRoomDataByApi: roomId=${webRid}, aBogusLen=${aBogus.length}, cookieLen=${finalCookie.length}`);
+  console.log(`[douyin] cookie: ${finalCookie.substring(0, 80)}`);
+  console.log(`[douyin] URL (first 250): ${requestURL.substring(0, 250)}`);
+  console.log(`[douyin] headers: ${JSON.stringify(hdrs).substring(0, 300)}`);
+
+  const resp = await Host.http.request({
+    url: requestURL,
+    method: "GET",
+    headers: hdrs,
+    timeout: 20
+  });
+
+  const httpStatus = resp && resp.status;
+  const respUrl = _dy_toString(resp && resp.url);
+  const bodyText = _dy_toString(resp && resp.bodyText);
+  console.log(`[douyin] API response: httpStatus=${httpStatus}, bodyLen=${bodyText.length}, respUrl=${respUrl.substring(0, 200)}, first200=${bodyText.substring(0, 200)}`);
+  let obj;
+  try {
+    obj = JSON.parse(bodyText || "{}");
+  } catch (e) {
+    _dy_throw("PARSE", "douyin API json parse failed", { roomId: String(roomId || ""), httpStatus: String(httpStatus || ""), bodyLen: String(bodyText.length), first200: bodyText.substring(0, 200) });
+  }
+
+  const statusCode = obj && obj.status_code;
+  console.log(`[douyin] API response: status_code=${statusCode}, data_keys=${_dy_objectKeys(obj && obj.data)}`);
+
+  const dataArr = (((obj || {}).data || {}).data) || [];
+  const roomData = Array.isArray(dataArr) && dataArr.length > 0 ? dataArr[0] : null;
+  const userData = ((obj || {}).data || {}).user || null;
+
+  if (!roomData || !roomData.id_str) {
+    _dy_throw("INVALID_RESPONSE", "douyin API returned empty room data", { roomId: String(roomId || ""), status_code: String(statusCode || "") });
+  }
+
+  // Build the same structure as _dy_getRoomDataByHtml returns
+  const room = roomData;
+  const owner = userData ? {
+    nickname: _dy_toString(userData.nickname || ""),
+    id_str: _dy_toString(userData.id_str || ""),
+    web_rid: _dy_toString(userData.web_rid || webRid),
+    avatar_thumb: userData.avatar_thumb || {}
+  } : (room.owner || {});
+
+  room.owner = owner;
+
+  return { room, roomInfo: { room, anchor: owner }, roomStore: {}, streamStore: {}, state: {} };
+}
+
+async function _dy_getDouyinRoomDetail(roomId, userId, cookie, maxRetries) {
+  const retries = maxRetries || 3;
+  let lastError = null;
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await _dy_getRoomDataByApi(roomId, userId, cookie);
+    } catch (e) {
+      lastError = e;
+      console.log(`[douyin] API attempt ${i + 1}/${retries} failed: ${_dy_toString(e && e.message)}`);
+    }
+  }
+
+  try {
+    return await _dy_getRoomDataByHtml(roomId, cookie);
+  } catch (e) {
+    throw lastError || e;
+  }
+}
+
 async function _dy_getRoomDataByHtml(roomId, cookie) {
   const webRid = _dy_toString(roomId).trim();
   if (!webRid) _dy_throw("INVALID_ARGS", "roomId is empty", { field: "roomId" });
 
+  const enrichedCookie = _dy_enrichCookie(cookie);
+
   const resp = await Host.http.request({
     url: `https://live.douyin.com/${encodeURIComponent(webRid)}`,
     method: "GET",
-    headers: _dy_pickHeaders(cookie),
+    headers: _dy_pickHeaders(enrichedCookie),
     timeout: 20
   });
 
+  const statusCode = resp && resp.status;
   const html = _dy_toString(resp && resp.bodyText);
+  console.log(`[douyin] getRoomDataByHtml: httpStatus=${statusCode}, htmlLen=${html.length}, hasState=${html.includes('\\"state\\"')}, hasRenderData=${html.includes('RENDER_DATA')}, first200=${html.substring(0, 200)}`);
+
   if (!html) {
     _dy_throw("INVALID_RESPONSE", "empty room html", { roomId: String(roomId || "") });
   }
@@ -652,6 +806,11 @@ async function _dy_getRoomDataByHtml(roomId, cookie) {
   }
 
   if (!payloadObj) {
+    const hasEscapedState = html.includes('\\"state\\"');
+    const hasRenderData = html.includes('id="RENDER_DATA"');
+    const hasInitialState = html.includes('__INITIAL_STATE__');
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const pageTitle = titleMatch ? titleMatch[1].substring(0, 100) : "no-title";
     _dy_throw("PARSE", "cannot parse douyin state payload from html", { roomId: String(roomId || "") });
   }
 
@@ -686,6 +845,8 @@ async function _dy_getRoomDataByHtml(roomId, cookie) {
 }
 
 async function _dy_getRoomList(id, parentId, page, cookie) {
+  // 使用匿名 cookie 避免 444
+  const freshCookie = await _dy_getCookie("");
   const params = [
     "aid=6383",
     "app_name=douyin_web",
@@ -699,7 +860,7 @@ async function _dy_getRoomList(id, parentId, page, cookie) {
     "browser_language=zh-CN",
     "browser_platform=Win32",
     "browser_name=Edge",
-    "browser_version=141.0.0.0",
+    "browser_version=140.0.0.0",
     "browser_online=true",
     "count=15",
     `offset=${encodeURIComponent(String((Number(page || 1) - 1) * 15))}`,
@@ -714,7 +875,7 @@ async function _dy_getRoomList(id, parentId, page, cookie) {
   const resp = await Host.http.request({
     url: requestURL,
     method: "GET",
-    headers: _dy_pickHeaders(cookie),
+    headers: _dy_pickHeaders(freshCookie),
     timeout: 20
   });
 
@@ -783,10 +944,10 @@ async function _dy_searchRooms(keyword, page, cookie) {
     "browser_language=zh-CN",
     "browser_platform=Win32",
     "browser_name=Edge",
-    "browser_version=141.0.0.0",
+    "browser_version=140.0.0.0",
     "browser_online=true",
     "engine_name=Blink",
-    "engine_version=141.0.0.0",
+    "engine_version=140.0.0.0",
     "os_name=Windows",
     "os_version=10",
     "cpu_core_num=12",
@@ -1050,8 +1211,9 @@ globalThis.LiveParsePlugin = {
   async getPlayback(payload) {
     const runtimePayload = _dy_requireCookie(payload, "getPlayback");
     const roomId = _dy_toString(runtimePayload.roomId);
+    const userId = _dy_toString(runtimePayload.userId);
     if (!roomId) _dy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    const data = await _dy_getRoomDataByHtml(roomId, runtimePayload.cookie);
+    const data = await _dy_getDouyinRoomDetail(roomId, userId, runtimePayload.cookie, 3);
     return _dy_extractPlayArgs(data, roomId);
   },
 
@@ -1066,8 +1228,9 @@ globalThis.LiveParsePlugin = {
   async getRoomDetail(payload) {
     const runtimePayload = _dy_requireCookie(payload, "getRoomDetail");
     const roomId = _dy_toString(runtimePayload.roomId);
+    const userId = _dy_toString(runtimePayload.userId);
     if (!roomId) _dy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    const data = await _dy_getRoomDataByHtml(roomId, runtimePayload.cookie);
+    const data = await _dy_getDouyinRoomDetail(roomId, userId, runtimePayload.cookie, 3);
     return _dy_buildLiveModel(data, roomId);
   },
 
@@ -1135,8 +1298,7 @@ globalThis.LiveParsePlugin = {
 };
 
 
-// ---- a_bogus pure JS implementation (from public reference) ----
-// All the content in this article is only for learning and communication use, not for any other purpose, strictly prohibited for commercial use and illegal use, otherwise all the consequences are irrelevant to the author!
+// ---- a_bogus implementation aligned with Swift ABogus (pageId=0, bigArray transform) ----
 function rc4_encrypt(plaintext, key) {
     var s = [];
     for (var i = 0; i < 256; i++) {
@@ -1165,8 +1327,7 @@ function rc4_encrypt(plaintext, key) {
     return cipher.join('');
 }
 
-// Directly vendored from sm-crypto (MIT): https://github.com/JuneAndGreen/sm-crypto
-// source: src/sm2/sm3.js + src/sm3/index.js
+// SM3 implementation (vendored from sm-crypto, MIT license)
 const _dy_sm3_W = new Uint32Array(68);
 const _dy_sm3_M = new Uint32Array(64);
 const _dy_sm3_blockLen = 64;
@@ -1188,24 +1349,17 @@ function _dy_sm3_xor(x, y) {
     return result;
 }
 
-function _dy_sm3_P0(X) {
-    return (_dy_sm3_rotl(X, 9) ^ _dy_sm3_rotl(X, 17) ^ X);
-}
-
-function _dy_sm3_P1(X) {
-    return (_dy_sm3_rotl(X, 15) ^ _dy_sm3_rotl(X, 23) ^ X);
-}
+function _dy_sm3_P0(X) { return (_dy_sm3_rotl(X, 9) ^ _dy_sm3_rotl(X, 17) ^ X); }
+function _dy_sm3_P1(X) { return (_dy_sm3_rotl(X, 15) ^ _dy_sm3_rotl(X, 23) ^ X); }
 
 function _dy_sm3_core(array) {
     let len = array.length * 8;
     let k = len % 512;
     k = k >= 448 ? 512 - (k % 448) - 1 : 448 - k - 1;
-
     const kArr = new Array((k - 7) / 8);
     const lenArr = new Array(8);
     for (let i = 0; i < kArr.length; i++) kArr[i] = 0;
     for (let i = 0; i < lenArr.length; i++) lenArr[i] = 0;
-
     len = len.toString(2);
     for (let i = 7; i >= 0; i--) {
         if (len.length > 8) {
@@ -1217,78 +1371,29 @@ function _dy_sm3_core(array) {
             len = "";
         }
     }
-
     const m = new Uint8Array([...array, 0x80, ...kArr, ...lenArr]);
     const dataView = new DataView(m.buffer, 0);
     const n = m.length / 64;
-    const V = new Uint32Array([
-        0x7380166F, 0x4914B2B9, 0x172442D7, 0xDA8A0600,
-        0xA96F30BC, 0x163138AA, 0xE38DEE4D, 0xB0FB0E4E
-    ]);
-
+    const V = new Uint32Array([0x7380166F, 0x4914B2B9, 0x172442D7, 0xDA8A0600, 0xA96F30BC, 0x163138AA, 0xE38DEE4D, 0xB0FB0E4E]);
     for (let i = 0; i < n; i++) {
-        _dy_sm3_W.fill(0);
-        _dy_sm3_M.fill(0);
-
+        _dy_sm3_W.fill(0); _dy_sm3_M.fill(0);
         const start = 16 * i;
-        for (let j = 0; j < 16; j++) {
-            _dy_sm3_W[j] = dataView.getUint32((start + j) * 4, false);
-        }
-        for (let j = 16; j < 68; j++) {
-            _dy_sm3_W[j] = (
-                _dy_sm3_P1((_dy_sm3_W[j - 16] ^ _dy_sm3_W[j - 9]) ^ _dy_sm3_rotl(_dy_sm3_W[j - 3], 15)) ^
-                _dy_sm3_rotl(_dy_sm3_W[j - 13], 7) ^
-                _dy_sm3_W[j - 6]
-            );
-        }
+        for (let j = 0; j < 16; j++) _dy_sm3_W[j] = dataView.getUint32((start + j) * 4, false);
+        for (let j = 16; j < 68; j++) _dy_sm3_W[j] = (_dy_sm3_P1((_dy_sm3_W[j - 16] ^ _dy_sm3_W[j - 9]) ^ _dy_sm3_rotl(_dy_sm3_W[j - 3], 15)) ^ _dy_sm3_rotl(_dy_sm3_W[j - 13], 7) ^ _dy_sm3_W[j - 6]);
+        for (let j = 0; j < 64; j++) _dy_sm3_M[j] = _dy_sm3_W[j] ^ _dy_sm3_W[j + 4];
+        const T1 = 0x79CC4519, T2 = 0x7A879D8A;
+        let A = V[0], B = V[1], C = V[2], D = V[3], E = V[4], F = V[5], G = V[6], H = V[7];
         for (let j = 0; j < 64; j++) {
-            _dy_sm3_M[j] = _dy_sm3_W[j] ^ _dy_sm3_W[j + 4];
+            const T = j <= 15 ? T1 : T2;
+            const SS1 = _dy_sm3_rotl(_dy_sm3_rotl(A, 12) + E + _dy_sm3_rotl(T, j), 7);
+            const SS2 = SS1 ^ _dy_sm3_rotl(A, 12);
+            const TT1 = (j <= 15 ? ((A ^ B) ^ C) : (((A & B) | (A & C)) | (B & C))) + D + SS2 + _dy_sm3_M[j];
+            const TT2 = (j <= 15 ? ((E ^ F) ^ G) : ((E & F) | ((~E) & G))) + H + SS1 + _dy_sm3_W[j];
+            D = C; C = _dy_sm3_rotl(B, 9); B = A; A = TT1;
+            H = G; G = _dy_sm3_rotl(F, 19); F = E; E = _dy_sm3_P0(TT2);
         }
-
-        const T1 = 0x79CC4519;
-        const T2 = 0x7A879D8A;
-        let A = V[0];
-        let B = V[1];
-        let C = V[2];
-        let D = V[3];
-        let E = V[4];
-        let F = V[5];
-        let G = V[6];
-        let H = V[7];
-        let SS1;
-        let SS2;
-        let TT1;
-        let TT2;
-        let T;
-
-        for (let j = 0; j < 64; j++) {
-            T = j >= 0 && j <= 15 ? T1 : T2;
-            SS1 = _dy_sm3_rotl(_dy_sm3_rotl(A, 12) + E + _dy_sm3_rotl(T, j), 7);
-            SS2 = SS1 ^ _dy_sm3_rotl(A, 12);
-
-            TT1 = (j >= 0 && j <= 15 ? ((A ^ B) ^ C) : (((A & B) | (A & C)) | (B & C))) + D + SS2 + _dy_sm3_M[j];
-            TT2 = (j >= 0 && j <= 15 ? ((E ^ F) ^ G) : ((E & F) | ((~E) & G))) + H + SS1 + _dy_sm3_W[j];
-
-            D = C;
-            C = _dy_sm3_rotl(B, 9);
-            B = A;
-            A = TT1;
-            H = G;
-            G = _dy_sm3_rotl(F, 19);
-            F = E;
-            E = _dy_sm3_P0(TT2);
-        }
-
-        V[0] ^= A;
-        V[1] ^= B;
-        V[2] ^= C;
-        V[3] ^= D;
-        V[4] ^= E;
-        V[5] ^= F;
-        V[6] ^= G;
-        V[7] ^= H;
+        V[0] ^= A; V[1] ^= B; V[2] ^= C; V[3] ^= D; V[4] ^= E; V[5] ^= F; V[6] ^= G; V[7] ^= H;
     }
-
     const result = [];
     for (let i = 0; i < V.length; i++) {
         const word = V[i];
@@ -1300,339 +1405,211 @@ function _dy_sm3_core(array) {
 function _dy_sm3_hmac(input, key) {
     if (key.length > _dy_sm3_blockLen) key = _dy_sm3_core(key);
     while (key.length < _dy_sm3_blockLen) key.push(0);
-    const iPadKey = _dy_sm3_xor(key, _dy_sm3_iPad);
-    const oPadKey = _dy_sm3_xor(key, _dy_sm3_oPad);
-    const hash = _dy_sm3_core([...iPadKey, ...input]);
-    return _dy_sm3_core([...oPadKey, ...hash]);
+    return _dy_sm3_core([..._dy_sm3_xor(key, _dy_sm3_oPad), ..._dy_sm3_core([..._dy_sm3_xor(key, _dy_sm3_iPad), ...input])]);
 }
 
-function _dy_sm3_leftPad(input, num) {
-    return input.length >= num ? input : (new Array(num - input.length + 1)).join("0") + input;
-}
-
-function _dy_sm3_arrayToHex(arr) {
-    return arr.map((item) => {
-        const hex = item.toString(16);
-        return hex.length === 1 ? "0" + hex : hex;
-    }).join("");
-}
-
+function _dy_sm3_arrayToHex(arr) { return arr.map(function(item) { const h = item.toString(16); return h.length === 1 ? "0" + h : h; }).join(""); }
 function _dy_sm3_hexToArray(hexStr) {
-    const words = [];
-    let text = _dy_toString(hexStr);
-    if (text.length % 2 !== 0) {
-        text = _dy_sm3_leftPad(text, text.length + 1);
-    }
-    for (let i = 0; i < text.length; i += 2) {
-        words.push(parseInt(text.substr(i, 2), 16));
-    }
+    const words = []; let text = _dy_toString(hexStr);
+    if (text.length % 2 !== 0) text = "0" + text;
+    for (let i = 0; i < text.length; i += 2) words.push(parseInt(text.substr(i, 2), 16));
     return words;
 }
-
 function _dy_sm3_utf8ToArray(str) {
     const arr = [];
     for (let i = 0; i < str.length; i++) {
         const point = str.codePointAt(i);
-        if (point <= 0x007F) {
-            arr.push(point);
-        } else if (point <= 0x07FF) {
-            arr.push(0xC0 | (point >>> 6));
-            arr.push(0x80 | (point & 0x3F));
-        } else if (point <= 0xD7FF || (point >= 0xE000 && point <= 0xFFFF)) {
-            arr.push(0xE0 | (point >>> 12));
-            arr.push(0x80 | ((point >>> 6) & 0x3F));
-            arr.push(0x80 | (point & 0x3F));
-        } else if (point >= 0x010000 && point <= 0x10FFFF) {
-            i += 1;
-            arr.push(0xF0 | ((point >>> 18) & 0x1C));
-            arr.push(0x80 | ((point >>> 12) & 0x3F));
-            arr.push(0x80 | ((point >>> 6) & 0x3F));
-            arr.push(0x80 | (point & 0x3F));
-        } else {
-            arr.push(point);
-            throw new Error("input is not supported");
-        }
+        if (point <= 0x007F) { arr.push(point); }
+        else if (point <= 0x07FF) { arr.push(0xC0 | (point >>> 6)); arr.push(0x80 | (point & 0x3F)); }
+        else if (point <= 0xD7FF || (point >= 0xE000 && point <= 0xFFFF)) { arr.push(0xE0 | (point >>> 12)); arr.push(0x80 | ((point >>> 6) & 0x3F)); arr.push(0x80 | (point & 0x3F)); }
+        else if (point >= 0x010000 && point <= 0x10FFFF) { i += 1; arr.push(0xF0 | ((point >>> 18) & 0x1C)); arr.push(0x80 | ((point >>> 12) & 0x3F)); arr.push(0x80 | ((point >>> 6) & 0x3F)); arr.push(0x80 | (point & 0x3F)); }
+        else { arr.push(point); }
     }
     return arr;
 }
 
 function sm3(input, options) {
-    const normalizedInput = typeof input === "string"
-        ? _dy_sm3_utf8ToArray(input)
-        : Array.prototype.slice.call(input);
-
+    const normalizedInput = typeof input === "string" ? _dy_sm3_utf8ToArray(input) : Array.prototype.slice.call(input);
     if (options) {
-        const mode = options.mode || "hmac";
-        if (mode !== "hmac") throw new Error("invalid mode");
         let key = options.key;
         if (!key) throw new Error("invalid key");
         key = typeof key === "string" ? _dy_sm3_hexToArray(key) : Array.prototype.slice.call(key);
         return _dy_sm3_arrayToHex(_dy_sm3_hmac(normalizedInput, key));
     }
-
     return _dy_sm3_arrayToHex(_dy_sm3_core(normalizedInput));
 }
 
-function _dy_sm3_double_bytes(input) {
-    const normalized = Array.isArray(input) ? input.map((n) => Number(n) & 0xFF) : _dy_toString(input);
-    const firstHex = sm3(normalized);
-    const secondHex = sm3(_dy_sm3_hexToArray(firstHex));
-    return _dy_sm3_hexToArray(secondHex);
+// ---- Swift-aligned ABogus (pageId=0, bigArray, Edge fingerprint) ----
+const _ab_character = "Dkdpgh2ZmsQB80/MfvV36XI1R45-WUAlEixNLwoqYTOPuzKFjJnry79HbGcaStCe";
+const _ab_character2 = "ckdp1h4ZKsUB80/Mfvw36XIgR25+WQAlEi7NLboqYTOPuzmFjJnryx9HVGDaStCe";
+const _ab_salt = "cus";
+const _ab_pageId = 0;
+const _ab_aid = 6383;
+const _ab_uaKey = [0x00, 0x01, 0x0E];
+const _ab_options = [0, 1, 14];
+const _ab_sortIndex = [18,20,52,26,30,34,58,38,40,53,42,21,27,54,55,31,35,57,39,41,43,22,28,32,60,36,23,29,33,37,44,45,59,46,47,48,49,50,24,25,65,66,70,71];
+const _ab_sortIndex2 = [18,20,26,30,34,38,40,42,21,27,31,35,39,41,43,22,28,32,36,23,29,33,37,44,45,46,47,48,49,50,24,25,52,53,54,55,57,58,59,60,65,66,70,71];
+
+function _ab_createBigArray() {
+    return [121,243,55,234,103,36,47,228,30,231,106,6,115,95,78,101,250,207,198,50,139,227,220,105,97,143,34,28,194,215,18,100,159,160,43,8,169,217,180,120,247,45,90,11,27,197,46,3,84,72,5,68,62,56,221,75,144,79,73,161,178,81,64,187,134,117,186,118,16,241,130,71,89,147,122,129,65,40,88,150,110,219,199,255,181,254,48,4,195,248,208,32,116,167,69,201,17,124,125,104,96,83,80,127,236,108,154,126,204,15,20,135,112,158,13,1,188,164,210,237,222,98,212,77,253,42,170,202,26,22,29,182,251,10,173,152,58,138,54,141,185,33,157,31,252,132,233,235,102,196,191,223,240,148,39,123,92,82,128,109,57,24,38,113,209,245,2,119,153,229,189,214,230,174,232,63,52,205,86,140,66,175,111,171,246,133,238,193,99,60,74,91,225,51,76,37,145,211,166,151,213,206,0,200,244,176,218,44,184,172,49,216,93,168,53,21,183,41,67,85,224,155,226,242,87,177,146,70,190,12,162,19,137,114,25,165,163,192,23,59,9,94,179,107,35,7,142,131,239,203,149,136,61,249,14,156];
 }
 
-function result_encrypt(long_str, num = null) {
-    let s_obj = {
-        "s0": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
-        "s1": "Dkdpgh4ZKsQB80/Mfvw36XI1R25+WUAlEi7NLboqYTOPuzmFjJnryx9HVGcaStCe=",
-        "s2": "Dkdpgh4ZKsQB80/Mfvw36XI1R25-WUAlEi7NLboqYTOPuzmFjJnryx9HVGcaStCe=",
-        "s3": "ckdp1h4ZKsUB80/Mfvw36XIgR25+WQAlEi7NLboqYTOPuzmFjJnryx9HVGDaStCe",
-        "s4": "Dkdpgh2ZmsQB80/MfvV36XI1R45-WUAlEixNLwoqYTOPuzKFjJnry79HbGcaStCe"
-    }
-    let constant = {
-        "0": 16515072,
-        "1": 258048,
-        "2": 4032,
-        "str": s_obj[num],
-    }
+function _ab_sm3ToArray(input) {
+    return _dy_sm3_hexToArray(sm3(input));
+}
 
+function _ab_paramsToArray(param, addSalt) {
+    if (addSalt === undefined) addSalt = true;
+    if (typeof param === "string" && addSalt) return _ab_sm3ToArray(param + _ab_salt);
+    return _ab_sm3ToArray(param);
+}
+
+function _ab_base64Encode(inputString, selectedAlphabet) {
+    const alphabet = selectedAlphabet === 1 ? _ab_character2 : _ab_character;
+    const charValues = [];
+    for (let i = 0; i < inputString.length; i++) charValues.push(inputString.charCodeAt(i) & 0xFF);
+    let binaryString = charValues.map(function(v) { let s = v.toString(2); while (s.length < 8) s = "0" + s; return s; }).join("");
+    const paddingLength = (6 - binaryString.length % 6) % 6;
+    binaryString += "0".repeat(paddingLength);
     let result = "";
-    let lound = 0;
-    let long_int = get_long_int(lound, long_str);
-    for (let i = 0; i < long_str.length / 3 * 4; i++) {
-        if (Math.floor(i / 4) !== lound) {
-            lound += 1;
-            long_int = get_long_int(lound, long_str);
+    for (let i = 0; i < binaryString.length; i += 6) result += alphabet[parseInt(binaryString.substring(i, i + 6), 2)];
+    return result + "=".repeat(Math.floor(paddingLength / 2));
+}
+
+function _ab_transformBytes(bigArray, bytesList) {
+    let resultValues = [];
+    let indexB = bigArray[1];
+    let initialValue = 0;
+    let valueE = 0;
+    for (let index = 0; index < bytesList.length; index++) {
+        let sumInitial;
+        if (index === 0) {
+            initialValue = bigArray[indexB];
+            sumInitial = indexB + initialValue;
+            bigArray[1] = initialValue;
+            bigArray[indexB] = indexB;
+        } else {
+            sumInitial = initialValue + valueE;
         }
-        let key = i % 4;
-        switch (key) {
-            case 0:
-                temp_int = (long_int & constant["0"]) >> 18;
-                result += constant["str"].charAt(temp_int);
-                break;
-            case 1:
-                temp_int = (long_int & constant["1"]) >> 12;
-                result += constant["str"].charAt(temp_int);
-                break;
-            case 2:
-                temp_int = (long_int & constant["2"]) >> 6;
-                result += constant["str"].charAt(temp_int);
-                break;
-            case 3:
-                temp_int = long_int & 63;
-                result += constant["str"].charAt(temp_int);
-                break;
-            default:
-                break;
+        const charValue = bytesList[index] & 0xFF;
+        sumInitial = ((sumInitial % bigArray.length) + bigArray.length) % bigArray.length;
+        const valueF = bigArray[sumInitial];
+        resultValues.push(charValue ^ valueF);
+        valueE = bigArray[(index + 2) % bigArray.length];
+        sumInitial = ((indexB + valueE) % bigArray.length + bigArray.length) % bigArray.length;
+        initialValue = bigArray[sumInitial];
+        bigArray[sumInitial] = bigArray[(index + 2) % bigArray.length];
+        bigArray[(index + 2) % bigArray.length] = initialValue;
+        indexB = sumInitial;
+    }
+    return resultValues;
+}
+
+function _ab_abogusEncode(randomValues, transformValues) {
+    const alphabet = _ab_character;
+    const charValues = randomValues.concat(transformValues);
+    let abogus = [];
+    for (let i = 0; i < charValues.length; i += 3) {
+        let n;
+        if (i + 2 < charValues.length) n = ((charValues[i] & 0xFF) << 16) | ((charValues[i+1] & 0xFF) << 8) | (charValues[i+2] & 0xFF);
+        else if (i + 1 < charValues.length) n = ((charValues[i] & 0xFF) << 16) | ((charValues[i+1] & 0xFF) << 8);
+        else n = (charValues[i] & 0xFF) << 16;
+        const shifts = [18, 12, 6, 0], masks = [0xFC0000, 0x03F000, 0x0FC0, 0x3F];
+        for (let j = 0; j < 4; j++) {
+            if (shifts[j] === 6 && i + 1 >= charValues.length) break;
+            if (shifts[j] === 0 && i + 2 >= charValues.length) break;
+            abogus.push(alphabet[(n & masks[j]) >> shifts[j]]);
         }
+    }
+    return abogus.join("") + "=".repeat((4 - abogus.length % 4) % 4);
+}
+
+function _ab_generateRandomBytes() {
+    let result = [];
+    for (let i = 0; i < 3; i++) {
+        const rd = Math.floor(Math.random() * 10000);
+        result.push(((rd & 255) & 170) | 1);
+        result.push(((rd & 255) & 85) | 2);
+        result.push((((rd & 0xFFFFFFFF) >>> 8) & 170) | 5);
+        result.push((((rd & 0xFFFFFFFF) >>> 8) & 85) | 40);
     }
     return result;
 }
 
-function get_long_int(round, long_str) {
-    round = round * 3;
-    return (long_str.charCodeAt(round) << 16) | (long_str.charCodeAt(round + 1) << 8) | (long_str.charCodeAt(round + 2));
+function _ab_generateEdgeFingerprint() {
+    function r(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+    const iw = r(1024, 1920), ih = r(768, 1080);
+    const ow = iw + r(24, 32), oh = ih + r(75, 90);
+    const sy = [0, 30][Math.floor(Math.random() * 2)];
+    const sw = r(1024, 1920), sh = r(768, 1080), aw = r(1280, 1920), ah = r(800, 1080);
+    return iw+"|"+ih+"|"+ow+"|"+oh+"|0|"+sy+"|0|0|"+sw+"|"+sh+"|"+aw+"|"+ah+"|"+iw+"|"+ih+"|24|24|Win32";
 }
 
-function gener_random(random, option) {
-    return [
-        (random & 255 & 170) | option[0] & 85, // 163
-        (random & 255 & 85) | option[0] & 170, //87
-        (random >> 8 & 255 & 170) | option[1] & 85, //37
-        (random >> 8 & 255 & 85) | option[1] & 170, //41
-    ]
-}
+function _ab_generateAbogus(params) {
+    const userAgent = _dy_ua;
+    const browserFp = _ab_generateEdgeFingerprint();
+    const bigArray = _ab_createBigArray();
 
-//////////////////////////////////////////////
-function generate_rc4_bb_str(url_search_params, user_agent, window_env_str, suffix = "cus", Arguments = [0, 1, 14]) {
-    let start_time = Date.now()
-    /**
-     * 进行3次加密处理
-     * 1: url_search_params两次sm3之的结果
-     * 2: 对后缀两次sm3之的结果
-     * 3: 对ua处理之后的结果
-     */
-        // url_search_params两次sm3之的结果
-    let url_search_params_list = _dy_sm3_double_bytes(url_search_params + suffix)
-    // 对后缀两次sm3之的结果
-    let cus = _dy_sm3_double_bytes(suffix)
-    // 对ua处理之后的结果
-    let ua = _dy_sm3_double_bytes(result_encrypt(rc4_encrypt(user_agent, String.fromCharCode.apply(null, [0.00390625, 1, Arguments[2]])), "s3"))
-    //
-    let end_time = Date.now()
-    // b
-    let b = {
-        8: 3, // 固定
-        10: end_time, //3次加密结束时间
-        15: {
-            "aid": 6383,
-            "pageId": 6241,
-            "boe": false,
-            "ddrt": 7,
-            "paths": {
-                "include": [
-                    {},
-                    {},
-                    {},
-                    {},
-                    {},
-                    {},
-                    {}
-                ],
-                "exclude": []
-            },
-            "track": {
-                "mode": 0,
-                "delay": 300,
-                "paths": []
-            },
-            "dump": true,
-            "rpU": ""
-        },
-        16: start_time, //3次加密开始时间
-        18: 44, //固定
-        19: [1, 0, 1, 5],
+    let abDir = {};
+    abDir[8] = 3;
+    abDir[18] = 44;
+    abDir[66] = 0; abDir[69] = 0; abDir[70] = 0; abDir[71] = 0;
+
+    const startEncryption = Date.now();
+    const array0 = _ab_paramsToArray(params, true);
+    const array1 = _ab_sm3ToArray(array0);
+    const bodyArray0 = _ab_paramsToArray("", true);
+    const array2 = _ab_sm3ToArray(bodyArray0);
+    const uaKeyStr = String.fromCharCode.apply(null, _ab_uaKey);
+    const encryptedUA = rc4_encrypt(userAgent, uaKeyStr);
+    const base64EncodedUA = _ab_base64Encode(encryptedUA, 1);
+    const array3 = _dy_sm3_hexToArray(sm3(base64EncodedUA));
+    const endEncryption = Date.now();
+
+    abDir[20] = (startEncryption >> 24) & 255;
+    abDir[21] = (startEncryption >> 16) & 255;
+    abDir[22] = (startEncryption >> 8) & 255;
+    abDir[23] = startEncryption & 255;
+    abDir[24] = Math.floor(startEncryption / 256 / 256 / 256 / 256);
+    abDir[25] = Math.floor(startEncryption / 256 / 256 / 256 / 256 / 256);
+    abDir[26] = 0; abDir[27] = 0; abDir[28] = 0; abDir[29] = 0;
+    abDir[30] = 0; abDir[31] = 1; abDir[32] = 0; abDir[33] = 0;
+    abDir[34] = 0; abDir[35] = 0; abDir[36] = 0; abDir[37] = 14;
+    abDir[38] = array1[21]; abDir[39] = array1[22];
+    abDir[40] = array2[21]; abDir[41] = array2[22];
+    abDir[42] = array3[23]; abDir[43] = array3[24];
+    abDir[44] = (endEncryption >> 24) & 255;
+    abDir[45] = (endEncryption >> 16) & 255;
+    abDir[46] = (endEncryption >> 8) & 255;
+    abDir[47] = endEncryption & 255;
+    abDir[48] = 3;
+    abDir[49] = Math.floor(endEncryption / 256 / 256 / 256 / 256);
+    abDir[50] = Math.floor(endEncryption / 256 / 256 / 256 / 256 / 256);
+    abDir[51] = 0; abDir[52] = 0; abDir[53] = 0; abDir[54] = 0; abDir[55] = 0;
+    abDir[56] = 6383; abDir[57] = 6383 & 255; abDir[58] = (6383 >> 8) & 255; abDir[59] = 0; abDir[60] = 0;
+    abDir[64] = browserFp.length;
+    abDir[65] = browserFp.length;
+
+    const fpBytes = [];
+    for (let i = 0; i < browserFp.length; i++) fpBytes.push(browserFp.charCodeAt(i) & 0xFF);
+
+    let abXor = (browserFp.length & 255) >> 8 & 255;
+    for (let idx = 0; idx < _ab_sortIndex2.length - 1; idx++) {
+        if (idx === 0) abXor = abDir[_ab_sortIndex2[idx]] || 0;
+        abXor ^= (abDir[_ab_sortIndex2[idx + 1]] || 0);
     }
 
-    //3次加密开始时间
-    b[20] = (b[16] >> 24) & 255
-    b[21] = (b[16] >> 16) & 255
-    b[22] = (b[16] >> 8) & 255
-    b[23] = b[16] & 255
-    b[24] = (b[16] / 256 / 256 / 256 / 256) >> 0
-    b[25] = (b[16] / 256 / 256 / 256 / 256 / 256) >> 0
-
-    // 参数Arguments [0, 1, 14, ...]
-    // let Arguments = [0, 1, 14]
-    b[26] = (Arguments[0] >> 24) & 255
-    b[27] = (Arguments[0] >> 16) & 255
-    b[28] = (Arguments[0] >> 8) & 255
-    b[29] = Arguments[0] & 255
-
-    b[30] = (Arguments[1] / 256) & 255
-    b[31] = (Arguments[1] % 256) & 255
-    b[32] = (Arguments[1] >> 24) & 255
-    b[33] = (Arguments[1] >> 16) & 255
-
-    b[34] = (Arguments[2] >> 24) & 255
-    b[35] = (Arguments[2] >> 16) & 255
-    b[36] = (Arguments[2] >> 8) & 255
-    b[37] = Arguments[2] & 255
-
-    // (url_search_params + "cus") 两次sm3之的结果
-    /**let url_search_params_list = [
-     91, 186,  35,  86, 143, 253,   6,  76,
-     34,  21, 167, 148,   7,  42, 192, 219,
-     188,  20, 182,  85, 213,  74, 213, 147,
-     37, 155,  93, 139,  85, 118, 228, 213
-     ]*/
-    b[38] = url_search_params_list[21]
-    b[39] = url_search_params_list[22]
-
-    // ("cus") 对后缀两次sm3之的结果
-    /**
-     * let cus = [
-     136, 101, 114, 147,  58,  77, 207, 201,
-     215, 162, 154,  93, 248,  13, 142, 160,
-     105,  73, 215, 241,  83,  58,  51,  43,
-     255,  38, 168, 141, 216, 194,  35, 236
-     ]*/
-    b[40] = cus[21]
-    b[41] = cus[22]
-
-    // 对ua处理之后的结果
-    /**
-     * let ua = [
-     129, 190,  70, 186,  86, 196, 199,  53,
-     99,  38,  29, 209, 243,  17, 157,  69,
-     147, 104,  53,  23, 114, 126,  66, 228,
-     135,  30, 168, 185, 109, 156, 251,  88
-     ]*/
-    b[42] = ua[23]
-    b[43] = ua[24]
-
-    //3次加密结束时间
-    b[44] = (b[10] >> 24) & 255
-    b[45] = (b[10] >> 16) & 255
-    b[46] = (b[10] >> 8) & 255
-    b[47] = b[10] & 255
-    b[48] = b[8]
-    b[49] = (b[10] / 256 / 256 / 256 / 256) >> 0
-    b[50] = (b[10] / 256 / 256 / 256 / 256 / 256) >> 0
-
-
-    // object配置项
-    b[51] = b[15]['pageId']
-    b[52] = (b[15]['pageId'] >> 24) & 255
-    b[53] = (b[15]['pageId'] >> 16) & 255
-    b[54] = (b[15]['pageId'] >> 8) & 255
-    b[55] = b[15]['pageId'] & 255
-
-    b[56] = b[15]['aid']
-    b[57] = b[15]['aid'] & 255
-    b[58] = (b[15]['aid'] >> 8) & 255
-    b[59] = (b[15]['aid'] >> 16) & 255
-    b[60] = (b[15]['aid'] >> 24) & 255
-
-    // 中间进行了环境检测
-    // 代码索引:  2496 索引值:  17 （索引64关键条件）
-    // '1536|747|1536|834|0|30|0|0|1536|834|1536|864|1525|747|24|24|Win32'.charCodeAt()得到65位数组
-    /**
-     * let window_env_list = [49, 53, 51, 54, 124, 55, 52, 55, 124, 49, 53, 51, 54, 124, 56, 51, 52, 124, 48, 124, 51,
-     * 48, 124, 48, 124, 48, 124, 49, 53, 51, 54, 124, 56, 51, 52, 124, 49, 53, 51, 54, 124, 56,
-     * 54, 52, 124, 49, 53, 50, 53, 124, 55, 52, 55, 124, 50, 52, 124, 50, 52, 124, 87, 105, 110,
-     * 51, 50]
-     */
-    let window_env_list = [];
-    for (let index = 0; index < window_env_str.length; index++) {
-        window_env_list.push(window_env_str.charCodeAt(index))
-    }
-    b[64] = window_env_list.length
-    b[65] = b[64] & 255
-    b[66] = (b[64] >> 8) & 255
-
-    b[69] = [].length
-    b[70] = b[69] & 255
-    b[71] = (b[69] >> 8) & 255
-
-    b[72] = b[18] ^ b[20] ^ b[26] ^ b[30] ^ b[38] ^ b[40] ^ b[42] ^ b[21] ^ b[27] ^ b[31] ^ b[35] ^ b[39] ^ b[41] ^ b[43] ^ b[22] ^
-        b[28] ^ b[32] ^ b[36] ^ b[23] ^ b[29] ^ b[33] ^ b[37] ^ b[44] ^ b[45] ^ b[46] ^ b[47] ^ b[48] ^ b[49] ^ b[50] ^ b[24] ^
-        b[25] ^ b[52] ^ b[53] ^ b[54] ^ b[55] ^ b[57] ^ b[58] ^ b[59] ^ b[60] ^ b[65] ^ b[66] ^ b[70] ^ b[71]
-    let bb = [
-        b[18], b[20], b[52], b[26], b[30], b[34], b[58], b[38], b[40], b[53], b[42], b[21], b[27], b[54], b[55], b[31],
-        b[35], b[57], b[39], b[41], b[43], b[22], b[28], b[32], b[60], b[36], b[23], b[29], b[33], b[37], b[44], b[45],
-        b[59], b[46], b[47], b[48], b[49], b[50], b[24], b[25], b[65], b[66], b[70], b[71]
-    ]
-    bb = bb.concat(window_env_list).concat(b[72])
-    return rc4_encrypt(String.fromCharCode.apply(null, bb), String.fromCharCode.apply(null, [121]));
-}
-
-function generate_random_str() {
-    let random_str_list = []
-    random_str_list = random_str_list.concat(gener_random(Math.random() * 10000, [3, 45]))
-    random_str_list = random_str_list.concat(gener_random(Math.random() * 10000, [1, 0]))
-    random_str_list = random_str_list.concat(gener_random(Math.random() * 10000, [1, 5]))
-    return String.fromCharCode.apply(null, random_str_list)
-}
-
-function sign(url_search_params, user_agent, arguments) {
-    /**
-     * url_search_params："device_platform=webapp&aid=6383&channel=channel_pc_web&update_version_code=170400&pc_client_type=1&version_code=170400&version_name=17.4.0&cookie_enabled=true&screen_width=1536&screen_height=864&browser_language=zh-CN&browser_platform=Win32&browser_name=Chrome&browser_version=123.0.0.0&browser_online=true&engine_name=Blink&engine_version=123.0.0.0&os_name=Windows&os_version=10&cpu_core_num=16&device_memory=8&platform=PC&downlink=10&effective_type=4g&round_trip_time=50&webid=7362810250930783783&msToken=VkDUvz1y24CppXSl80iFPr6ez-3FiizcwD7fI1OqBt6IICq9RWG7nCvxKb8IVi55mFd-wnqoNkXGnxHrikQb4PuKob5Q-YhDp5Um215JzlBszkUyiEvR"
-     * user_agent："Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-     */
-    let result_str = generate_random_str() + generate_rc4_bb_str(
-        url_search_params,
-        user_agent,
-        "1536|747|1536|834|0|30|0|0|1536|834|1536|864|1525|747|24|24|Win32",
-        "cus",
-        arguments
-    );
-    return result_encrypt(result_str, "s4") + "=";
+    const sortedValues = _ab_sortIndex.map(function(i) { return abDir[i] || 0; });
+    const finalSortedValues = sortedValues.concat(fpBytes).concat([abXor]);
+    const transformValues = _ab_transformBytes(bigArray, finalSortedValues);
+    const randomValues = _ab_generateRandomBytes();
+    return _ab_abogusEncode(randomValues, transformValues);
 }
 
 function sign_datail(params, userAgent) {
-    return sign(params, userAgent, [0, 1, 14])
+    return _ab_generateAbogus(params);
 }
 
 function sign_reply(params, userAgent) {
-    return sign(params, userAgent, [0, 1, 8])
+    return _ab_generateAbogus(params);
 }

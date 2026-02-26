@@ -121,6 +121,26 @@ public enum LiveParseJSPlatformManager {
         )
     }
 
+    /// 切换清晰度/CDN 时获取指定清晰度的播放地址
+    /// quality 字典可包含: rate(Int), cdn(String), lineSeq(Int), gear(Int) 等
+    public static func getPlayArgsWithQuality(
+        platform: LiveParseJSPlatform,
+        roomId: String,
+        userId: String?,
+        quality: [String: Any],
+        context: [String: Any] = [:]
+    ) async throws -> [LiveQualityModel] {
+        try await callWithFallback(
+            platform: platform,
+            function: "getPlayback",
+            fallback: "getPlayArgs",
+            payload: mergePayload(mergePayload(context, quality), [
+                "roomId": roomId,
+                "userId": userId
+            ])
+        )
+    }
+
     public static func searchRooms(
         platform: LiveParseJSPlatform,
         keyword: String,
@@ -220,10 +240,11 @@ public enum LiveParseJSPlatformManager {
         function: String,
         payload: [String: Any] = [:]
     ) async throws -> ResultType {
-        try await LiveParsePlugins.shared.callDecodable(
+        let finalPayload = injectCookieIfNeeded(platform: platform, payload: payload)
+        return try await LiveParsePlugins.shared.callDecodable(
             pluginId: platform.pluginId,
             function: function,
-            payload: payload
+            payload: finalPayload
         )
     }
 
@@ -234,11 +255,12 @@ public enum LiveParseJSPlatformManager {
         fallback: String,
         payload: [String: Any] = [:]
     ) async throws -> ResultType {
+        let finalPayload = injectCookieIfNeeded(platform: platform, payload: payload)
         do {
             return try await LiveParsePlugins.shared.callDecodable(
                 pluginId: platform.pluginId,
                 function: function,
-                payload: payload
+                payload: finalPayload
             )
         } catch let error as LiveParsePluginError {
             // 仅当函数不存在时回退，其他错误直接抛出
@@ -246,11 +268,31 @@ public enum LiveParseJSPlatformManager {
                 return try await LiveParsePlugins.shared.callDecodable(
                     pluginId: platform.pluginId,
                     function: fallback,
-                    payload: payload
+                    payload: finalPayload
                 )
             }
             throw error
         }
+    }
+
+    /// 对 bilibili 平台自动注入 Cookie（JS 插件无 setCookie，依赖 payload 传入）
+    private static func injectCookieIfNeeded(platform: LiveParseJSPlatform, payload: [String: Any]) -> [String: Any] {
+        guard platform == .bilibili else { return payload }
+        // 已有 cookie 则不覆盖
+        if let existing = payload["cookie"] as? String, !existing.isEmpty {
+            return payload
+        }
+        let cookie = BiliBiliCookie.cookie
+        guard !cookie.isEmpty else {
+            return payload
+        }
+        var result = payload
+        result["cookie"] = cookie
+        let uid = BiliBiliCookie.uid
+        if uid != "0" && !uid.isEmpty {
+            result["uid"] = uid
+        }
+        return result
     }
 
     private static func mergePayload(_ base: [String: Any], _ extra: [String: Any?]) -> [String: Any] {

@@ -6,9 +6,17 @@ import Foundation
 /// 因此提供一个共享实例给各平台调用。
 public enum LiveParsePlugins {
     public static let shared: LiveParsePluginManager = {
-        // applicationSupportDirectory 创建失败的概率极低；如果确实失败，说明运行环境异常。
-        // 这里用 try! 简化上层调用。
-        return try! LiveParsePluginManager()
+        // 使用独立的 URLSession，禁用自动 cookie 管理，
+        // 避免 HTTPCookieStorage 干扰插件手动设置的 Cookie header。
+        let config = URLSessionConfiguration.default
+        config.httpCookieStorage = nil
+        config.httpCookieAcceptPolicy = .never
+        config.httpShouldSetCookies = false
+        let session = URLSession(configuration: config)
+
+        return try! LiveParsePluginManager(session: session, logHandler: { msg in
+            print("[LiveParse:JS] \(msg)")
+        })
     }()
 }
 
