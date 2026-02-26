@@ -61,7 +61,7 @@ final class YYWebSocketClient: NSObject, @unchecked Sendable {
                 } else if let error {
                     continuation.resume(throwing: error)
                 } else {
-                    continuation.resume(throwing: LiveParsePluginError.internalError("YY WebSocket completed without result"))
+                    continuation.resume(throwing: LiveParsePluginError.jsException("YY WebSocket completed without result"))
                 }
             }
         }
@@ -185,7 +185,7 @@ final class YYWebSocketClient: NSObject, @unchecked Sendable {
 
         // 解析 channel_stream_info (field 2)
         guard let channelStreamInfo = fields[2] else {
-            disconnect(error: LiveParsePluginError.internalError("Missing channel_stream_info"))
+            disconnect(error: LiveParsePluginError.jsException("Missing channel_stream_info"))
             return
         }
 
@@ -194,7 +194,7 @@ final class YYWebSocketClient: NSObject, @unchecked Sendable {
         // 解析 streams (field 1) - 这是一个数组
         // 简化处理：取第一个 stream
         guard let firstStream = streamFields[1] else {
-            disconnect(error: LiveParsePluginError.internalError("Missing streams"))
+            disconnect(error: LiveParsePluginError.jsException("Missing streams"))
             return
         }
 
@@ -205,7 +205,7 @@ final class YYWebSocketClient: NSObject, @unchecked Sendable {
               let streamKey = YYBinaryProtocol.parseString(streamKeyData),
               let verData = stream[5],
               let ver = YYBinaryProtocol.parseString(verData) else {
-            disconnect(error: LiveParsePluginError.internalError("Missing stream_key or ver"))
+            disconnect(error: LiveParsePluginError.jsException("Missing stream_key or ver"))
             return
         }
 
@@ -224,7 +224,7 @@ final class YYWebSocketClient: NSObject, @unchecked Sendable {
 
         // 解析 avp_info_res (field 1)
         guard let avpInfo = fields[1] else {
-            disconnect(error: LiveParsePluginError.internalError("Missing avp_info_res"))
+            disconnect(error: LiveParsePluginError.jsException("Missing avp_info_res"))
             return
         }
 
@@ -232,7 +232,7 @@ final class YYWebSocketClient: NSObject, @unchecked Sendable {
 
         // 解析 stream_line_addr (field 3) - map
         guard let streamLineAddr = avpFields[3] else {
-            disconnect(error: LiveParsePluginError.internalError("Missing stream_line_addr"))
+            disconnect(error: LiveParsePluginError.jsException("Missing stream_line_addr"))
             return
         }
 
@@ -255,7 +255,7 @@ final class YYWebSocketClient: NSObject, @unchecked Sendable {
             }
         }
 
-        disconnect(error: LiveParsePluginError.internalError("No valid URL found in response"))
+        disconnect(error: LiveParsePluginError.jsException("No valid URL found in response"))
     }
 }
 
@@ -273,7 +273,7 @@ extension YYWebSocketClient: WebSocketDelegate {
             if case .completed = state {
                 disconnect()
             } else {
-                disconnect(error: LiveParsePluginError.internalError("YY WebSocket disconnected: \(reason) (\(code))"))
+                disconnect(error: LiveParsePluginError.jsException("YY WebSocket disconnected: \(reason) (\(code))"))
             }
 
         case .binary(let data):
@@ -281,10 +281,10 @@ extension YYWebSocketClient: WebSocketDelegate {
 
         case .error(let error):
             print("❌ YY WebSocket error: \(error?.localizedDescription ?? "unknown")")
-            disconnect(error: error ?? LiveParsePluginError.internalError("YY WebSocket unknown error"))
+            disconnect(error: error ?? LiveParsePluginError.jsException("YY WebSocket unknown error"))
 
         case .cancelled:
-            disconnect(error: LiveParsePluginError.internalError("YY WebSocket cancelled"))
+            disconnect(error: LiveParsePluginError.jsException("YY WebSocket cancelled"))
 
         default:
             break
