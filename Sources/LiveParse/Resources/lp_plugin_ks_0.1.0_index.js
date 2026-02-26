@@ -445,9 +445,34 @@ globalThis.LiveParsePlugin = {
   async getDanmaku(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) _ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+
+    // 获取直播间数据
+    const liveData = await _ks_getLiveRoom(roomId);
+    const playList = liveData && liveData.liveroom && liveData.liveroom.playList;
+    const current = Array.isArray(playList) && playList.length > 0 ? playList[0] : null;
+
+    if (!current || !current.liveStream || !current.liveStream.id) {
+      _ks_throw("NOT_FOUND", "liveStreamId not found", { roomId: String(roomId) });
+    }
+
+    const liveStreamId = String(current.liveStream.id);
+
+    // 返回 HTTP 轮询配置
     return {
-      args: {},
-      headers: null
+      args: {
+        "_danmu_type": "http_polling",
+        "_polling_url": "https://live.kuaishou.com/live_api/liveroom/recall",
+        "_polling_method": "POST",
+        "_polling_interval": "3000",
+        "liveStreamId": liveStreamId,
+        "cursor_comment": 0,
+        "cursor_like": 0
+      },
+      headers: {
+        "Content-Type": "application/json",
+        "Referer": "https://live.kuaishou.com/",
+        "User-Agent": __lp_ks_ua
+      }
     };
   }
 };
