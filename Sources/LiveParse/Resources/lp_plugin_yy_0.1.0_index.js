@@ -371,7 +371,29 @@ globalThis.LiveParsePlugin = {
   async getPlayback(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) _yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    return await _yy_getPlayback(roomId, -1, 4);
+
+    // 使用 WebSocket 协议获取流地址
+    try {
+      const streamInfo = await Host.yy.getStreamInfo(roomId);
+      const url = streamInfo.url || "";
+      if (!url) _yy_throw("NOT_FOUND", "No play URL found", { roomId });
+
+      // 返回播放地址（简化版本：只返回单个清晰度）
+      return [{
+        cdn: "默认",
+        yyLineSeq: "-1",
+        qualitys: [{
+          roomId: String(roomId),
+          title: "默认",
+          qn: 4,
+          url: url,
+          liveCodeType: "flv",
+          liveType: "6"
+        }]
+      }];
+    } catch (error) {
+      _yy_throw("UPSTREAM", `YY WebSocket failed: ${error.message || error}`, { roomId });
+    }
   },
 
   async getRoomDetail(payload) {

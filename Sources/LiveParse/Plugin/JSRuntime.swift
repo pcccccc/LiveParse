@@ -27,6 +27,7 @@ public final class JSRuntime: @unchecked Sendable {
             Self.configureHostCrypto(in: context)
             Self.configureHostRuntime(in: context)
             Self.configureHostBootstrap(in: context)
+            Self.configureHostYY(in: context, queue: queue)
         }
     }
 
@@ -178,6 +179,9 @@ private extension JSRuntime {
             return !!__lp_host_load_builtin_script(String(name || ""));
           };
 
+          // Load YY Host API
+          Host.runtime.loadBuiltinScript("__lp_host_yy.js");
+
         })();
         """
         context.evaluateScript(script)
@@ -326,5 +330,30 @@ private extension JSRuntime {
             throw LiveParsePluginError.invalidReturnValue("Invalid UTF-8 JSON")
         }
         return try JSONSerialization.jsonObject(with: data)
+    }
+
+    // MARK: - YY Platform Specific
+
+    static func configureHostYY(in context: JSContext, queue: DispatchQueue) {
+        let yyGetStreamInfoBlock: @convention(block) (String, JSValue, JSValue) -> Void = { roomId, resolve, reject in
+            Task {
+                do {
+                    let client = YYWebSocketClient(roomId: roomId)
+                    let streamInfo = try await client.getStreamInfo()
+
+                    queue.async {
+                        let jsonData = (try? JSONSerialization.data(withJSONObject: streamInfo)) ?? Data("{}".utf8)
+                        let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
+                        resolve.call(withArguments: [jsonString])
+                    }
+                } catch {
+                    queue.async {
+                        reject.call(withArguments: [error.localizedDescription])
+                    }
+                }
+            }
+        }
+
+        context.setObject(yyGetStreamInfoBlock, forKeyedSubscript: "__lp_yy_get_stream_info" as NSString)
     }
 }
