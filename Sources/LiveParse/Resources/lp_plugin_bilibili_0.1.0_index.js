@@ -16,11 +16,17 @@ function _bili_md5(input) {
 }
 
 function _bili_getLiveStateString(liveState) {
-  const value = Number(liveState || -1);
+  const value = _bili_toNumberOrDefault(liveState, -1);
   if (value === 0) return "0";
   if (value === 1) return "1";
   if (value === 2) return "0";
   return "3";
+}
+
+function _bili_toNumberOrDefault(value, defaultValue) {
+  if (value === null || value === undefined || value === "") return defaultValue;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : defaultValue;
 }
 
 function _bili_stripHTML(text) {
@@ -345,17 +351,21 @@ async function _bili_getLiveLatestInfo(roomId, headers) {
     headers,
     timeout: 20
   });
+  console.log(`[bilibili][raw][getH5InfoByRoom] roomId=${String(roomId)} body=${String(resp.bodyText || "")}`);
   const obj = JSON.parse(resp.bodyText || "{}");
   const data = obj && obj.data ? obj.data : null;
   if (!data) _bili_throw("INVALID_RESPONSE", "empty room info", { roomId: String(roomId || "") });
 
   let liveStatus = "3";
-  const status = Number((data.room_info && data.room_info.live_status) || -1);
+  const status = _bili_toNumberOrDefault(data.room_info && data.room_info.live_status, -1);
   if (status === 0) liveStatus = "0";
   else if (status === 1) liveStatus = "1";
   else if (status === 2) liveStatus = "0";
   else liveStatus = "3";
-
+    console.log(`[bilibili][raw][getH5InfoByRoomlive_status] ${data.room_info.live_status}`);
+    console.log(`[bilibili][raw][getH5InfoByRoomlive_status] ${status}`);
+    console.log(`[bilibili][raw][getH5InfoByRoomlive_status] ${liveStatus}`);
+    
   let realRoomId = String(roomId);
   const serverRoomId = data.room_info && data.room_info.room_id ? String(data.room_info.room_id) : realRoomId;
   if (serverRoomId !== String(roomId)) {
@@ -448,9 +458,10 @@ async function _bili_getLiveState(roomId, headers) {
     headers,
     timeout: 20
   });
+  console.log(`[bilibili][raw][get_info] roomId=${String(roomId)} body=${String(resp.bodyText || "")}`);
 
   const obj = JSON.parse(resp.bodyText || "{}");
-  const liveStatus = Number((((obj || {}).data) || {}).live_status || -1);
+  const liveStatus = _bili_toNumberOrDefault((((obj || {}).data) || {}).live_status, -1);
   return {
     liveState: _bili_getLiveStateString(liveStatus)
   };

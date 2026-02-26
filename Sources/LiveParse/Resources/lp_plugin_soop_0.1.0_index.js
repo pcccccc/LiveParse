@@ -205,6 +205,18 @@ async function _soop_playerApi(bjId, broadNo, type, quality) {
     },
     body: bodyParts.join("&"),
   });
+  console.log(
+    "[soop][raw][player_live_api] bjId=" +
+      String(bjId) +
+      " broadNo=" +
+      String(broadNo || "") +
+      " type=" +
+      String(type || "live") +
+      " quality=" +
+      String(quality || "") +
+      " body=" +
+      String(resp.bodyText || "")
+  );
 
   var result = JSON.parse(resp.bodyText || "{}");
   var channel = result && result.CHANNEL;
@@ -288,6 +300,12 @@ async function _soop_getStationStatus(bjId) {
       "https://st.sooplive.co.kr/api/get_station_status.php?szBjId=" +
       encodeURIComponent(String(bjId)),
   });
+  console.log(
+    "[soop][raw][station_status] bjId=" +
+      String(bjId) +
+      " body=" +
+      String(resp.bodyText || "")
+  );
 
   var data = JSON.parse(resp.bodyText || "{}");
   return data.DATA || data.data || null;
@@ -589,7 +607,7 @@ globalThis.LiveParsePlugin = {
         field: "roomId",
       });
 
-    // 尝试获取直播信息
+    // 先用收藏记录的 roomId 尝试获取当前频道
     try {
       var channel = await _soop_getChannelInfo(bjId, roomId);
       if (Number(channel.RESULT) === 1 && channel.BNO) {
@@ -606,13 +624,32 @@ globalThis.LiveParsePlugin = {
         };
       }
     } catch (e) {
-      // 主播可能未开播，继续尝试获取基本信息
+      // ignore
+    }
+
+    // 再用空 broadNo 查询当前频道，兼容收藏中 roomId 过期（主播重新开播后 BNO 变化）
+    try {
+      var latestChannel = await _soop_getChannelInfo(bjId, "");
+      if (Number(latestChannel.RESULT) === 1 && latestChannel.BNO) {
+        return {
+          userName: _soop_str(latestChannel.BJNICK),
+          roomTitle: _soop_str(latestChannel.TITLE),
+          roomCover:
+            "https://liveimg.sooplive.co.kr/m/" + _soop_str(latestChannel.BNO),
+          userHeadImg: "",
+          liveState: "1",
+          userId: _soop_str(latestChannel.BJID),
+          roomId: _soop_str(latestChannel.BNO),
+          liveWatchedCount: "0",
+        };
+      }
+    } catch (e) {
+      // ignore
     }
 
     // 从 station_status 获取基本信息
     var stationData = await _soop_getStationStatus(bjId);
     if (stationData) {
-      var isLive = _soop_str(stationData.broad_start) !== "";
       return {
         userName: _soop_str(stationData.user_nick || stationData.station_name),
         roomTitle: _soop_str(
@@ -620,7 +657,8 @@ globalThis.LiveParsePlugin = {
         ),
         roomCover: "",
         userHeadImg: "",
-        liveState: isLive ? "1" : "0",
+        // broad_start 可能是历史开播时间，不能作为在线状态判定依据
+        liveState: "0",
         userId: _soop_str(stationData.user_id || bjId),
         roomId: _soop_str(stationData.station_no || bjId),
         liveWatchedCount: _soop_str(stationData.total_view_cnt || "0"),
