@@ -10,6 +10,11 @@ const __lp_yy_playHeaders = {
   "content-type": "text/plain;charset=UTF-8",
   referer: "https://www.yy.com"
 };
+const __lp_yy_playbackUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const __lp_yy_playbackHeaders = {
+  Referer: "https://www.yy.com/",
+  Origin: "https://www.yy.com"
+};
 
 const __lp_yy_sidQueryKeys = ["sid", "ssid", "roomId"];
 
@@ -272,6 +277,18 @@ function _yy_resolveShare(shareCode) {
   _yy_throw("NOT_FOUND", "cannot resolve roomId from shareCode", { shareCode: String(shareCode || "") });
 }
 
+function _yy_makeUUIDNoDash() {
+  if (typeof crypto !== "undefined" && crypto && typeof crypto.randomUUID === "function") {
+    return String(crypto.randomUUID()).replace(/-/g, "");
+  }
+  const template = "xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx";
+  return template.replace(/[xy]/g, function (c) {
+    const r = Math.floor(Math.random() * 16);
+    const v = c === "x" ? r : ((r & 0x3) | 0x8);
+    return v.toString(16);
+  });
+}
+
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
 
@@ -372,27 +389,78 @@ globalThis.LiveParsePlugin = {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) _yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
-    // 使用 WebSocket 协议获取流地址
+    // 兜底确保 YY Host API 可用（某些初始化时序下 bootstrap 可能尚未注入）
+    if (!Host.yy || typeof Host.yy.getStreamInfo !== "function") {
+      if (Host.runtime && typeof Host.runtime.loadBuiltinScript === "function") {
+        Host.runtime.loadBuiltinScript("__lp_host_yy.js");
+      }
+    }
+    if (!Host.yy || typeof Host.yy.getStreamInfo !== "function") {
+      _yy_throw("INTERNAL", "YY Host API not available", { roomId });
+    }
+    
+    // 仅使用 WebSocket（Swift Host）获取播放地址，不回退 HTTP。
     try {
-      const streamInfo = await Host.yy.getStreamInfo(roomId);
-      const url = streamInfo.url || "";
-      if (!url) _yy_throw("NOT_FOUND", "No play URL found", { roomId });
+      const requestedQn = Number((payload && payload.qn) || (payload && payload.gear) || 0);
+      const requestedGear = Number.isFinite(requestedQn) && requestedQn > 0 ? requestedQn : undefined;
+
+      let requestedLineSeq;
+      const rawLineSeq = payload && payload.lineSeq !== undefined ? payload.lineSeq : (payload && payload.line_seq !== undefined ? payload.line_seq : undefined);
+      if (rawLineSeq !== undefined && rawLineSeq !== null && String(rawLineSeq).trim() !== "") {
+        const parsedLineSeq = Number(rawLineSeq);
+        requestedLineSeq = Number.isFinite(parsedLineSeq) ? parsedLineSeq : String(rawLineSeq).trim();
+      }
+
+      const requestOptions = {};
+      if (requestedGear !== undefined) {
+        requestOptions.qn = requestedGear;
+        requestOptions.gear = requestedGear;
+      }
+      if (requestedLineSeq !== undefined) {
+        requestOptions.lineSeq = requestedLineSeq;
+      }
+
+      const streamInfo = await Host.yy.getStreamInfo(roomId, requestOptions);
+      const url = String((streamInfo && streamInfo.url) || "");
+      if (!url) _yy_throw("NOT_FOUND", "No play URL found", { roomId, streamInfo: streamInfo || {} });
+
+      const streamKey = String((streamInfo && (streamInfo.stream_key || streamInfo.streamKey)) || "");
+      const ver = String((streamInfo && streamInfo.ver) || "");
+      let lineSeqRaw = "-1";
+      if (streamInfo && streamInfo.line_seq !== undefined && streamInfo.line_seq !== null) {
+        lineSeqRaw = streamInfo.line_seq;
+      } else if (streamInfo && streamInfo.lineSeq !== undefined && streamInfo.lineSeq !== null) {
+        lineSeqRaw = streamInfo.lineSeq;
+      }
+      const yyLineSeq = String(lineSeqRaw);
+      const streamGear = Number((streamInfo && (streamInfo.gear !== undefined ? streamInfo.gear : streamInfo.qn)) || 0);
+      const qn = (Number.isFinite(streamGear) && streamGear > 0 ? streamGear : (requestedGear || 4)) || 4;
+
+      let title = "默认";
+      if (streamKey.includes("_0_10_0")) title = "高清";
+      else if (streamKey.includes("_0_11_0")) title = "流畅";
 
       // 返回播放地址（简化版本：只返回单个清晰度）
       return [{
-        cdn: "默认",
-        yyLineSeq: "-1",
+        cdn: streamKey || "默认",
+        yyLineSeq: yyLineSeq,
         qualitys: [{
           roomId: String(roomId),
-          title: "默认",
-          qn: 4,
+          title: title,
+          qn: qn,
           url: url,
           liveCodeType: "flv",
-          liveType: "6"
+          liveType: "6",
+          userAgent: __lp_yy_playbackUserAgent,
+          headers: __lp_yy_playbackHeaders
         }]
       }];
     } catch (error) {
-      _yy_throw("UPSTREAM", `YY WebSocket failed: ${error.message || error}`, { roomId });
+      _yy_throw(
+        "UPSTREAM",
+        `YY WebSocket failed: ${error && error.message ? error.message : error}`,
+        { roomId, payload: payload || {} }
+      );
     }
   },
 
@@ -474,9 +542,20 @@ globalThis.LiveParsePlugin = {
   async getDanmaku(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) _yy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    const wsUUID = _yy_makeUUIDNoDash();
+    const wsURL = `wss://h5-sinchl.yy.com/websocket?appid=yymwebh5&version=3.2.10&uuid=${encodeURIComponent(wsUUID)}&sign=a8d7eef2`;
     return {
-      args: {},
-      headers: null
+      args: {
+        roomId: String(roomId),
+        sid: String(roomId),
+        ssid: String(roomId),
+        ws_uuid: String(wsUUID),
+        ws_url: String(wsURL)
+      },
+      headers: {
+        "User-Agent": __lp_yy_playbackUserAgent,
+        Origin: "https://www.yy.com"
+      }
     };
   }
 };

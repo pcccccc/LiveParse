@@ -5,6 +5,8 @@ const __lp_ks_searchOverviewURL = "https://live.kuaishou.com/live_api/search/ove
 const __lp_ks_searchAuthorURL = "https://live.kuaishou.com/live_api/search/author";
 const __lp_ks_searchLiveStreamURL = "https://live.kuaishou.com/live_api/search/liveStream";
 const __lp_ks_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
+const __lp_ks_playbackUserAgent = "libmpv";
+const __lp_ks_playbackHeaders = { "User-Agent": __lp_ks_playbackUserAgent };
 function _ks_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
     Host.raise(code, message, context || {});
@@ -67,7 +69,9 @@ function _ks_makeQualityDetails(playUrl, roomId) {
       qn: Number(rep && rep.bitrate ? rep.bitrate : 0),
       url: String(rep && rep.url ? rep.url : ""),
       liveCodeType: "flv",
-      liveType: "5"
+      liveType: "5",
+      userAgent: __lp_ks_playbackUserAgent,
+      headers: __lp_ks_playbackHeaders
     };
   }).filter(function (item) { return !!item.url; });
 }
@@ -446,7 +450,6 @@ globalThis.LiveParsePlugin = {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) _ks_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 
-    // 获取直播间数据
     const liveData = await _ks_getLiveRoom(roomId);
     const playList = liveData && liveData.liveroom && liveData.liveroom.playList;
     const current = Array.isArray(playList) && playList.length > 0 ? playList[0] : null;
@@ -455,9 +458,11 @@ globalThis.LiveParsePlugin = {
       _ks_throw("NOT_FOUND", "liveStreamId not found", { roomId: String(roomId) });
     }
 
-    const liveStreamId = String(current.liveStream.id);
+    const liveStreamId = String(current.liveStream.id || "");
+    if (!liveStreamId) {
+      _ks_throw("NOT_FOUND", "liveStreamId is empty", { roomId: String(roomId) });
+    }
 
-    // 返回 HTTP 轮询配置
     return {
       args: {
         "_danmu_type": "http_polling",
@@ -465,8 +470,8 @@ globalThis.LiveParsePlugin = {
         "_polling_method": "POST",
         "_polling_interval": "3000",
         "liveStreamId": liveStreamId,
-        "cursor_comment": 0,
-        "cursor_like": 0
+        "cursor_comment": "0",
+        "cursor_like": "0"
       },
       headers: {
         "Content-Type": "application/json",

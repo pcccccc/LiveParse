@@ -83,6 +83,10 @@ public struct LiveQualityDetail: Codable, Sendable {
     public var url: String
     public var liveCodeType: LiveCodeType
     public var liveType: LiveType
+    /// 播放该线路时建议使用的 User-Agent（可选，缺省由宿主兜底）
+    public var userAgent: String?
+    /// 播放该线路时建议附带的请求头（可选）
+    public var headers: [String: String]?
 }
 
 public struct LiveCategoryModel: Codable {
@@ -139,4 +143,3 @@ public enum LiveCodeType: String, Codable, Sendable {
     case flv = "flv",
          hls = "m3u8"
 }
-

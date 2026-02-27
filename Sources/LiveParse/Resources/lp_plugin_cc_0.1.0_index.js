@@ -1,4 +1,6 @@
 const _cc_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
+const _cc_playbackUserAgent = "libmpv";
+const _cc_playbackHeaders = { "User-Agent": _cc_playbackUserAgent };
 
 function _cc_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
@@ -121,7 +123,9 @@ function _cc_buildQualityModel(label, resolution, roomId) {
       qn: Number(resolution.vbr || 0),
       url: String(url),
       liveCodeType: "flv",
-      liveType: "4"
+      liveType: "4",
+      userAgent: _cc_playbackUserAgent,
+      headers: _cc_playbackHeaders
     });
   }
 

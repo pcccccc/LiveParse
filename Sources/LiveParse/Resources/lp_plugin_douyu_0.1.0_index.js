@@ -1,3 +1,5 @@
+const _douyu_playbackUserAgent = "libmpv";
+
 function _lp_decodePercent(s) {
   try {
     return decodeURIComponent(s);
@@ -261,6 +263,7 @@ async function _douyu_getPlayback(roomId, rate, cdn) {
   for (const cdnItem of cdns) {
     const serverCdn = String(cdnItem.cdn || "");
     if (cdn && serverCdn !== String(cdn)) continue;
+    const playbackHeaders = { "User-Agent": _douyu_playbackUserAgent };
 
     const qualitys = multirates.map(function (q) {
       return {
@@ -269,7 +272,9 @@ async function _douyu_getPlayback(roomId, rate, cdn) {
         qn: Number(q.rate || 0),
         url: playUrl,
         liveCodeType: "flv",
-        liveType: "3"
+        liveType: "3",
+        userAgent: _douyu_playbackUserAgent,
+        headers: playbackHeaders
       };
     });
 

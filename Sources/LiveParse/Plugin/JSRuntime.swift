@@ -341,16 +341,43 @@ private extension JSRuntime {
     // MARK: - YY Platform Specific
 
     static func configureHostYY(in context: JSContext, queue: DispatchQueue) {
-        let yyGetStreamInfoBlock: @convention(block) (String, JSValue, JSValue) -> Void = { roomId, resolve, reject in
+        func parseInt(_ value: Any?) -> Int? {
+            if let number = value as? NSNumber {
+                return number.intValue
+            }
+            if let string = value as? String {
+                return Int(string.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+            return nil
+        }
+
+        let requestStreamInfo: (String, [String: Any], JSValue, JSValue) -> Void = { roomId, options, resolve, reject in
             Task {
                 do {
-                    let client = YYWebSocketClient(roomId: roomId)
+                    let requestedGear = parseInt(options["qn"]) ?? parseInt(options["gear"])
+                    let requestedLineSeq = parseInt(options["lineSeq"]) ?? parseInt(options["line_seq"])
+                    let client = YYWebSocketClient(
+                        roomId: roomId,
+                        requestedLineSeq: requestedLineSeq,
+                        requestedGear: requestedGear
+                    )
                     let streamInfo = try await client.getStreamInfo()
 
                     queue.async {
-                        let jsonData = (try? JSONSerialization.data(withJSONObject: streamInfo)) ?? Data("{}".utf8)
-                        let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
-                        resolve.call(withArguments: [jsonString])
+                        do {
+                            guard JSONSerialization.isValidJSONObject(streamInfo) else {
+                                throw NSError(
+                                    domain: "LiveParse.JSRuntime",
+                                    code: -1,
+                                    userInfo: [NSLocalizedDescriptionKey: "streamInfo is not JSON serializable"]
+                                )
+                            }
+                            let jsonData = try JSONSerialization.data(withJSONObject: streamInfo)
+                            let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
+                            resolve.call(withArguments: [jsonString])
+                        } catch {
+                            reject.call(withArguments: ["YY serialize stream info failed: \(error.localizedDescription)"])
+                        }
                     }
                 } catch {
                     queue.async {
@@ -360,6 +387,22 @@ private extension JSRuntime {
             }
         }
 
+        let yyGetStreamInfoBlock: @convention(block) (String, JSValue, JSValue) -> Void = { roomId, resolve, reject in
+            requestStreamInfo(roomId, [:], resolve, reject)
+        }
+
+        let yyGetStreamInfoExBlock: @convention(block) (String, JSValue, JSValue, JSValue) -> Void = { roomId, optionsValue, resolve, reject in
+            var options: [String: Any] = [:]
+            if let dict = optionsValue.toDictionary() {
+                options = Dictionary(uniqueKeysWithValues: dict.compactMap { key, value in
+                    guard let keyString = key as? String else { return nil }
+                    return (keyString, value)
+                })
+            }
+            requestStreamInfo(roomId, options, resolve, reject)
+        }
+
         context.setObject(yyGetStreamInfoBlock, forKeyedSubscript: "__lp_yy_get_stream_info" as NSString)
+        context.setObject(yyGetStreamInfoExBlock, forKeyedSubscript: "__lp_yy_get_stream_info_ex" as NSString)
     }
 }

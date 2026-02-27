@@ -122,7 +122,7 @@ globalThis.LiveParsePlugin = {
   /**
    * 获取播放地址
    * @param {Object} payload - {roomId: string, userId?: string}
-   * @returns {Array<{name: string, qualitys: Array<{name, url, codec?}>}>}
+   * @returns {Array<{cdn: string, qualitys: Array<{roomId, title, qn, url, liveCodeType, liveType, userAgent?: string, headers?: Object}>}>}
    */
   async getPlayback(payload) {
     // TODO: 实现播放地址获取

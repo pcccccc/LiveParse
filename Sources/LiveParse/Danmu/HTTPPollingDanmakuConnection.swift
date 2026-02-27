@@ -47,6 +47,15 @@ public class HTTPPollingDanmakuConnection {
     /// 轮询任务计数器（用于调试）
     private var pollCount: UInt64 = 0
 
+    /// 快手弹幕去重：已发送过的消息 key
+    private var seenCommentKeys: Set<String> = []
+
+    /// 快手弹幕去重：记录插入顺序，用于裁剪内存
+    private var seenCommentOrder: [String] = []
+
+    /// 是否已输出首批历史窗口
+    private var didEmitInitialHistory: Bool = false
+
     // MARK: - Initialization
 
     public init(parameters: [String: String]?, headers: [String: String]?, liveType: LiveType) {
@@ -103,6 +112,7 @@ public class HTTPPollingDanmakuConnection {
             return
         }
 
+        resetRuntimeState()
         isConnected = true
         delegate?.webSocketDidConnect()
 
@@ -168,18 +178,11 @@ public class HTTPPollingDanmakuConnection {
             return
         }
 
-        // 构建请求参数
-        var requestParams: [String: Any] = [
-            "liveStreamId": liveStreamId
+        // 固定请求“当前最新窗口”，避免 cursor 回翻到更旧历史。
+        let requestParams: [String: Any] = [
+            "liveStreamId": liveStreamId,
+            "feedTypeCursorMap": ["1": 0, "2": 0]
         ]
-
-        // 添加游标参数
-        if let cursorComment = cursors["cursor_comment"] {
-            requestParams["feedTypeCursorMap"] = [
-                "1": cursorComment,  // 评论
-                "2": cursors["cursor_like"] ?? 0  // 点赞
-            ]
-        }
 
         // 发起请求
         AF.request(
@@ -213,22 +216,14 @@ public class HTTPPollingDanmakuConnection {
                 return
             }
 
-            // 更新游标
-            if let cursorMap = dataObject["feedTypeCursorMap"] as? [String: Any] {
-                if let commentCursor = cursorMap["1"] {
-                    cursors["cursor_comment"] = commentCursor
-                }
-                if let likeCursor = cursorMap["2"] {
-                    cursors["cursor_like"] = likeCursor
-                }
-            }
-
             // 解析弹幕列表
             if let backTraceFeedMap = dataObject["backTraceFeedMap"] as? [String: Any],
                let commentFeedData = backTraceFeedMap["1"] as? [String: Any],
                let historyFeedList = commentFeedData["historyFeedList"] as? [String] {
+                var entries: [KuaishouCommentEntry] = []
+                entries.reserveCapacity(historyFeedList.count)
 
-                for base64String in historyFeedList {
+                for (index, base64String) in historyFeedList.enumerated() {
                     // Base64 解码
                     guard let protobufData = Data(base64Encoded: base64String) else {
                         continue
@@ -239,8 +234,11 @@ public class HTTPPollingDanmakuConnection {
                         let commentFeed = try Kuaishou_WebCommentFeed(serializedData: protobufData)
 
                         // 提取弹幕内容
-                        let userName = commentFeed.user.userName
+                        let userName = commentFeed.user?.userName ?? ""
                         let content = commentFeed.content
+                        guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                            continue
+                        }
 
                         // 解析颜色（十六进制字符串转 UInt32）
                         var color: UInt32 = 0xFFFFFF // 默认白色
@@ -251,20 +249,94 @@ public class HTTPPollingDanmakuConnection {
                                 color = colorValue
                             }
                         }
+                        let key: String
+                        if !commentFeed.id.isEmpty {
+                            key = commentFeed.id
+                        } else {
+                            key = "\(commentFeed.time)|\(userName)|\(content)"
+                        }
 
-                        // 触发弹幕回调
-                        delegate?.webSocketDidReceiveMessage(
-                            text: content,
-                            nickname: userName,
-                            color: color
+                        entries.append(
+                            KuaishouCommentEntry(
+                                key: key,
+                                time: commentFeed.time,
+                                sequence: index,
+                                nickname: userName,
+                                content: content,
+                                color: color
+                            )
                         )
                     } catch {
                         print("❌ Protobuf 解析失败: \(error.localizedDescription)")
                     }
                 }
+
+                // 旧 -> 新，确保“最新在最后”
+                entries.sort { lhs, rhs in
+                    if lhs.time != rhs.time { return lhs.time < rhs.time }
+                    return lhs.sequence < rhs.sequence
+                }
+
+                if !didEmitInitialHistory {
+                    for entry in entries {
+                        rememberSeenKey(entry.key)
+                        delegate?.webSocketDidReceiveMessage(
+                            text: entry.content,
+                            nickname: entry.nickname,
+                            color: entry.color
+                        )
+                    }
+                    didEmitInitialHistory = true
+                    return
+                }
+
+                for entry in entries where !seenCommentKeys.contains(entry.key) {
+                    rememberSeenKey(entry.key)
+                    delegate?.webSocketDidReceiveMessage(
+                        text: entry.content,
+                        nickname: entry.nickname,
+                        color: entry.color
+                    )
+                }
             }
         } catch {
             print("❌ 解析快手响应失败: \(error.localizedDescription)")
+        }
+    }
+}
+
+private extension HTTPPollingDanmakuConnection {
+    struct KuaishouCommentEntry {
+        let key: String
+        let time: UInt64
+        let sequence: Int
+        let nickname: String
+        let content: String
+        let color: UInt32
+    }
+
+    func resetRuntimeState() {
+        pollCount = 0
+        seenCommentKeys.removeAll(keepingCapacity: true)
+        seenCommentOrder.removeAll(keepingCapacity: true)
+        didEmitInitialHistory = false
+    }
+
+    func rememberSeenKey(_ key: String) {
+        guard !key.isEmpty else { return }
+        if seenCommentKeys.insert(key).inserted {
+            seenCommentOrder.append(key)
+        }
+
+        let maxCount = 8_000
+        let keepCount = 4_000
+        if seenCommentOrder.count > maxCount {
+            let removeCount = seenCommentOrder.count - keepCount
+            let removed = seenCommentOrder.prefix(removeCount)
+            seenCommentOrder.removeFirst(removeCount)
+            for key in removed {
+                seenCommentKeys.remove(key)
+            }
         }
     }
 }

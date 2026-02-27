@@ -7,23 +7,39 @@ if (typeof Host.yy === "undefined") {
   Host.yy = {};
 }
 
-// Host.yy.getStreamInfo(roomId) -> Promise<{stream_key, ver, url}>
-Host.yy.getStreamInfo = function(roomId) {
+// Host.yy.getStreamInfo(roomId, options?) -> Promise<{stream_key, ver, url, line_seq?, gear?}>
+Host.yy.getStreamInfo = function(roomId, options) {
   return new Promise(function(resolve, reject) {
-    if (typeof __lp_yy_get_stream_info !== "function") {
+    const hasLegacyAPI = typeof __lp_yy_get_stream_info === "function";
+    const hasExtendedAPI = typeof __lp_yy_get_stream_info_ex === "function";
+    if (!hasLegacyAPI && !hasExtendedAPI) {
       reject(new Error("YY Host API not available"));
       return;
     }
 
-    __lp_yy_get_stream_info(String(roomId), function(jsonString) {
+    const onResolve = function(rawResult) {
       try {
-        const result = JSON.parse(jsonString);
+        let result = rawResult;
+        if (typeof rawResult === "string") {
+          result = JSON.parse(rawResult || "{}");
+        } else if (!rawResult || typeof rawResult !== "object") {
+          result = {};
+        }
         resolve(result);
       } catch (e) {
         reject(e);
       }
-    }, function(error) {
+    };
+
+    const onReject = function(error) {
       reject(new Error(String(error)));
-    });
+    };
+
+    const safeOptions = options && typeof options === "object" ? options : {};
+    if (hasExtendedAPI) {
+      __lp_yy_get_stream_info_ex(String(roomId), safeOptions, onResolve, onReject);
+    } else {
+      __lp_yy_get_stream_info(String(roomId), onResolve, onReject);
+    }
   });
 };

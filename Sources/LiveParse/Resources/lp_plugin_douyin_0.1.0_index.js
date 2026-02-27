@@ -1,4 +1,8 @@
 const _dy_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+const _dy_playbackUserAgent = "libmpv";
+const _dy_playbackHeaders = {
+  "User-Agent": _dy_playbackUserAgent
+};
 const _dy_runtime = {
   cookie: "",
   searchId: "",
@@ -560,10 +564,28 @@ function _dy_extractPlayDetailsFromStreamData(roomId, streamDataText) {
     const main = quality.main || {};
     const title = qualityMap[key] || key;
     if (main.flv) {
-      details.push({ roomId: _dy_toString(roomId), title: `${title}_FLV`, qn: 0, url: _dy_toString(main.flv), liveCodeType: "flv", liveType: "2" });
+      details.push({
+        roomId: _dy_toString(roomId),
+        title: `${title}_FLV`,
+        qn: 0,
+        url: _dy_toString(main.flv),
+        liveCodeType: "flv",
+        liveType: "2",
+        userAgent: _dy_playbackUserAgent,
+        headers: _dy_playbackHeaders
+      });
     }
     if (main.hls) {
-      details.push({ roomId: _dy_toString(roomId), title: `${title}_HLS`, qn: 0, url: _dy_toString(main.hls), liveCodeType: "m3u8", liveType: "2" });
+      details.push({
+        roomId: _dy_toString(roomId),
+        title: `${title}_HLS`,
+        qn: 0,
+        url: _dy_toString(main.hls),
+        liveCodeType: "m3u8",
+        liveType: "2",
+        userAgent: _dy_playbackUserAgent,
+        headers: _dy_playbackHeaders
+      });
     }
   });
 
@@ -581,10 +603,10 @@ function _dy_extractPlayArgs(roomData, roomId) {
   qualitys = qualitys.concat(_dy_extractPlayDetailsFromStreamData(roomId, streamData));
 
   if (qualitys.length === 0) {
-    if (hlsMap.FULL_HD1) qualitys.push({ roomId: _dy_toString(roomId), title: "超清", qn: 0, url: _dy_toString(hlsMap.FULL_HD1), liveCodeType: "m3u8", liveType: "2" });
-    if (hlsMap.HD1) qualitys.push({ roomId: _dy_toString(roomId), title: "高清", qn: 0, url: _dy_toString(hlsMap.HD1), liveCodeType: "m3u8", liveType: "2" });
-    if (hlsMap.SD1) qualitys.push({ roomId: _dy_toString(roomId), title: "标清 1", qn: 0, url: _dy_toString(hlsMap.SD1), liveCodeType: "m3u8", liveType: "2" });
-    if (hlsMap.SD2) qualitys.push({ roomId: _dy_toString(roomId), title: "标清 2", qn: 0, url: _dy_toString(hlsMap.SD2), liveCodeType: "m3u8", liveType: "2" });
+    if (hlsMap.FULL_HD1) qualitys.push({ roomId: _dy_toString(roomId), title: "超清", qn: 0, url: _dy_toString(hlsMap.FULL_HD1), liveCodeType: "m3u8", liveType: "2", userAgent: _dy_playbackUserAgent, headers: _dy_playbackHeaders });
+    if (hlsMap.HD1) qualitys.push({ roomId: _dy_toString(roomId), title: "高清", qn: 0, url: _dy_toString(hlsMap.HD1), liveCodeType: "m3u8", liveType: "2", userAgent: _dy_playbackUserAgent, headers: _dy_playbackHeaders });
+    if (hlsMap.SD1) qualitys.push({ roomId: _dy_toString(roomId), title: "标清 1", qn: 0, url: _dy_toString(hlsMap.SD1), liveCodeType: "m3u8", liveType: "2", userAgent: _dy_playbackUserAgent, headers: _dy_playbackHeaders });
+    if (hlsMap.SD2) qualitys.push({ roomId: _dy_toString(roomId), title: "标清 2", qn: 0, url: _dy_toString(hlsMap.SD2), liveCodeType: "m3u8", liveType: "2", userAgent: _dy_playbackUserAgent, headers: _dy_playbackHeaders });
   }
 
   if (qualitys.length === 0) {

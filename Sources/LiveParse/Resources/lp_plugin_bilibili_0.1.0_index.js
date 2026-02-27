@@ -1,5 +1,9 @@
 const _bili_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 const _bili_referer = "https://live.bilibili.com/";
+const _bili_playbackUserAgent = "libmpv";
+const _bili_playbackHeaders = {
+  "User-Agent": _bili_playbackUserAgent
+};
 
 function _bili_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
@@ -319,7 +323,9 @@ async function _bili_getPlayArgs(roomId, headers) {
         qn: Number(qn || 1500),
         url: `${host}${baseUrl}${extra}`,
         liveCodeType: streamInfo.protocol_name === "http_hls" ? "m3u8" : "flv",
-        liveType: "0"
+        liveType: "0",
+        userAgent: _bili_playbackUserAgent,
+        headers: _bili_playbackHeaders
       });
     }
   }

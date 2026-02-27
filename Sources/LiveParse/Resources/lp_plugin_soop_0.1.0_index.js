@@ -24,6 +24,8 @@ const __soop_defaultHeaders = {
 };
 
 const __soop_defaultCookie = "AbroadChk=OK";
+const __soop_playbackUserAgent = "libmpv";
+const __soop_playbackHeaders = { "User-Agent": __soop_playbackUserAgent };
 
 // 运行时用户登录 Cookie（由 APP 侧通过 setCookie 注入，用于 19+ 房间）
 var __soop_runtimeCookie = "";
@@ -553,6 +555,8 @@ globalThis.LiveParsePlugin = {
           url: finalUrl,
           liveCodeType: "m3u8",
           liveType: "8",
+          userAgent: __soop_playbackUserAgent,
+          headers: __soop_playbackHeaders,
         });
       } catch (e) {
         // 某些清晰度可能不可用，跳过

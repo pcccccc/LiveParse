@@ -672,6 +672,7 @@ globalThis.LiveParsePlugin = {
   async getPlayback(payload) {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) _huya_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
+    const playbackUA = "HYSDK(Windows,30000002)_APP(pc_exe&7060000&officia)_SDK(trans&2.32.3.5646)";
 
     const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Mobile/15E148 Safari/604.1";
     const resp = await Host.http.request({
@@ -707,7 +708,9 @@ globalThis.LiveParsePlugin = {
               qn: bitRate,
               url: flvURL,
               liveCodeType: "flv",
-              liveType: "1"
+              liveType: "1",
+              userAgent: playbackUA,
+              headers: { "user-agent": playbackUA }
             });
           }
 
@@ -719,7 +722,9 @@ globalThis.LiveParsePlugin = {
               qn: bitRate,
               url: hlsURL,
               liveCodeType: "m3u8",
-              liveType: "1"
+              liveType: "1",
+              userAgent: playbackUA,
+              headers: { "user-agent": playbackUA }
             });
           }
         }
@@ -743,7 +748,9 @@ globalThis.LiveParsePlugin = {
           qn: replay.iVideoSyncTime || 0,
           url: replay.sHlsUrl,
           liveCodeType: "m3u8",
-          liveType: "1"
+          liveType: "1",
+          userAgent: playbackUA,
+          headers: { "user-agent": playbackUA }
         }]
       }];
     }
