@@ -129,6 +129,7 @@ public enum LiveType: String, Codable, Sendable {
          cc = "4",
          ks = "5",
          yy = "6",
+         youtube = "7",
          soop = "8"
 }
 

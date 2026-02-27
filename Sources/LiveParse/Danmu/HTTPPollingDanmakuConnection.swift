@@ -164,6 +164,8 @@ public class HTTPPollingDanmakuConnection {
         switch liveType {
         case .ks:
             performKuaishouPolling()
+        case .youtube:
+            performYouTubePolling()
         default:
             print("⚠️ HTTP 轮询暂不支持平台: \(liveType)")
         }
@@ -203,6 +205,107 @@ public class HTTPPollingDanmakuConnection {
                 print("❌ 快手轮询请求失败: \(error.localizedDescription)")
                 // 不触发 disconnect，继续下一次轮询
             }
+        }
+    }
+
+    /// YouTube 平台 HTTP 轮询
+    private func performYouTubePolling() {
+        guard let continuation = cursors["continuation"] as? String, !continuation.isEmpty else {
+            print("❌ YouTube 轮询缺少 continuation")
+            return
+        }
+        guard let apiKey = cursors["apiKey"] as? String, !apiKey.isEmpty else {
+            print("❌ YouTube 轮询缺少 apiKey")
+            return
+        }
+
+        let endpoint = buildYouTubeEndpoint(baseURL: pollingURL, apiKey: apiKey)
+        let body: [String: Any] = [
+            "context": [
+                "client": [
+                    "clientName": cursors["clientName"] as? String ?? "WEB",
+                    "clientVersion": cursors["clientVersion"] as? String ?? "2.20250201.00.00",
+                    "hl": cursors["hl"] as? String ?? "en",
+                    "gl": cursors["gl"] as? String ?? "US"
+                ]
+            ],
+            "continuation": continuation
+        ]
+
+        AF.request(
+            endpoint,
+            method: pollingMethod,
+            parameters: body,
+            encoding: JSONEncoding.default,
+            headers: headers.map { HTTPHeaders($0) }
+        )
+        .validate()
+        .responseData { [weak self] response in
+            guard let self = self else { return }
+
+            switch response.result {
+            case .success(let data):
+                self.parseYouTubeResponse(data: data)
+            case .failure(let error):
+                print("❌ YouTube 轮询请求失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func buildYouTubeEndpoint(baseURL: String, apiKey: String) -> String {
+        var url = baseURL
+        let separator = baseURL.contains("?") ? "&" : "?"
+        if !baseURL.contains("key=") {
+            url += "\(separator)prettyPrint=false&key=\(apiKey)"
+        }
+        return url
+    }
+
+    private func parseYouTubeResponse(data: Data) {
+        do {
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                print("❌ YouTube 响应格式错误")
+                return
+            }
+
+            guard let continuationRoot = json["continuationContents"] as? [String: Any],
+                  let liveChat = continuationRoot["liveChatContinuation"] as? [String: Any] else {
+                return
+            }
+
+            var entries = parseYouTubeActions(liveChat)
+            entries.sort { lhs, rhs in
+                if lhs.time != rhs.time { return lhs.time < rhs.time }
+                return lhs.sequence < rhs.sequence
+            }
+
+            if !didEmitInitialHistory {
+                for entry in entries {
+                    rememberSeenKey(entry.key)
+                    delegate?.webSocketDidReceiveMessage(
+                        text: entry.content,
+                        nickname: entry.nickname,
+                        color: entry.color
+                    )
+                }
+                didEmitInitialHistory = true
+            } else {
+                for entry in entries where !seenCommentKeys.contains(entry.key) {
+                    rememberSeenKey(entry.key)
+                    delegate?.webSocketDidReceiveMessage(
+                        text: entry.content,
+                        nickname: entry.nickname,
+                        color: entry.color
+                    )
+                }
+            }
+
+            if let next = extractYouTubeContinuationAndTimeout(liveChat) {
+                cursors["continuation"] = next.continuation
+                updatePollingIntervalIfNeeded(timeoutMillis: next.timeoutMs)
+            }
+        } catch {
+            print("❌ 解析 YouTube 响应失败: \(error.localizedDescription)")
         }
     }
 
@@ -313,6 +416,152 @@ private extension HTTPPollingDanmakuConnection {
         let nickname: String
         let content: String
         let color: UInt32
+    }
+
+    struct YouTubeCommentEntry {
+        let key: String
+        let time: UInt64
+        let sequence: Int
+        let nickname: String
+        let content: String
+        let color: UInt32
+    }
+
+    struct YouTubeContinuationState {
+        let continuation: String
+        let timeoutMs: Int?
+    }
+
+    func parseYouTubeActions(_ liveChat: [String: Any]) -> [YouTubeCommentEntry] {
+        let actions = liveChat["actions"] as? [[String: Any]] ?? []
+        var entries: [YouTubeCommentEntry] = []
+        entries.reserveCapacity(actions.count)
+
+        for (index, action) in actions.enumerated() {
+            if let addAction = action["addChatItemAction"] as? [String: Any],
+               let item = addAction["item"] as? [String: Any],
+               let entry = parseYouTubeChatItem(item, sequence: index) {
+                entries.append(entry)
+                continue
+            }
+
+            if let replayAction = action["replayChatItemAction"] as? [String: Any],
+               let replayActions = replayAction["actions"] as? [[String: Any]] {
+                for (nestedIndex, nestedAction) in replayActions.enumerated() {
+                    guard let addAction = nestedAction["addChatItemAction"] as? [String: Any],
+                          let item = addAction["item"] as? [String: Any],
+                          let entry = parseYouTubeChatItem(item, sequence: index * 100 + nestedIndex) else {
+                        continue
+                    }
+                    entries.append(entry)
+                }
+            }
+        }
+
+        return entries
+    }
+
+    func parseYouTubeChatItem(_ item: [String: Any], sequence: Int) -> YouTubeCommentEntry? {
+        let rendererKeys = [
+            "liveChatTextMessageRenderer",
+            "liveChatPaidMessageRenderer",
+            "liveChatMembershipItemRenderer",
+            "liveChatPaidStickerRenderer"
+        ]
+
+        for key in rendererKeys {
+            guard let renderer = item[key] as? [String: Any] else { continue }
+            let nickname = parseYouTubeText(renderer["authorName"] as? [String: Any])
+            var content = parseYouTubeText(renderer["message"] as? [String: Any])
+
+            if content.isEmpty {
+                content = parseYouTubeText(renderer["headerPrimaryText"] as? [String: Any])
+            }
+            if content.isEmpty {
+                content = parseYouTubeText(renderer["purchaseAmountText"] as? [String: Any])
+            }
+            if content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                continue
+            }
+
+            let messageId = (renderer["id"] as? String) ?? "\(nickname)|\(content)|\(sequence)"
+            let timeUsec = UInt64((renderer["timestampUsec"] as? String) ?? "") ?? 0
+            let argb = (renderer["authorNameTextColor"] as? NSNumber)?.uint32Value ?? 0
+            let color = normalizeYouTubeColor(argb)
+
+            return YouTubeCommentEntry(
+                key: messageId,
+                time: timeUsec,
+                sequence: sequence,
+                nickname: nickname.isEmpty ? "YouTube" : nickname,
+                content: content,
+                color: color
+            )
+        }
+
+        return nil
+    }
+
+    func parseYouTubeText(_ object: [String: Any]?) -> String {
+        guard let object else { return "" }
+        if let simpleText = object["simpleText"] as? String {
+            return simpleText
+        }
+        guard let runs = object["runs"] as? [[String: Any]] else { return "" }
+        return runs.map { run in
+            if let text = run["text"] as? String {
+                return text
+            }
+            if let emoji = run["emoji"] as? [String: Any],
+               let shortcuts = emoji["shortcuts"] as? [String],
+               let first = shortcuts.first {
+                return first
+            }
+            return ""
+        }.joined()
+    }
+
+    func normalizeYouTubeColor(_ argb: UInt32) -> UInt32 {
+        let rgb = argb & 0x00FFFFFF
+        return rgb == 0 ? 0xFFFFFF : rgb
+    }
+
+    func extractYouTubeContinuationAndTimeout(_ liveChat: [String: Any]) -> YouTubeContinuationState? {
+        let continuationBlocks = liveChat["continuations"] as? [[String: Any]] ?? []
+        let keys = [
+            "invalidationContinuationData",
+            "timedContinuationData",
+            "reloadContinuationData",
+            "liveChatReplayContinuationData"
+        ]
+
+        for block in continuationBlocks {
+            for key in keys {
+                guard let item = block[key] as? [String: Any],
+                      let continuation = item["continuation"] as? String,
+                      !continuation.isEmpty else {
+                    continue
+                }
+
+                let timeoutMs = (item["timeoutMs"] as? NSNumber)?.intValue
+                return YouTubeContinuationState(
+                    continuation: continuation,
+                    timeoutMs: timeoutMs
+                )
+            }
+        }
+        return nil
+    }
+
+    func updatePollingIntervalIfNeeded(timeoutMillis: Int?) {
+        guard let timeoutMillis, timeoutMillis > 0 else { return }
+        let clamped = max(1.0, min(Double(timeoutMillis) / 1000.0, 10.0))
+        guard abs(clamped - pollingInterval) >= 0.5 else { return }
+
+        pollingInterval = clamped
+        if isConnected {
+            startPollingTimer()
+        }
     }
 
     func resetRuntimeState() {

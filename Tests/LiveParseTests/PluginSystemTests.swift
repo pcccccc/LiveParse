@@ -107,12 +107,29 @@ struct PluginSystemTests {
         #expect(ids.contains("1"))   // 游戏子分类（射击游戏）
         #expect(ids.contains("108")) // 运动
     }
+
     @Test
-    func jsPlatformManagerMarksSevenPlatforms() async throws {
+    func builtInYouTubePluginResolvable() async throws {
+        let manager = try LiveParsePluginManager()
+        let plugin = try manager.resolve(pluginId: "youtube")
+        #expect(plugin.manifest.pluginId == "youtube")
+        try await plugin.load()
+    }
+
+    @Test
+    func builtInSOOPPluginResolvable() async throws {
+        let manager = try LiveParsePluginManager()
+        let plugin = try manager.resolve(pluginId: "soop")
+        #expect(plugin.manifest.pluginId == "soop")
+        try await plugin.load()
+    }
+
+    @Test
+    func jsPlatformManagerMarksAllPlatforms() async throws {
         let infos = LiveParseJSPlatformManager.availablePlatformInfos()
-        #expect(infos.count == 7)
+        #expect(infos.count == 9)
 
         let pluginIds = Set(infos.map(\.pluginId))
-        #expect(pluginIds == Set(["bilibili", "huya", "douyin", "douyu", "cc", "ks", "yy"]))
+        #expect(pluginIds == Set(["bilibili", "huya", "douyin", "douyu", "cc", "ks", "yy", "youtube", "soop"]))
     }
 }

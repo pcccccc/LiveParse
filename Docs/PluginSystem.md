@@ -165,9 +165,9 @@ globalThis.LiveParsePlugin = {
 
 ## 当前迁移进度（2026-02-25）
 
-当前仓库已落地"全平台内置插件 + 仅插件模式（无 Swift fallback）"。旧平台 Swift 解析文件已全部删除。YouTube 已移除，新增 SOOP 平台。
+当前仓库已落地"全平台内置插件 + 仅插件模式（无 Swift fallback）"。旧平台 Swift 解析文件已全部删除。已恢复 YouTube 插件并保留 SOOP 平台。
 
-### 已完成平台（8 个）
+### 已完成平台（9 个）
 
 - `bilibili`
 - `douyu`
@@ -176,6 +176,7 @@ globalThis.LiveParsePlugin = {
 - `ks`（KuaiShou）
 - `yy`
 - `cc`（NeteaseCC）
+- `youtube`
 - `soop`（原 AfreecaTV）
 
 以上平台均已：

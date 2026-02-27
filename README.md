@@ -2,7 +2,7 @@
 
 ## 介绍
 
-解析 Bilibili/Douyu/Huya/Douyin/KuaiShou/YY/NeteaseCC/SOOP 直播相关内容的 Swift Package。
+解析 Bilibili/Douyu/Huya/Douyin/KuaiShou/YY/NeteaseCC/YouTube/SOOP 直播相关内容的 Swift Package。
 
 当前默认运行模式：**纯 JS 插件模式**（所有平台 API 解析均通过 JavaScriptCore 插件实现）。
 
@@ -116,6 +116,7 @@ let rooms = try await LiveParseJSPlatformManager.searchRooms(
 | 快手 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | YY | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | 网易CC | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| YouTube | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SOOP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ## 插件架构
