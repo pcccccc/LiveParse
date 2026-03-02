@@ -1,5 +1,7 @@
 # LiveParse 插件系统（JavaScriptCore）设计草案
 
+> 快速落地手册请看：`Docs/PluginReleaseUsage.md`
+
 目标：将各平台解析逻辑以 JS 插件形式解耦，Swift 侧提供统一宿主能力（网络、存储、加密等），并支持热更新、版本锁定、回滚。
 
 ## 核心原则
@@ -96,6 +98,20 @@ Application Support/LiveParse/state.json
     {
       "pluginId": "huya",
       "version": "2.3.1",
+      "platform": "huya",
+      "platformName": "虎牙",
+      "icon": "assets/live_card_huya.png",
+      "iosIcon": "assets/pad_live_card_huya.png",
+      "macosIcon": "assets/mini_live_card_huya.png",
+      "tvosIcon": "assets/live_card_huya.png",
+      "tvosBigIcon": "assets/tv_huya_big.png",
+      "tvosSmallIcon": "assets/tv_huya_small.png",
+      "tvosBigIconDark": "assets/tv_huya_big_dark.png",
+      "tvosSmallIconDark": "assets/tv_huya_small_dark.png",
+      "zipURLs": [
+        "https://cdn-cn.example.com/liveparse/huya/2.3.1.zip",
+        "https://github.com/your-org/liveparse-plugins/releases/download/huya-v2.3.1/huya-2.3.1.zip"
+      ],
       "zipURL": "https://example.com/liveparse/huya/2.3.1.zip",
       "sha256": "<hex>",
       "signature": "<base64>",
@@ -107,9 +123,60 @@ Application Support/LiveParse/state.json
 
 字段约定：
 
-- `zipURL`：插件包下载地址（zip）。
+- `platform`：平台标识（可选，通常等于 `pluginId`）。
+- `platformName`：平台展示名（可选，用于客户端 UI）。
+- `icon`：平台图标路径（可选，推荐写 zip 内部路径，如 `assets/live_card_huya.png`）。
+- `iosIcon`：iOS 图标路径（可选，推荐 `assets/pad_live_card_<id>.png`）。
+- `macosIcon`：macOS 图标路径（可选，推荐 `assets/mini_live_card_<id>.png`）。
+- `tvosIcon`：tvOS 卡片图路径（可选，推荐 `assets/live_card_<id>.png`）。
+- `tvosBigIcon`：tvOS 平台页大图路径（可选，推荐 `assets/tv_<id>_big.png`）。
+- `tvosSmallIcon`：tvOS 平台页小图路径（可选，推荐 `assets/tv_<id>_small.png`）。
+- `tvosBigIconDark`：tvOS 平台页大图深色路径（可选，推荐 `assets/tv_<id>_big_dark.png`）。
+- `tvosSmallIconDark`：tvOS 平台页小图深色路径（可选，推荐 `assets/tv_<id>_small_dark.png`）。
+- `zipURLs`：插件包多源下载地址（按优先级排序，推荐）。
+- `zipURL`：单地址兼容字段（legacy，作为 `zipURLs` 的后备）。
 - `sha256`：zip 内容的 sha256（hex）。
 - `signature/signingKeyId`：可选的签名与 key 标识（强烈建议上线使用）。
+
+建议：由索引接口按地区返回不同 `zipURLs` 顺序（如中国大陆优先国内镜像，其次 GitHub）。
+
+### 发布脚本（仓库内）
+
+可使用脚本自动打包 9 平台插件、计算 sha256、生成 `plugins.json`：
+
+```bash
+python3 Scripts/build_plugin_release.py \
+  --url-prefix https://cdn-cn.example.com/liveparse/plugins \
+  --url-prefix https://github.com/your-org/liveparse-plugins/releases/download/latest
+```
+
+输出目录默认在 `Dist/PluginRelease/`：
+
+- `Dist/PluginRelease/zips/*.zip`
+- `Dist/PluginRelease/plugins.json`
+- `Dist/PluginRelease/checksums.txt`
+
+### 插件图标目录规范（推荐）
+
+为了避免“新增平台必须发版 App 才能补图标”，图标应随插件 zip 一起发布。
+
+在仓库内按以下目录放图：
+
+```
+Sources/LiveParse/Resources/plugin_assets/<pluginId>/
+```
+
+命名建议（与三端 UI 对齐）：
+
+- `live_card_<pluginId>.png`
+- `pad_live_card_<pluginId>.png`
+- `mini_live_card_<pluginId>.png`
+- `tv_<pluginId>_big.png`
+- `tv_<pluginId>_small.png`
+- `tv_<pluginId>_big_dark.png`（tvOS 深色）
+- `tv_<pluginId>_small_dark.png`（tvOS 深色）
+
+`Scripts/build_plugin_release.py` 会自动把这些文件打进 zip 的 `assets/` 目录，并在 `plugins.json` 中写入对应路径。
 
 ## 插件包（zip）格式
 

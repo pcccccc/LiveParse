@@ -48,6 +48,19 @@ public final class LiveParsePluginManager: @unchecked Sendable {
         try reload()
     }
 
+    public func setLastGoodVersion(pluginId: String, version: String?) throws {
+        var record = state.plugins[pluginId] ?? .init()
+        record.lastGoodVersion = version
+        state.plugins[pluginId] = record
+        try storage.saveState(state)
+    }
+
+    public func evict(pluginId: String) {
+        lock.lock()
+        loadedPlugins.removeValue(forKey: pluginId)
+        lock.unlock()
+    }
+
     public func resolve(pluginId: String) throws -> LiveParseLoadedPlugin {
         lock.lock()
         if let existing = loadedPlugins[pluginId] {
