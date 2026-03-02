@@ -1,0 +1,186 @@
+{
+  "apiVersion": 1,
+  "generatedAt": "2026-03-02T07:06:31Z",
+  "plugins": [
+    {
+      "pluginId": "bilibili",
+      "version": "0.1.0",
+      "platform": "bilibili",
+      "platformName": "哔哩哔哩",
+      "zipURLs": [
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_0.1.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_0.1.0.zip"
+      ],
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_0.1.0.zip",
+      "sha256": "0f07eb1eeb0a9848919a7a1be8537a2476991129d6bf69e6488abe97df1081b9",
+      "icon": "assets/live_card_bilibili.png",
+      "iosIcon": "assets/pad_live_card_bilibili.png",
+      "macosIcon": "assets/mini_live_card_bilibili.png",
+      "tvosIcon": "assets/live_card_bilibili.png",
+      "tvosBigIcon": "assets/tv_bilibili_big.png",
+      "tvosSmallIcon": "assets/tv_bilibili_small.png",
+      "tvosBigIconDark": "assets/tv_bilibili_big_dark.png",
+      "tvosSmallIconDark": "assets/tv_bilibili_small_dark.png"
+    },
+    {
+      "pluginId": "cc",
+      "version": "0.1.0",
+      "platform": "cc",
+      "platformName": "网易CC",
+      "zipURLs": [
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_0.1.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_0.1.0.zip"
+      ],
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_0.1.0.zip",
+      "sha256": "062f54bedbaad9e617eaa8f4a794c841afda6317f258320b013ad886fe04679a",
+      "icon": "assets/live_card_cc.png",
+      "iosIcon": "assets/pad_live_card_cc.png",
+      "macosIcon": "assets/mini_live_card_cc.png",
+      "tvosIcon": "assets/live_card_cc.png",
+      "tvosBigIcon": "assets/tv_cc_big.png",
+      "tvosSmallIcon": "assets/tv_cc_small.png",
+      "tvosBigIconDark": "assets/tv_cc_big_dark.png",
+      "tvosSmallIconDark": "assets/tv_cc_small_dark.png"
+    },
+    {
+      "pluginId": "douyin",
+      "version": "0.1.0",
+      "platform": "douyin",
+      "platformName": "抖音",
+      "zipURLs": [
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_0.1.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_0.1.0.zip"
+      ],
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_0.1.0.zip",
+      "sha256": "e9bf7493edab84d1af9ad16e85b492d251b2927ddd5fded59c3279cd9bc8a1b5",
+      "icon": "assets/live_card_douyin.png",
+      "iosIcon": "assets/pad_live_card_douyin.png",
+      "macosIcon": "assets/mini_live_card_douyin.png",
+      "tvosIcon": "assets/live_card_douyin.png",
+      "tvosBigIcon": "assets/tv_douyin_big.png",
+      "tvosSmallIcon": "assets/tv_douyin_small.png",
+      "tvosBigIconDark": "assets/tv_douyin_big_dark.png",
+      "tvosSmallIconDark": "assets/tv_douyin_small_dark.png"
+    },
+    {
+      "pluginId": "douyu",
+      "version": "0.1.0",
+      "platform": "douyu",
+      "platformName": "斗鱼",
+      "zipURLs": [
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_0.1.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_0.1.0.zip"
+      ],
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_0.1.0.zip",
+      "sha256": "79ac73ff2ef6ad11d4c373ef1c0b1c712be72a6786ff0f579fb95a076f5fe230",
+      "icon": "assets/live_card_douyu.png",
+      "iosIcon": "assets/pad_live_card_douyu.png",
+      "macosIcon": "assets/mini_live_card_douyu.png",
+      "tvosIcon": "assets/live_card_douyu.png",
+      "tvosBigIcon": "assets/tv_douyu_big.png",
+      "tvosSmallIcon": "assets/tv_douyu_small.png",
+      "tvosBigIconDark": "assets/tv_douyu_big_dark.png",
+      "tvosSmallIconDark": "assets/tv_douyu_small_dark.png"
+    },
+    {
+      "pluginId": "huya",
+      "version": "0.1.1",
+      "platform": "huya",
+      "platformName": "虎牙",
+      "zipURLs": [
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_0.1.1.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_0.1.1.zip"
+      ],
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_0.1.1.zip",
+      "sha256": "83d89f3625fd9f6c49852291dc3eed10356ff325b03113c0a5966a3099bfbd8d",
+      "icon": "assets/live_card_huya.png",
+      "iosIcon": "assets/pad_live_card_huya.png",
+      "macosIcon": "assets/mini_live_card_huya.png",
+      "tvosIcon": "assets/live_card_huya.png",
+      "tvosBigIcon": "assets/tv_huya_big.png",
+      "tvosSmallIcon": "assets/tv_huya_small.png",
+      "tvosBigIconDark": "assets/tv_huya_big_dark.png",
+      "tvosSmallIconDark": "assets/tv_huya_small_dark.png"
+    },
+    {
+      "pluginId": "ks",
+      "version": "0.1.0",
+      "platform": "ks",
+      "platformName": "快手",
+      "zipURLs": [
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_0.1.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_0.1.0.zip"
+      ],
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_0.1.0.zip",
+      "sha256": "a3604fc5fa4970750548a4e85f6560a7f4f62ddaaf174966d1e09205bb8b4d2d",
+      "icon": "assets/live_card_ks.png",
+      "iosIcon": "assets/pad_live_card_ks.png",
+      "macosIcon": "assets/mini_live_card_ks.png",
+      "tvosIcon": "assets/live_card_ks.png",
+      "tvosBigIcon": "assets/tv_ks_big.png",
+      "tvosSmallIcon": "assets/tv_ks_small.png",
+      "tvosBigIconDark": "assets/tv_ks_big_dark.png",
+      "tvosSmallIconDark": "assets/tv_ks_small_dark.png"
+    },
+    {
+      "pluginId": "soop",
+      "version": "0.1.0",
+      "platform": "soop",
+      "platformName": "SOOP",
+      "zipURLs": [
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_0.1.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_0.1.0.zip"
+      ],
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_0.1.0.zip",
+      "sha256": "55aad583a2ae39ec2c344976c0ee49bd4090a6fc683e450c670c3ab8862db8c1",
+      "icon": "assets/live_card_soop.png",
+      "iosIcon": "assets/pad_live_card_soop.png",
+      "macosIcon": "assets/mini_live_card_soop.png",
+      "tvosIcon": "assets/live_card_soop.png",
+      "tvosBigIcon": "assets/tv_soop_big.png",
+      "tvosSmallIcon": "assets/tv_soop_small.png",
+      "tvosBigIconDark": "assets/tv_soop_big_dark.png",
+      "tvosSmallIconDark": "assets/tv_soop_small_dark.png"
+    },
+    {
+      "pluginId": "youtube",
+      "version": "0.2.0",
+      "platform": "youtube",
+      "platformName": "YouTube",
+      "zipURLs": [
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.0.zip"
+      ],
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.0.zip",
+      "sha256": "8d36df73893e1f0806664d1a3d486e21c6dc865a12cbc8d9aa0125c9e4b89c95",
+      "icon": "assets/live_card_youtube.png",
+      "iosIcon": "assets/pad_live_card_youtube.png",
+      "macosIcon": "assets/mini_live_card_youtube.png",
+      "tvosIcon": "assets/live_card_youtube.png",
+      "tvosBigIcon": "assets/tv_youtube_big.png",
+      "tvosSmallIcon": "assets/tv_youtube_small.png",
+      "tvosBigIconDark": "assets/tv_youtube_big_dark.png",
+      "tvosSmallIconDark": "assets/tv_youtube_small_dark.png"
+    },
+    {
+      "pluginId": "yy",
+      "version": "0.1.0",
+      "platform": "yy",
+      "platformName": "YY直播",
+      "zipURLs": [
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_0.1.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_0.1.0.zip"
+      ],
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_0.1.0.zip",
+      "sha256": "d0d67469fff581931e28856aeaa494f98cf51c2f4792f479b25742e9a8ad3d36",
+      "icon": "assets/live_card_yy.png",
+      "iosIcon": "assets/pad_live_card_yy.png",
+      "macosIcon": "assets/mini_live_card_yy.png",
+      "tvosIcon": "assets/live_card_yy.png",
+      "tvosBigIcon": "assets/tv_yy_big.png",
+      "tvosSmallIcon": "assets/tv_yy_small.png",
+      "tvosBigIconDark": "assets/tv_yy_big_dark.png",
+      "tvosSmallIconDark": "assets/tv_yy_small_dark.png"
+    }
+  ]
+}

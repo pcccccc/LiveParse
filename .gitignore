@@ -9,4 +9,10 @@ DerivedData/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
-Dist/
+
+# Dist 下仅保留发布索引与校验文件；zip 产物不入库
+Dist/*
+!Dist/PluginRelease/
+Dist/PluginRelease/*
+!Dist/PluginRelease/plugins.json
+!Dist/PluginRelease/checksums.txt
