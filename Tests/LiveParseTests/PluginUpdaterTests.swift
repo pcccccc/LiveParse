@@ -270,6 +270,20 @@ struct PluginUpdaterTests {
         )
         #expect(Bool(true))
     }
+
+    @Test
+    func smokeTestCanBeSkippedWithEmptyFunction() async throws {
+        let updater = try makeUpdater()
+        let manifest = try createTestPluginFilesWithoutPing(updater: updater, pluginId: "demo-no-ping", version: "1.0.0")
+
+        try await updater.smokeTestInstalledPlugin(
+            manifest: manifest,
+            function: "",
+            payload: ["value": 1],
+            session: makeSession()
+        )
+        #expect(Bool(true))
+    }
 }
 
 private extension PluginUpdaterTests {
@@ -300,6 +314,31 @@ private extension PluginUpdaterTests {
         globalThis.LiveParsePlugin = {
           apiVersion: 1,
           ping(payload) { return { ok: true, echo: payload }; }
+        };
+        """
+        try script.write(to: entryURL, atomically: true, encoding: .utf8)
+
+        return LiveParsePluginManifest(
+            pluginId: pluginId,
+            version: version,
+            apiVersion: 1,
+            liveTypes: ["1"],
+            entry: "index.js"
+        )
+    }
+
+    func createTestPluginFilesWithoutPing(
+        updater: LiveParsePluginUpdater,
+        pluginId: String,
+        version: String
+    ) throws -> LiveParsePluginManifest {
+        let root = updater.storage.pluginVersionDirectory(pluginId: pluginId, version: version)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+
+        let entryURL = root.appendingPathComponent("index.js", isDirectory: false)
+        let script = """
+        globalThis.LiveParsePlugin = {
+          apiVersion: 1
         };
         """
         try script.write(to: entryURL, atomically: true, encoding: .utf8)

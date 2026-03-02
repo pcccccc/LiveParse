@@ -30,7 +30,7 @@ public final class LiveParsePluginUpdater: @unchecked Sendable {
     @discardableResult
     public func installAndActivate(
         item: LiveParseRemotePluginItem,
-        smokeFunction: String = "ping",
+        smokeFunction: String = "",
         smokePayload: [String: Any] = [:],
         manager: LiveParsePluginManager? = nil
     ) async throws -> LiveParsePluginManifest {
