@@ -39,6 +39,7 @@ REQUIRED_PLUGIN_ICON_FILES = [
     "tv_{pluginId}_big_dark.png",
     "tv_{pluginId}_small_dark.png",
 ]
+ZIP_FIXED_TIMESTAMP = (2020, 1, 1, 0, 0, 0)
 
 PLATFORM_DISPLAY_NAMES = {
     "bilibili": "哔哩哔哩",
@@ -186,15 +187,19 @@ def build_zip(
 
     output_zip_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output_zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("manifest.json", json.dumps(packaged_manifest, ensure_ascii=False, indent=2) + "\n")
-        zf.write(entry_src_path, packaged_entry)
+        write_zip_text(
+            zf=zf,
+            arc_name="manifest.json",
+            text=json.dumps(packaged_manifest, ensure_ascii=False, indent=2) + "\n",
+        )
+        write_zip_file(zf=zf, src_path=entry_src_path, arc_name=packaged_entry)
         for preload_name in preload_scripts:
             preload_src = resources_dir / preload_name
             ensure_file_exists(preload_src, f"{plugin_id}@{version} preload script")
-            zf.write(preload_src, preload_name)
+            write_zip_file(zf=zf, src_path=preload_src, arc_name=preload_name)
         for relative_asset_path, asset_source in plugin_assets:
             zip_asset_path = f"assets/{relative_asset_path}"
-            zf.write(asset_source, zip_asset_path)
+            write_zip_file(zf=zf, src_path=asset_source, arc_name=zip_asset_path)
             packaged_asset_paths.append(zip_asset_path)
 
     digest = hashlib.sha256(output_zip_path.read_bytes()).hexdigest()
@@ -215,6 +220,24 @@ def collect_plugin_assets(resources_dir: pathlib.Path, plugin_id: str) -> list[t
         rel = path.relative_to(assets_root).as_posix()
         results.append((rel, path))
     return results
+
+
+def make_zip_info(arc_name: str) -> zipfile.ZipInfo:
+    info = zipfile.ZipInfo(filename=arc_name, date_time=ZIP_FIXED_TIMESTAMP)
+    # Use regular-file mode bits for stable, cross-machine zip metadata.
+    info.external_attr = 0o100644 << 16
+    info.compress_type = zipfile.ZIP_DEFLATED
+    return info
+
+
+def write_zip_text(zf: zipfile.ZipFile, arc_name: str, text: str) -> None:
+    info = make_zip_info(arc_name=arc_name)
+    zf.writestr(info, text.encode("utf-8"))
+
+
+def write_zip_file(zf: zipfile.ZipFile, src_path: pathlib.Path, arc_name: str) -> None:
+    info = make_zip_info(arc_name=arc_name)
+    zf.writestr(info, src_path.read_bytes())
 
 
 def choose_zip_urls(zip_name: str, prefixes: list[str]) -> list[str]:
