@@ -162,6 +162,20 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
         return json.load(f)
 
 
+def normalize_changelog(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+
+    results: list[str] = []
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        entry = item.strip()
+        if entry:
+            results.append(entry)
+    return results
+
+
 def normalized_prefix(prefix: str) -> str:
     return prefix.rstrip("/")
 
@@ -416,6 +430,9 @@ def main() -> int:
             "zipURL": urls[-1],
             "sha256": sha256,
         }
+        changelog = normalize_changelog(manifest.get("changelog"))
+        if changelog:
+            item["changelog"] = changelog
         item.update(icon_fields)
         index_plugins.append(item)
 

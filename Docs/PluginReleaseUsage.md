@@ -96,6 +96,7 @@ python3 Scripts/build_plugin_release.py \
 - `tvosBigIconDark` / `tvosSmallIconDark`
 - `zipURLs` / `zipURL`
 - `sha256`
+- `changelog`（可选，字符串数组，用于“更新日志”展示）
 
 三端建议映射：
 
@@ -139,4 +140,3 @@ LiveParse 已支持：
 1. 拉取远端索引。
 2. 对目标平台执行 `installAndActivate`。
 3. 成功后切换运行版本；失败保持旧版本。
-

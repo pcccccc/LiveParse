@@ -1,0 +1,11 @@
+{
+  "pluginId": "youtube",
+  "version": "0.2.1",
+  "apiVersion": 1,
+  "displayName": "YouTube (JS PoC)",
+  "changelog": [
+    "更新图标资源"
+  ],
+  "liveTypes": ["7"],
+  "entry": "lp_plugin_youtube_0.2.1_index.js"
+}

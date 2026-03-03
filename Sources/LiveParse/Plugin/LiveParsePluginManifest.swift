@@ -5,6 +5,8 @@ public struct LiveParsePluginManifest: Codable, Equatable, Sendable {
     public let version: String
     public let apiVersion: Int
     public let displayName: String?
+    /// 面向用户的简短更新日志，按条目展示。
+    public let changelog: [String]?
     public let liveTypes: [String]
     public let entry: String
     public let minHostVersion: String?
@@ -16,6 +18,7 @@ public struct LiveParsePluginManifest: Codable, Equatable, Sendable {
         version: String,
         apiVersion: Int,
         displayName: String? = nil,
+        changelog: [String]? = nil,
         liveTypes: [String],
         entry: String,
         minHostVersion: String? = nil,
@@ -25,6 +28,7 @@ public struct LiveParsePluginManifest: Codable, Equatable, Sendable {
         self.version = version
         self.apiVersion = apiVersion
         self.displayName = displayName
+        self.changelog = changelog
         self.liveTypes = liveTypes
         self.entry = entry
         self.minHostVersion = minHostVersion
@@ -42,4 +46,3 @@ extension LiveParsePluginManifest {
         }
     }
 }
-

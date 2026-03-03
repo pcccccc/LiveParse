@@ -9,6 +9,8 @@ public struct LiveParseRemotePluginIndex: Codable, Equatable, Sendable {
 public struct LiveParseRemotePluginItem: Codable, Equatable, Sendable {
     public let pluginId: String
     public let version: String
+    /// 面向用户展示的更新日志（当前版本）。
+    public let changelog: [String]?
     /// Optional platform identifier for UI metadata.
     public let platform: String?
     /// Optional localized display name for UI metadata.
@@ -40,6 +42,7 @@ public struct LiveParseRemotePluginItem: Codable, Equatable, Sendable {
     public init(
         pluginId: String,
         version: String,
+        changelog: [String]? = nil,
         platform: String? = nil,
         platformName: String? = nil,
         icon: String? = nil,
@@ -58,6 +61,7 @@ public struct LiveParseRemotePluginItem: Codable, Equatable, Sendable {
     ) {
         self.pluginId = pluginId
         self.version = version
+        self.changelog = changelog
         self.platform = platform
         self.platformName = platformName
         self.icon = icon
@@ -102,6 +106,7 @@ public struct LiveParseRemotePluginItem: Codable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case pluginId
         case version
+        case changelog
         case platform
         case platformName
         case icon
@@ -123,6 +128,7 @@ public struct LiveParseRemotePluginItem: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         pluginId = try container.decode(String.self, forKey: .pluginId)
         version = try container.decode(String.self, forKey: .version)
+        changelog = try container.decodeIfPresent([String].self, forKey: .changelog)
         platform = try container.decodeIfPresent(String.self, forKey: .platform)
         platformName = try container.decodeIfPresent(String.self, forKey: .platformName)
         icon = try container.decodeIfPresent(String.self, forKey: .icon)

@@ -113,6 +113,34 @@ struct PluginUpdaterTests {
     }
 
     @Test
+    func remoteItemDecodesChangelog() throws {
+        let json = """
+        {
+          "apiVersion": 1,
+          "plugins": [
+            {
+              "pluginId": "douyin",
+              "version": "0.1.1",
+              "zipURL": "https://example.com/douyin.zip",
+              "sha256": "abc123",
+              "changelog": [
+                "修复房间信息偶发为空",
+                "优化直播状态判断"
+              ]
+            }
+          ]
+        }
+        """
+        let data = Data(json.utf8)
+        let index = try JSONDecoder().decode(LiveParseRemotePluginIndex.self, from: data)
+
+        #expect(index.plugins[0].changelog == [
+            "修复房间信息偶发为空",
+            "优化直播状态判断"
+        ])
+    }
+
+    @Test
     func remoteItemPrefersMirrorListAndDeduplicates() throws {
         let json = """
         {
@@ -244,6 +272,58 @@ struct PluginUpdaterTests {
 
         let state = updater.storage.loadState()
         #expect(state.plugins["huya"]?.lastGoodVersion == "1.2.3")
+    }
+
+    @Test
+    func checkUpdateReturnsLatestVersionAndChangelog() throws {
+        let updater = try makeUpdater()
+        let index = LiveParseRemotePluginIndex(
+            apiVersion: 1,
+            generatedAt: nil,
+            plugins: [
+                LiveParseRemotePluginItem(
+                    pluginId: "douyin",
+                    version: "0.1.0",
+                    zipURL: "https://example.com/douyin_0.1.0.zip",
+                    sha256: "abc123"
+                ),
+                LiveParseRemotePluginItem(
+                    pluginId: "douyin",
+                    version: "0.1.1",
+                    changelog: ["修复房间信息偶发为空"],
+                    zipURL: "https://example.com/douyin_0.1.1.zip",
+                    sha256: "def456"
+                )
+            ]
+        )
+
+        let result = updater.checkUpdate(pluginId: "douyin", currentVersion: "0.1.0", index: index)
+        #expect(result?.hasUpdate == true)
+        #expect(result?.latestVersion == "0.1.1")
+        #expect(result?.changelog == ["修复房间信息偶发为空"])
+    }
+
+    @Test
+    func checkUpdateReturnsNoUpdateWhenCurrentIsLatest() throws {
+        let updater = try makeUpdater()
+        let index = LiveParseRemotePluginIndex(
+            apiVersion: 1,
+            generatedAt: nil,
+            plugins: [
+                LiveParseRemotePluginItem(
+                    pluginId: "douyin",
+                    version: "0.1.1",
+                    changelog: ["优化直播状态判断"],
+                    zipURL: "https://example.com/douyin_0.1.1.zip",
+                    sha256: "def456"
+                )
+            ]
+        )
+
+        let result = updater.checkUpdate(pluginId: "douyin", currentVersion: "0.1.1", index: index)
+        #expect(result?.hasUpdate == false)
+        #expect(result?.latestVersion == "0.1.1")
+        #expect(result?.changelog == ["优化直播状态判断"])
     }
 
     @Test

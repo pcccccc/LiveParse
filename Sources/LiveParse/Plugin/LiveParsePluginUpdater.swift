@@ -1,6 +1,28 @@
 import CryptoKit
 import Foundation
 
+public struct LiveParsePluginUpdateInfo: Equatable, Sendable {
+    public let pluginId: String
+    public let currentVersion: String?
+    public let latestVersion: String
+    public let hasUpdate: Bool
+    public let changelog: [String]
+
+    public init(
+        pluginId: String,
+        currentVersion: String?,
+        latestVersion: String,
+        hasUpdate: Bool,
+        changelog: [String]
+    ) {
+        self.pluginId = pluginId
+        self.currentVersion = currentVersion
+        self.latestVersion = latestVersion
+        self.hasUpdate = hasUpdate
+        self.changelog = changelog
+    }
+}
+
 public final class LiveParsePluginUpdater: @unchecked Sendable {
     public let storage: LiveParsePluginStorage
     public let session: URLSession
@@ -18,6 +40,35 @@ public final class LiveParsePluginUpdater: @unchecked Sendable {
     public func downloadZip(url: URL) async throws -> Data {
         let (data, _) = try await session.data(from: url)
         return data
+    }
+
+    /// Check whether the specified plugin has a newer version in remote index.
+    /// - Returns: nil when plugin does not exist in the index.
+    public func checkUpdate(
+        pluginId: String,
+        currentVersion: String?,
+        index: LiveParseRemotePluginIndex
+    ) -> LiveParsePluginUpdateInfo? {
+        let candidates = index.plugins.filter { $0.pluginId == pluginId }
+        guard let latest = candidates.max(by: { semverCompare($0.version, $1.version) < 0 }) else {
+            return nil
+        }
+
+        let normalizedCurrent = currentVersion?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasUpdate: Bool
+        if let current = normalizedCurrent, !current.isEmpty {
+            hasUpdate = semverCompare(latest.version, current) > 0
+        } else {
+            hasUpdate = true
+        }
+
+        return LiveParsePluginUpdateInfo(
+            pluginId: pluginId,
+            currentVersion: normalizedCurrent,
+            latestVersion: latest.version,
+            hasUpdate: hasUpdate,
+            changelog: latest.changelog ?? []
+        )
     }
 
     public func install(item: LiveParseRemotePluginItem) async throws -> LiveParsePluginManifest {
@@ -131,5 +182,20 @@ public final class LiveParsePluginUpdater: @unchecked Sendable {
         )
         try await plugin.load()
         _ = try await plugin.runtime.callPluginFunction(name: smoke, payload: payload)
+    }
+
+    func semverCompare(_ lhs: String, _ rhs: String) -> Int {
+        func parts(_ value: String) -> [Int] {
+            value.split(separator: ".").map { Int($0) ?? 0 } + [0, 0, 0]
+        }
+
+        let left = parts(lhs)
+        let right = parts(rhs)
+        for idx in 0..<3 {
+            if left[idx] != right[idx] {
+                return left[idx] < right[idx] ? -1 : 1
+            }
+        }
+        return 0
     }
 }

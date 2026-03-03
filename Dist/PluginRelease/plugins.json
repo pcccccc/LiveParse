@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-02T07:06:31Z",
+  "generatedAt": "2026-03-03T03:30:13Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -12,7 +12,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_0.1.0.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_0.1.0.zip",
-      "sha256": "0cdbd16b480eb0b8a4266a3f8d2514fed227865014bb335d8af257a7b95de338",
+      "sha256": "07dc40495f67f7c975260d67f4bcc055b0f33e670da5294929cc35193b7c31b1",
       "icon": "assets/live_card_bilibili.png",
       "iosIcon": "assets/pad_live_card_bilibili.png",
       "macosIcon": "assets/mini_live_card_bilibili.png",
@@ -32,7 +32,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_0.1.0.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_0.1.0.zip",
-      "sha256": "4939a472f2285e1cf204982c964dcaaa9635410dbef10977d4c1cd06407ea2ba",
+      "sha256": "ba408103ad0c28d6691742e09c363b2d953ae59b8ba0f7dc17204791d75fadcf",
       "icon": "assets/live_card_cc.png",
       "iosIcon": "assets/pad_live_card_cc.png",
       "macosIcon": "assets/mini_live_card_cc.png",
@@ -52,7 +52,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_0.1.0.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_0.1.0.zip",
-      "sha256": "7f9b810671e671ea55685102b1ec7efe5a0884901d3021ef1b81c3fad834f440",
+      "sha256": "8d36c6ecbb7524505935972211727473df6ca813919a3458459abd42eed2c0c1",
       "icon": "assets/live_card_douyin.png",
       "iosIcon": "assets/pad_live_card_douyin.png",
       "macosIcon": "assets/mini_live_card_douyin.png",
@@ -72,7 +72,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_0.1.0.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_0.1.0.zip",
-      "sha256": "d70c62a74f79e1a7166be31c528588b901fbb4cff10e88e29455ef2583a8a7be",
+      "sha256": "b9b49ba3fdc71529532ad9e9b50ba6d39ed2c6e59af2fdd863dcb809fd3e9cda",
       "icon": "assets/live_card_douyu.png",
       "iosIcon": "assets/pad_live_card_douyu.png",
       "macosIcon": "assets/mini_live_card_douyu.png",
@@ -92,7 +92,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_0.1.1.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_0.1.1.zip",
-      "sha256": "c15c1a7b5658df32d639e7008e9dbd3159a8b5d8e0d1e68a853147ecc25bd6c9",
+      "sha256": "dfc0c7e18112b366d56826ae527d533ab8445bf7b1f341d5362b4db64950a358",
       "icon": "assets/live_card_huya.png",
       "iosIcon": "assets/pad_live_card_huya.png",
       "macosIcon": "assets/mini_live_card_huya.png",
@@ -112,7 +112,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_0.1.0.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_0.1.0.zip",
-      "sha256": "a55ec874c02525f4bf848afe4d4a55497276075dc1fbfd1ed27c21bd5356013b",
+      "sha256": "e063226df4bd161814b204d22db894477d60a55fdf7a5953204ff21f998dc4f0",
       "icon": "assets/live_card_ks.png",
       "iosIcon": "assets/pad_live_card_ks.png",
       "macosIcon": "assets/mini_live_card_ks.png",
@@ -132,7 +132,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_0.1.0.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_0.1.0.zip",
-      "sha256": "0323f64a0528a9712f49d6e1c1f4dd49704d27b48d98b9cc25da7a4089036e6b",
+      "sha256": "1372b904391f8356d691cb04ed6b233735d21c720ed9ceab6a93e01040a0500e",
       "icon": "assets/live_card_soop.png",
       "iosIcon": "assets/pad_live_card_soop.png",
       "macosIcon": "assets/mini_live_card_soop.png",
@@ -144,15 +144,18 @@
     },
     {
       "pluginId": "youtube",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "platform": "youtube",
       "platformName": "YouTube",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.0.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.1.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.1.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.0.zip",
-      "sha256": "36adc9356c51ee1fd74289f1f3b13d55b29562a67d9e952762d6a8ee95db6039",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.1.zip",
+      "sha256": "4ca666c9351cf961c0ddecf0b3c00b97ef9fb9ca127797a1ed4d1ef880cf4fed",
+      "changelog": [
+        "更新图标资源"
+      ],
       "icon": "assets/live_card_youtube.png",
       "iosIcon": "assets/pad_live_card_youtube.png",
       "macosIcon": "assets/mini_live_card_youtube.png",
@@ -172,7 +175,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_0.1.0.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_0.1.0.zip",
-      "sha256": "7239e342c42f66b4b70e157f27a6c9c6ec399db0e1d32f5b93193feed3597309",
+      "sha256": "3673e777836bbd68d7a474ed15c455bbc5395b082f71c9bc00d6b9fb6e6d4d87",
       "icon": "assets/live_card_yy.png",
       "iosIcon": "assets/pad_live_card_yy.png",
       "macosIcon": "assets/mini_live_card_yy.png",
