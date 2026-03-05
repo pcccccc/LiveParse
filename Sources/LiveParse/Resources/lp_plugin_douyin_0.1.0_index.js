@@ -3,11 +3,23 @@ const _dy_playbackUserAgent = "libmpv";
 const _dy_playbackHeaders = {
   "User-Agent": _dy_playbackUserAgent
 };
+const _dy_platformId = "douyin";
 const _dy_runtime = {
-  cookie: "",
   searchId: "",
   searchKeyword: ""
 };
+
+async function _dy_request(request, authMode) {
+  return await Host.http.request({
+    platformId: _dy_platformId,
+    authMode: authMode || "none",
+    request: request || {}
+  });
+}
+
+async function _dy_requestWithSession(request) {
+  return await _dy_request(request, "platform_cookie");
+}
 
 function _dy_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
@@ -33,26 +45,6 @@ function _dy_toString(v) {
 
 function _dy_normalizeCookie(cookie) {
   return _dy_toString(cookie).trim();
-}
-
-function _dy_setRuntimeCookie(cookie) {
-  _dy_runtime.cookie = _dy_normalizeCookie(cookie);
-}
-
-function _dy_getRuntimeCookie(payload) {
-  const payloadCookie = _dy_normalizeCookie(payload && payload.cookie);
-  if (payloadCookie) {
-    _dy_setRuntimeCookie(payloadCookie);
-    return payloadCookie;
-  }
-  return _dy_runtime.cookie;
-}
-
-function _dy_withRuntimeCookie(payload) {
-  const safePayload = payload && typeof payload === "object" ? Object.assign({}, payload) : {};
-  const cookie = _dy_getRuntimeCookie(safePayload);
-  if (cookie) safePayload.cookie = cookie;
-  return safePayload;
 }
 
 function _dy_firstURL(text) {
@@ -172,12 +164,8 @@ function _dy_pickHeaders(cookie) {
 }
 
 function _dy_requireCookie(payload, apiName) {
-  const runtimePayload = _dy_withRuntimeCookie(payload || {});
-  const cookie = _dy_normalizeCookie(runtimePayload.cookie);
-  if (!cookie) {
-    _dy_throw("AUTH_REQUIRED", `${apiName} requires cookie`, { api: String(apiName || "") });
-  }
-  runtimePayload.cookie = cookie;
+  const runtimePayload = payload && typeof payload === "object" ? Object.assign({}, payload) : {};
+  runtimePayload.__authMode = "platform_cookie";
   return runtimePayload;
 }
 
@@ -634,7 +622,7 @@ function _dy_enrichCookie(cookie) {
 async function _dy_getCookie(roomId) {
   let ttwid = "";
   try {
-    const resp = await Host.http.request({
+    const resp = await _dy_request({
       url: "https://ttwid.bytedance.com/ttwid/union/register/",
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -648,7 +636,7 @@ async function _dy_getCookie(roomId) {
         union: true
       }),
       timeout: 10
-    });
+    }, "none");
     const setCookie = _dy_toString(resp && resp.headers && resp.headers["Set-Cookie"]);
     console.log(`[douyin] _dy_getCookie: ttwid register status=${resp && resp.status}, Set-Cookie length=${setCookie.length}`);
     if (setCookie) {
@@ -700,12 +688,12 @@ async function _dy_getRoomDataByApi(roomId, userId, cookie) {
   console.log(`[douyin] URL (first 250): ${requestURL.substring(0, 250)}`);
   console.log(`[douyin] headers: ${JSON.stringify(hdrs).substring(0, 300)}`);
 
-  const resp = await Host.http.request({
+  const resp = await _dy_request({
     url: requestURL,
     method: "GET",
     headers: hdrs,
     timeout: 20
-  });
+  }, "none");
 
   const httpStatus = resp && resp.status;
   const respUrl = _dy_toString(resp && resp.url);
@@ -769,7 +757,7 @@ async function _dy_getRoomDataByHtml(roomId, cookie) {
 
   const enrichedCookie = _dy_enrichCookie(cookie);
 
-  const resp = await Host.http.request({
+  const resp = await _dy_requestWithSession({
     url: `https://live.douyin.com/${encodeURIComponent(webRid)}`,
     method: "GET",
     headers: _dy_pickHeaders(enrichedCookie),
@@ -894,12 +882,12 @@ async function _dy_getRoomList(id, parentId, page, cookie) {
   const aBogus = _dy_signDetail(params);
   const requestURL = `https://live.douyin.com/webcast/web/partition/detail/room/v2/?${params}&a_bogus=${encodeURIComponent(aBogus)}`;
 
-  const resp = await Host.http.request({
+  const resp = await _dy_request({
     url: requestURL,
     method: "GET",
     headers: _dy_pickHeaders(freshCookie),
     timeout: 20
-  });
+  }, "none");
 
   const obj = JSON.parse(_dy_toString(resp && resp.bodyText) || "{}");
   const list = (((obj || {}).data || {}).data) || [];
@@ -944,7 +932,6 @@ async function _dy_searchRooms(keyword, page, cookie) {
   if (!verifyFpFromCookie) {
     searchCookie = _dy_appendCookieKV(searchCookie, "s_v_web_id", verifyFp);
   }
-  _dy_setRuntimeCookie(searchCookie);
   const keywordText = String(keyword || "").trim();
   const encodedKeyword = encodeURIComponent(keywordText);
   const pageNo = Number(page || 1);
@@ -1005,7 +992,7 @@ async function _dy_searchRooms(keyword, page, cookie) {
     "Referer": `https://www.douyin.com/search/${encodedKeyword}?type=general&source=tab_search`
   });
 
-  const resp = await Host.http.request({
+  const resp = await _dy_requestWithSession({
     url: requestURL,
     method: "GET",
     headers: searchHeaders,
@@ -1175,7 +1162,7 @@ async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
 
   const shortURL = _dy_firstURL(text) || (text.startsWith("http") ? text : "");
   if (shortURL) {
-    const resp = await Host.http.request({
+    const resp = await _dy_requestWithSession({
       url: shortURL,
       method: "GET",
       headers: _dy_pickHeaders(cookie),
@@ -1200,23 +1187,6 @@ async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
 globalThis.LiveParsePlugin = {
   apiVersion: 1,
 
-  async setCookie(payload) {
-    const cookie = _dy_normalizeCookie(payload && payload.cookie);
-    _dy_setRuntimeCookie(cookie);
-    if (!cookie) {
-      _dy_runtime.searchId = "";
-      _dy_runtime.searchKeyword = "";
-    }
-    return { ok: true, hasCookie: cookie.length > 0 };
-  },
-
-  async clearCookie() {
-    _dy_setRuntimeCookie("");
-    _dy_runtime.searchId = "";
-    _dy_runtime.searchKeyword = "";
-    return { ok: true, hasCookie: false };
-  },
-
   async getCategories() {
     return _dy_defaultCategories();
   },
@@ -1227,7 +1197,7 @@ globalThis.LiveParsePlugin = {
     const parentId = _dy_toString(runtimePayload.parentId);
     const page = Number(runtimePayload.page || 1);
     if (!id) _dy_throw("INVALID_ARGS", "id is required", { field: "id" });
-    return await _dy_getRoomList(id, parentId, page, runtimePayload.cookie);
+    return await _dy_getRoomList(id, parentId, page, "");
   },
 
   async getPlayback(payload) {
@@ -1235,7 +1205,7 @@ globalThis.LiveParsePlugin = {
     const roomId = _dy_toString(runtimePayload.roomId);
     const userId = _dy_toString(runtimePayload.userId);
     if (!roomId) _dy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    const data = await _dy_getDouyinRoomDetail(roomId, userId, runtimePayload.cookie, 3);
+    const data = await _dy_getDouyinRoomDetail(roomId, userId, "", 3);
     return _dy_extractPlayArgs(data, roomId);
   },
 
@@ -1244,7 +1214,7 @@ globalThis.LiveParsePlugin = {
     const keyword = _dy_toString(runtimePayload.keyword);
     const page = Number(runtimePayload.page || 1);
     if (!keyword) _dy_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
-    return await _dy_searchRooms(keyword, page, runtimePayload.cookie);
+    return await _dy_searchRooms(keyword, page, "");
   },
 
   async getRoomDetail(payload) {
@@ -1252,7 +1222,7 @@ globalThis.LiveParsePlugin = {
     const roomId = _dy_toString(runtimePayload.roomId);
     const userId = _dy_toString(runtimePayload.userId);
     if (!roomId) _dy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
-    const data = await _dy_getDouyinRoomDetail(roomId, userId, runtimePayload.cookie, 3);
+    const data = await _dy_getDouyinRoomDetail(roomId, userId, "", 3);
     return _dy_buildLiveModel(data, roomId);
   },
 
@@ -1266,8 +1236,8 @@ globalThis.LiveParsePlugin = {
     const runtimePayload = _dy_requireCookie(payload, "resolveShare");
     const shareCode = _dy_toString(runtimePayload.shareCode);
     if (!shareCode) _dy_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
-    const roomId = await _dy_resolveRoomIdFromShareCode(shareCode, runtimePayload.cookie);
-    return await this.getRoomDetail({ roomId, userId: roomId, cookie: runtimePayload.cookie });
+    const roomId = await _dy_resolveRoomIdFromShareCode(shareCode, "");
+    return await this.getRoomDetail({ roomId, userId: roomId });
   },
 
   async getDanmaku(payload) {
@@ -1277,7 +1247,6 @@ globalThis.LiveParsePlugin = {
 
     const live = await this.getRoomDetail(runtimePayload);
     const finalRoomId = _dy_toString((live && live.userId) || roomId);
-    const cookie = _dy_toString(runtimePayload.cookie);
 
     // 生成 user_unique_id（随机 19 位数字，73xx-79xx 开头）
     const lo = 7300000000000000000;
@@ -1314,7 +1283,7 @@ globalThis.LiveParsePlugin = {
         browser_name: "Mozilla",
         browser_version: _dy_ua
       },
-      headers: cookie ? { cookie, "User-Agent": _dy_ua } : null
+      headers: { "User-Agent": _dy_ua }
     };
   }
 };

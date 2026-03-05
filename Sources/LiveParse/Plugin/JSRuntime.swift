@@ -8,10 +8,12 @@ public final class JSRuntime: @unchecked Sendable {
 
     private let queue: DispatchQueue
     private let context: JSContext
+    private let pluginId: String
     private let session: URLSession
 
-    public init(session: URLSession = .shared, logHandler: LogHandler? = nil) {
+    public init(pluginId: String, session: URLSession = .shared, logHandler: LogHandler? = nil) {
         self.queue = DispatchQueue(label: "liveparse.jsruntime.\(UUID().uuidString)")
+        self.pluginId = pluginId
         self.session = session
 
         var createdContext: JSContext?
@@ -23,7 +25,7 @@ public final class JSRuntime: @unchecked Sendable {
         queue.sync {
             Self.configureConsole(in: context, logHandler: logHandler)
             Self.configureExceptionHandler(in: context)
-            Self.configureHostHTTP(in: context, queue: queue, session: session)
+            Self.configureHostHTTP(in: context, queue: queue, session: session, pluginId: pluginId)
             Self.configureHostCrypto(in: context)
             Self.configureHostRuntime(in: context)
             Self.configureHostBootstrap(in: context)
@@ -207,36 +209,33 @@ private extension JSRuntime {
         context.setObject(loadBuiltinScript, forKeyedSubscript: "__lp_host_load_builtin_script" as NSString)
     }
 
-    static func configureHostHTTP(in context: JSContext, queue: DispatchQueue, session: URLSession) {
+    static func configureHostHTTP(in context: JSContext, queue: DispatchQueue, session: URLSession, pluginId: String) {
         let requestBlock: @convention(block) (String, JSValue, JSValue) -> Void = { optionsJSON, resolve, reject in
             let optionsData = optionsJSON.data(using: .utf8) ?? Data()
             let options = (try? JSONSerialization.jsonObject(with: optionsData) as? [String: Any]) ?? [:]
-            guard let urlString = options["url"] as? String, let url = URL(string: urlString) else {
+
+            guard let envelope = makeHostHTTPRequestEnvelope(options: options, pluginId: pluginId) else {
                 reject.call(withArguments: ["Invalid url"]) // already on JS thread
                 return
             }
 
-            var request = URLRequest(url: url)
-            request.httpMethod = (options["method"] as? String)?.uppercased() ?? "GET"
+            var request = URLRequest(url: envelope.url)
+            request.httpMethod = envelope.method
+            request.timeoutInterval = envelope.timeout
 
-            if let timeout = options["timeout"] as? Double {
-                request.timeoutInterval = timeout
-            }
-
-            if let headers = options["headers"] as? [String: Any] {
-                for (k, v) in headers {
-                    if let s = v as? String {
-                        request.setValue(s, forHTTPHeaderField: k)
-                    }
+            var requestHeaders = envelope.headers
+            if envelope.authMode == .platformCookie {
+                requestHeaders = removeProtectedHeaders(requestHeaders)
+                if let cookieHeader = LiveParsePlatformSessionVault.mergedCookieHeader(for: envelope.platformId) {
+                    requestHeaders["Cookie"] = cookieHeader
                 }
             }
 
-            if let bodyBase64 = options["bodyBase64"] as? String,
-               let bodyData = Data(base64Encoded: bodyBase64) {
-                request.httpBody = bodyData
-            } else if let body = options["body"] as? String {
-                request.httpBody = body.data(using: .utf8)
+            for (key, value) in requestHeaders {
+                request.setValue(value, forHTTPHeaderField: key)
             }
+
+            request.httpBody = envelope.body
 
             let task = session.dataTask(with: request) { data, response, error in
                 queue.async {
@@ -256,9 +255,13 @@ private extension JSRuntime {
                     }
                     // httpCookieAcceptPolicy=.never 会导致 allHeaderFields 过滤 Set-Cookie，
                     // 但 JS 插件（如抖音 getCookie）需要读取它，因此单独补回。
-                    if headersDict["Set-Cookie"] == nil,
+                    if envelope.authMode != .platformCookie,
+                       headersDict["Set-Cookie"] == nil,
                        let setCookie = http.value(forHTTPHeaderField: "Set-Cookie") {
                         headersDict["Set-Cookie"] = setCookie
+                    }
+                    if envelope.authMode == .platformCookie {
+                        headersDict = removeSetCookieHeaders(headersDict)
                     }
 
                     let bodyText = data.flatMap { String(data: $0, encoding: .utf8) }
@@ -267,7 +270,7 @@ private extension JSRuntime {
                     let result: [String: Any] = [
                         "status": http.statusCode,
                         "headers": headersDict,
-                        "url": http.url?.absoluteString ?? urlString,
+                        "url": http.url?.absoluteString ?? envelope.urlString,
                         "bodyText": bodyText ?? NSNull(),
                         "bodyBase64": bodyBase64 ?? NSNull()
                     ]
@@ -281,6 +284,123 @@ private extension JSRuntime {
         }
 
         context.setObject(requestBlock, forKeyedSubscript: "__lp_host_http_request" as NSString)
+    }
+
+    private enum HostHTTPAuthMode: String {
+        case none
+        case platformCookie = "platform_cookie"
+    }
+
+    private struct HostHTTPRequestEnvelope {
+        let url: URL
+        let urlString: String
+        let method: String
+        let headers: [String: String]
+        let body: Data?
+        let timeout: TimeInterval
+        let authMode: HostHTTPAuthMode
+        let platformId: String
+    }
+
+    private static func makeHostHTTPRequestEnvelope(options: [String: Any], pluginId: String) -> HostHTTPRequestEnvelope? {
+        let request = (options["request"] as? [String: Any]) ?? options
+        guard let urlString = (request["url"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !urlString.isEmpty,
+              let url = URL(string: urlString) else {
+            return nil
+        }
+
+        let method = (request["method"] as? String)?.uppercased() ?? "GET"
+        var headers = normalizedHeaders(request["headers"])
+
+        let timeout = resolveTimeout(request: request, options: options)
+        let body = resolveBody(request: request)
+
+        let authRaw = ((options["authMode"] as? String) ?? "none").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let authMode = HostHTTPAuthMode(rawValue: authRaw) ?? .none
+        let platformId = LiveParsePlatformSessionVault.canonicalPlatformId(
+            ((options["platformId"] as? String) ?? pluginId)
+        )
+
+        if authMode == .platformCookie {
+            headers = removeProtectedHeaders(headers)
+        }
+
+        return HostHTTPRequestEnvelope(
+            url: url,
+            urlString: urlString,
+            method: method,
+            headers: headers,
+            body: body,
+            timeout: timeout,
+            authMode: authMode,
+            platformId: platformId
+        )
+    }
+
+    private static func resolveTimeout(request: [String: Any], options: [String: Any]) -> TimeInterval {
+        func seconds(from any: Any?) -> TimeInterval? {
+            if let value = any as? Double { return value }
+            if let value = any as? NSNumber { return value.doubleValue }
+            if let value = any as? String, let doubleValue = Double(value) { return doubleValue }
+            return nil
+        }
+
+        func milliseconds(from any: Any?) -> TimeInterval? {
+            guard let millis = seconds(from: any), millis > 0 else { return nil }
+            return millis / 1000.0
+        }
+
+        if let timeoutMs = milliseconds(from: request["timeoutMs"]) {
+            return timeoutMs
+        }
+        if let timeout = seconds(from: request["timeout"]) {
+            return timeout
+        }
+        if let timeoutMs = milliseconds(from: options["timeoutMs"]) {
+            return timeoutMs
+        }
+        if let timeout = seconds(from: options["timeout"]) {
+            return timeout
+        }
+        return 20
+    }
+
+    private static func resolveBody(request: [String: Any]) -> Data? {
+        if let bodyBase64 = request["bodyBase64"] as? String,
+           let bodyData = Data(base64Encoded: bodyBase64) {
+            return bodyData
+        }
+        if let body = request["body"] as? String {
+            return body.data(using: .utf8)
+        }
+        return nil
+    }
+
+    private static func normalizedHeaders(_ raw: Any?) -> [String: String] {
+        guard let headers = raw as? [String: Any] else { return [:] }
+        var result: [String: String] = [:]
+        for (key, value) in headers {
+            if let stringValue = value as? String {
+                result[key] = stringValue
+            } else if let numberValue = value as? NSNumber {
+                result[key] = numberValue.stringValue
+            }
+        }
+        return result
+    }
+
+    private static func removeProtectedHeaders(_ headers: [String: String]) -> [String: String] {
+        headers.filter { key, _ in
+            let lowered = key.lowercased()
+            return lowered != "cookie" && lowered != "authorization"
+        }
+    }
+
+    private static func removeSetCookieHeaders(_ headers: [String: String]) -> [String: String] {
+        headers.filter { key, _ in
+            key.lowercased() != "set-cookie"
+        }
     }
 
     static func configureHostCrypto(in context: JSContext) {

@@ -18,5 +18,12 @@ public enum LiveParsePlugins {
             print("[LiveParse:JS] \(msg)")
         })
     }()
-}
 
+    public static func updatePlatformSession(platformId: String, cookie: String, uid: String? = nil) {
+        LiveParsePlatformSessionVault.update(platformId: platformId, cookie: cookie, uid: uid)
+    }
+
+    public static func clearPlatformSession(platformId: String) {
+        LiveParsePlatformSessionVault.clear(platformId: platformId)
+    }
+}

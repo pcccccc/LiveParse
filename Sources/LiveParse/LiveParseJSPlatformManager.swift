@@ -1,45 +1,24 @@
 import Foundation
 
-public enum LiveParseJSPlatform: String, CaseIterable, Codable, Sendable {
-    case bilibili
-    case huya
-    case douyin
-    case douyu
-    case cc
-    case ks
-    case yy
-    case youtube
-    case soop
+public struct LiveParseJSPlatform: Hashable, Codable, Sendable {
+    public let pluginId: String
+    public let liveTypes: [LiveType]
+    public let platformName: String?
 
-    public var pluginId: String {
-        rawValue
+    public init(pluginId: String, liveTypes: [LiveType], platformName: String? = nil) {
+        self.pluginId = pluginId
+        self.liveTypes = liveTypes
+        self.platformName = platformName
     }
 
+    /// 兼容旧调用：取首个 liveType 作为主类型。
     public var liveType: LiveType {
-        switch self {
-        case .bilibili:
-            return .bilibili
-        case .huya:
-            return .huya
-        case .douyin:
-            return .douyin
-        case .douyu:
-            return .douyu
-        case .cc:
-            return .cc
-        case .ks:
-            return .ks
-        case .yy:
-            return .yy
-        case .youtube:
-            return .youtube
-        case .soop:
-            return .soop
-        }
+        liveTypes.first ?? .bilibili
     }
 
     public var displayName: String {
-        LiveParseTools.getLivePlatformName(liveType)
+        let normalized = platformName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return normalized.isEmpty ? pluginId : normalized
     }
 }
 
@@ -47,12 +26,27 @@ public struct LiveParseJSPlatformInfo: Codable, Sendable {
     public let platform: LiveParseJSPlatform
     public let pluginId: String
     public let liveType: LiveType
+    public let liveTypes: [LiveType]
     public let displayName: String
 }
 
 public enum LiveParseJSPlatformManager {
-    /// 按产品展示顺序声明可用平台。
-    public static let availablePlatforms: [LiveParseJSPlatform] = [.bilibili, .huya, .douyin, .douyu, .cc, .ks, .yy, .youtube, .soop]
+    private struct ManifestCandidate {
+        let platform: LiveParseJSPlatform
+        let version: String
+        let sourcePriority: Int
+    }
+
+    private struct PlatformRegistry {
+        let platforms: [LiveParseJSPlatform]
+        let byLiveType: [LiveType: LiveParseJSPlatform]
+        let byPluginId: [String: LiveParseJSPlatform]
+    }
+
+    /// 按产品展示顺序返回可用平台（由插件 manifest 动态发现，不再写死平台枚举列表）。
+    public static var availablePlatforms: [LiveParseJSPlatform] {
+        registry().platforms
+    }
 
     public static func availablePlatformInfos() -> [LiveParseJSPlatformInfo] {
         availablePlatforms.map {
@@ -60,17 +54,27 @@ public enum LiveParseJSPlatformManager {
                 platform: $0,
                 pluginId: $0.pluginId,
                 liveType: $0.liveType,
+                liveTypes: $0.liveTypes,
                 displayName: $0.displayName
             )
         }
     }
 
     public static func platform(for liveType: LiveType) -> LiveParseJSPlatform? {
-        availablePlatforms.first(where: { $0.liveType == liveType })
+        registry().byLiveType[liveType]
+    }
+
+    public static func platform(forPluginId pluginId: String) -> LiveParseJSPlatform? {
+        registry().byPluginId[pluginId]
     }
 
     public static func isAvailable(_ platform: LiveParseJSPlatform) -> Bool {
-        availablePlatforms.contains(platform)
+        registry().byPluginId[platform.pluginId] != nil
+    }
+
+    /// 兼容旧调用：当前映射实时扫描，无需手动刷新。
+    public static func reloadPlatformRegistry() {
+        // no-op
     }
 
     // MARK: - Plugin API (v2 method names, with v1 fallback)
@@ -233,7 +237,7 @@ public enum LiveParseJSPlatformManager {
                 "userId": userId
             ])
         )
-        if platform == .yy {
+        if platform.pluginId == "yy" {
             var args = result.args
             let fallbackRoomId = roomId.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -271,11 +275,10 @@ public enum LiveParseJSPlatformManager {
         function: String,
         payload: [String: Any] = [:]
     ) async throws -> ResultType {
-        let finalPayload = injectCookieIfNeeded(platform: platform, payload: payload)
         return try await LiveParsePlugins.shared.callDecodable(
             pluginId: platform.pluginId,
             function: function,
-            payload: finalPayload
+            payload: payload
         )
     }
 
@@ -286,12 +289,11 @@ public enum LiveParseJSPlatformManager {
         fallback: String,
         payload: [String: Any] = [:]
     ) async throws -> ResultType {
-        let finalPayload = injectCookieIfNeeded(platform: platform, payload: payload)
         do {
             return try await LiveParsePlugins.shared.callDecodable(
                 pluginId: platform.pluginId,
                 function: function,
-                payload: finalPayload
+                payload: payload
             )
         } catch let error as LiveParsePluginError {
             // 仅当函数不存在时回退，其他错误直接抛出
@@ -299,31 +301,11 @@ public enum LiveParseJSPlatformManager {
                 return try await LiveParsePlugins.shared.callDecodable(
                     pluginId: platform.pluginId,
                     function: fallback,
-                    payload: finalPayload
+                    payload: payload
                 )
             }
             throw error
         }
-    }
-
-    /// 对 bilibili 平台自动注入 Cookie（JS 插件无 setCookie，依赖 payload 传入）
-    private static func injectCookieIfNeeded(platform: LiveParseJSPlatform, payload: [String: Any]) -> [String: Any] {
-        guard platform == .bilibili else { return payload }
-        // 已有 cookie 则不覆盖
-        if let existing = payload["cookie"] as? String, !existing.isEmpty {
-            return payload
-        }
-        let cookie = BiliBiliCookie.cookie
-        guard !cookie.isEmpty else {
-            return payload
-        }
-        var result = payload
-        result["cookie"] = cookie
-        let uid = BiliBiliCookie.uid
-        if uid != "0" && !uid.isEmpty {
-            result["uid"] = uid
-        }
-        return result
     }
 
     private static func mergePayload(_ base: [String: Any], _ extra: [String: Any?]) -> [String: Any] {
@@ -365,6 +347,183 @@ public enum LiveParseJSPlatformManager {
             return .close
         }
         return .unknow
+    }
+
+    private static func registry() -> PlatformRegistry {
+        buildRegistry()
+    }
+
+    private static func buildRegistry() -> PlatformRegistry {
+        var candidatesByPluginId: [String: ManifestCandidate] = [:]
+
+        for manifestURL in discoverBuiltInManifestURLs() {
+            guard let candidate = makeCandidate(from: manifestURL, sourcePriority: 1) else { continue }
+            mergeCandidate(candidate, into: &candidatesByPluginId)
+        }
+
+        for manifestURL in discoverSandboxManifestURLs() {
+            guard let candidate = makeCandidate(from: manifestURL, sourcePriority: 2) else { continue }
+            mergeCandidate(candidate, into: &candidatesByPluginId)
+        }
+
+        let platforms = candidatesByPluginId.values
+            .map(\.platform)
+            .sorted(by: sortPlatform)
+
+        var byPluginId: [String: LiveParseJSPlatform] = [:]
+        var byLiveType: [LiveType: LiveParseJSPlatform] = [:]
+
+        for platform in platforms {
+            byPluginId[platform.pluginId] = platform
+            for liveType in platform.liveTypes where byLiveType[liveType] == nil {
+                byLiveType[liveType] = platform
+            }
+        }
+
+        return PlatformRegistry(platforms: platforms, byLiveType: byLiveType, byPluginId: byPluginId)
+    }
+
+    private static func makeCandidate(from manifestURL: URL, sourcePriority: Int) -> ManifestCandidate? {
+        guard let manifest = try? LiveParsePluginManifest.load(from: manifestURL) else { return nil }
+        let liveTypes = manifest.liveTypes.compactMap { LiveType(rawValue: $0) }
+        guard !manifest.pluginId.isEmpty, !liveTypes.isEmpty else { return nil }
+
+        let platform = LiveParseJSPlatform(
+            pluginId: manifest.pluginId,
+            liveTypes: liveTypes,
+            platformName: manifest.displayName
+        )
+        return ManifestCandidate(platform: platform, version: manifest.version, sourcePriority: sourcePriority)
+    }
+
+    private static func mergeCandidate(_ candidate: ManifestCandidate, into storage: inout [String: ManifestCandidate]) {
+        guard let existing = storage[candidate.platform.pluginId] else {
+            storage[candidate.platform.pluginId] = candidate
+            return
+        }
+
+        if candidate.sourcePriority != existing.sourcePriority {
+            if candidate.sourcePriority > existing.sourcePriority {
+                storage[candidate.platform.pluginId] = candidate
+            }
+            return
+        }
+
+        if semverCompare(candidate.version, existing.version) > 0 {
+            storage[candidate.platform.pluginId] = candidate
+        }
+    }
+
+    private static func discoverSandboxManifestURLs() -> [URL] {
+        let storage = LiveParsePlugins.shared.storage
+        let pluginsRoot = storage.pluginsRootDirectory
+        guard FileManager.default.fileExists(atPath: pluginsRoot.path),
+              let pluginDirs = try? FileManager.default.contentsOfDirectory(
+                at: pluginsRoot,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+              ) else {
+            return []
+        }
+
+        var result: [URL] = []
+        for pluginDir in pluginDirs where pluginDir.hasDirectoryPath {
+            guard let versionDirs = try? FileManager.default.contentsOfDirectory(
+                at: pluginDir,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            ) else {
+                continue
+            }
+
+            for versionDir in versionDirs where versionDir.hasDirectoryPath {
+                let manifestURL = versionDir.appendingPathComponent("manifest.json", isDirectory: false)
+                if FileManager.default.fileExists(atPath: manifestURL.path) {
+                    result.append(manifestURL)
+                }
+            }
+        }
+
+        return result
+    }
+
+    private static func discoverBuiltInManifestURLs() -> [URL] {
+        guard let resourceURL = LiveParsePlugins.shared.bundle.resourceURL else {
+            return []
+        }
+
+        let pluginsRoot = resourceURL.appendingPathComponent("Plugins", isDirectory: true)
+        if FileManager.default.fileExists(atPath: pluginsRoot.path) {
+            return discoverManifestURLsInFolderMode(pluginsRoot: pluginsRoot)
+        }
+        return discoverManifestURLsInFlatMode(resourceURL: resourceURL)
+    }
+
+    private static func discoverManifestURLsInFolderMode(pluginsRoot: URL) -> [URL] {
+        guard let enumerator = FileManager.default.enumerator(
+            at: pluginsRoot,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
+        }
+
+        var result: [URL] = []
+        for case let url as URL in enumerator where url.lastPathComponent == "manifest.json" {
+            result.append(url)
+        }
+        return result
+    }
+
+    private static func discoverManifestURLsInFlatMode(resourceURL: URL) -> [URL] {
+        guard let enumerator = FileManager.default.enumerator(
+            at: resourceURL,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
+        }
+
+        var result: [URL] = []
+        for case let url as URL in enumerator {
+            let name = url.lastPathComponent
+            if name.hasPrefix("lp_plugin_") && name.hasSuffix("_manifest.json") {
+                result.append(url)
+            }
+        }
+        return result
+    }
+
+    private static func sortPlatform(lhs: LiveParseJSPlatform, rhs: LiveParseJSPlatform) -> Bool {
+        let leftNumber = Int(lhs.liveType.rawValue)
+        let rightNumber = Int(rhs.liveType.rawValue)
+
+        switch (leftNumber, rightNumber) {
+        case let (l?, r?) where l != r:
+            return l < r
+        case (nil, nil):
+            return lhs.pluginId < rhs.pluginId
+        case (nil, _?):
+            return false
+        case (_?, nil):
+            return true
+        default:
+            return lhs.pluginId < rhs.pluginId
+        }
+    }
+
+    private static func semverCompare(_ lhs: String, _ rhs: String) -> Int {
+        func parts(_ text: String) -> [Int] {
+            text.split(separator: ".").map { Int($0) ?? 0 } + [0, 0, 0]
+        }
+
+        let left = parts(lhs)
+        let right = parts(rhs)
+
+        for index in 0..<3 where left[index] != right[index] {
+            return left[index] < right[index] ? -1 : 1
+        }
+        return 0
     }
 }
 

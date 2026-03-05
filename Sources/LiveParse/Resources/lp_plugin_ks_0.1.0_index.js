@@ -7,6 +7,15 @@ const __lp_ks_searchLiveStreamURL = "https://live.kuaishou.com/live_api/search/l
 const __lp_ks_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 const __lp_ks_playbackUserAgent = "libmpv";
 const __lp_ks_playbackHeaders = { "User-Agent": __lp_ks_playbackUserAgent };
+const __lp_ks_platformId = "ks";
+
+async function _ks_platformRequest(request) {
+  return await Host.http.request({
+    platformId: __lp_ks_platformId,
+    authMode: "platform_cookie",
+    request: request || {}
+  });
+}
 function _ks_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
     Host.raise(code, message, context || {});
@@ -100,14 +109,12 @@ function _ks_searchToRoomModel(item) {
   };
 }
 
-function _ks_pickHeaders(cookie, referer) {
+function _ks_pickHeaders(referer) {
   const out = {
     "User-Agent": __lp_ks_ua,
     "Accept": "application/json, text/plain, */*",
     "Referer": String(referer || "https://live.kuaishou.com/")
   };
-  const normalizedCookie = String(cookie || "").trim();
-  if (normalizedCookie) out.Cookie = normalizedCookie;
   return out;
 }
 
@@ -122,13 +129,13 @@ function _ks_toQueryString(params) {
   return parts.join("&");
 }
 
-async function _ks_getSearchData(url, params, cookie, referer) {
+async function _ks_getSearchData(url, params, referer) {
   const qs = _ks_toQueryString(params);
   const reqURL = qs ? `${url}?${qs}` : url;
-  const resp = await Host.http.request({
+  const resp = await _ks_platformRequest({
     url: reqURL,
     method: "GET",
-    headers: _ks_pickHeaders(cookie, referer),
+    headers: _ks_pickHeaders(referer),
     timeout: 20
   });
   const obj = JSON.parse(resp.bodyText || "{}");
@@ -142,7 +149,7 @@ async function _ks_getSearchData(url, params, cookie, referer) {
 
 async function _ks_getLiveRoom(roomId) {
   const url = `https://live.kuaishou.com/u/${encodeURIComponent(String(roomId))}`;
-  const resp = await Host.http.request({
+  const resp = await _ks_platformRequest({
     url,
     method: "GET",
     headers: {
@@ -178,7 +185,7 @@ async function _ks_getCategorySubList(id) {
       "pageSize=20"
     ].join("&");
 
-    const resp = await Host.http.request({
+    const resp = await _ks_platformRequest({
       url: `${__lp_ks_categoryURL}?${qs}`,
       method: "GET",
       timeout: 20
@@ -215,7 +222,7 @@ async function _ks_getRooms(id, page) {
     `gameId=${encodeURIComponent(String(id))}`
   ].join("&");
 
-  const resp = await Host.http.request({
+  const resp = await _ks_platformRequest({
     url: `${url}?${qs}`,
     method: "GET",
     timeout: 20
@@ -225,18 +232,16 @@ async function _ks_getRooms(id, page) {
   return list.map(_ks_toRoomModel);
 }
 
-async function _ks_search(keyword, page, cookie) {
+async function _ks_search(keyword, page) {
   const keywordText = String(keyword || "").trim();
   if (!keywordText) return [];
   const pageNo = Number(page) > 0 ? Number(page) : 1;
-  const normalizedCookie = String(cookie || "").trim();
   const searchReferer = `https://live.kuaishou.com/search/${encodeURIComponent(keywordText)}`;
 
   // 先打 overview，让站点侧建立搜索会话。
   await _ks_getSearchData(
     __lp_ks_searchOverviewURL,
     { keyword: keywordText, ussid: "" },
-    normalizedCookie,
     searchReferer
   );
 
@@ -250,7 +255,6 @@ async function _ks_search(keyword, page, cookie) {
       lssid: "",
       count: 15
     },
-    normalizedCookie,
     searchReferer
   );
 
@@ -262,7 +266,6 @@ async function _ks_search(keyword, page, cookie) {
       page: pageNo,
       ussid
     },
-    normalizedCookie,
     searchReferer
   );
 
@@ -350,7 +353,7 @@ async function _ks_resolveShare(shareCode) {
 
   const shortUrl = _ks_extractShortLink(trimmed);
   if (shortUrl) {
-    const resp = await Host.http.request({
+    const resp = await _ks_platformRequest({
       url: shortUrl,
       method: "GET",
       timeout: 20
@@ -422,8 +425,7 @@ globalThis.LiveParsePlugin = {
   async search(payload) {
     const keyword = String(payload && payload.keyword ? payload.keyword : "");
     const page = payload && payload.page ? Number(payload.page) : 1;
-    const cookie = String(payload && payload.cookie ? payload.cookie : "");
-    return await _ks_search(keyword, page, cookie);
+    return await _ks_search(keyword, page);
   },
 
   async getRoomDetail(payload) {

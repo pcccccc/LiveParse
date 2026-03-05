@@ -5,7 +5,7 @@ import Testing
 struct PluginSystemTests {
     @Test
     func jsRuntimeSyncCall() async throws {
-        let runtime = JSRuntime()
+        let runtime = JSRuntime(pluginId: "test")
         try await runtime.evaluate(script: """
         globalThis.LiveParsePlugin = {
           apiVersion: 1,
@@ -22,7 +22,7 @@ struct PluginSystemTests {
 
     @Test
     func jsRuntimePromiseCall() async throws {
-        let runtime = JSRuntime()
+        let runtime = JSRuntime(pluginId: "test")
         try await runtime.evaluate(script: """
         globalThis.LiveParsePlugin = {
           apiVersion: 1,

@@ -23,12 +23,9 @@ const __soop_defaultHeaders = {
   accept: "application/json, text/javascript, */*; q=0.01",
 };
 
-const __soop_defaultCookie = "AbroadChk=OK";
+const __soop_platformId = "soop";
 const __soop_playbackUserAgent = "libmpv";
 const __soop_playbackHeaders = { "User-Agent": __soop_playbackUserAgent };
-
-// 运行时用户登录 Cookie（由 APP 侧通过 setCookie 注入，用于 19+ 房间）
-var __soop_runtimeCookie = "";
 
 const __soop_playerApiUrl =
   "https://live.sooplive.co.kr/afreeca/player_live_api.php";
@@ -84,20 +81,20 @@ function _soop_isValidBjId(val) {
 // ============================================================
 
 /**
- * 通用请求封装，自动附加 Cookie
+ * 通用请求封装，统一走宿主 Cookie 托管能力。
  */
 async function _soop_request(options) {
   var headers = Object.assign({}, __soop_defaultHeaders, options.headers || {});
-  headers["cookie"] = __soop_runtimeCookie
-    ? __soop_defaultCookie + "; " + __soop_runtimeCookie
-    : __soop_defaultCookie;
-
   return await Host.http.request({
-    url: options.url,
-    method: options.method || "GET",
-    headers: headers,
-    body: options.body || null,
-    timeout: options.timeout || 20,
+    platformId: __soop_platformId,
+    authMode: "platform_cookie",
+    request: {
+      url: options.url,
+      method: options.method || "GET",
+      headers: headers,
+      body: options.body || null,
+      timeout: options.timeout || 20
+    }
   });
 }
 
@@ -757,20 +754,4 @@ globalThis.LiveParsePlugin = {
     return { args: {}, headers: null };
   },
 
-  /**
-   * 设置用户登录 Cookie（由 APP 侧调用，用于 19+ 房间访问）
-   */
-  async setCookie(payload) {
-    var cookie = (payload && payload.cookie) || "";
-    __soop_runtimeCookie = String(cookie).trim();
-    return { ok: true, hasCookie: __soop_runtimeCookie.length > 0 };
-  },
-
-  /**
-   * 清除用户登录 Cookie
-   */
-  async clearCookie() {
-    __soop_runtimeCookie = "";
-    return { ok: true, hasCookie: false };
-  },
 };

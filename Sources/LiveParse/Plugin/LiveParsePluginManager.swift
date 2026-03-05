@@ -80,7 +80,11 @@ public final class LiveParsePluginManager: @unchecked Sendable {
             manifest: selected.manifest,
             rootDirectory: selected.rootDirectory,
             location: selected.location,
-            runtime: JSRuntime(session: session, logHandler: logHandler)
+            runtime: JSRuntime(
+                pluginId: selected.manifest.pluginId,
+                session: session,
+                logHandler: logHandler
+            )
         )
 
         lock.lock()
@@ -95,6 +99,17 @@ public final class LiveParsePluginManager: @unchecked Sendable {
     }
 
     public func call(pluginId: String, function: String, payload: [String: Any] = [:]) async throws -> Any {
+        if function == "setCookie" {
+            let cookie = (payload["cookie"] as? String) ?? ""
+            let uid = payload["uid"] as? String
+            LiveParsePlatformSessionVault.update(platformId: pluginId, cookie: cookie, uid: uid)
+            return ["ok": true, "managedByHost": true, "hasCookie": !cookie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty]
+        }
+        if function == "clearCookie" {
+            LiveParsePlatformSessionVault.clear(platformId: pluginId)
+            return ["ok": true, "managedByHost": true, "hasCookie": false]
+        }
+
         let plugin = try resolve(pluginId: pluginId)
         try await plugin.load()
         return try await plugin.runtime.callPluginFunction(name: function, payload: payload)
