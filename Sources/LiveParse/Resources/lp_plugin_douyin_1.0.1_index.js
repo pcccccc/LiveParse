@@ -163,10 +163,8 @@ function _dy_pickHeaders(cookie) {
   return out;
 }
 
-function _dy_requireCookie(payload, apiName) {
-  const runtimePayload = payload && typeof payload === "object" ? Object.assign({}, payload) : {};
-  runtimePayload.__authMode = "platform_cookie";
-  return runtimePayload;
+function _dy_runtimePayload(payload) {
+  return payload && typeof payload === "object" ? Object.assign({}, payload) : {};
 }
 
 function _dy_getCookieValue(cookie, name) {
@@ -757,12 +755,12 @@ async function _dy_getRoomDataByHtml(roomId, cookie) {
 
   const enrichedCookie = _dy_enrichCookie(cookie);
 
-  const resp = await _dy_requestWithSession({
+  const resp = await _dy_request({
     url: `https://live.douyin.com/${encodeURIComponent(webRid)}`,
     method: "GET",
     headers: _dy_pickHeaders(enrichedCookie),
     timeout: 20
-  });
+  }, "none");
 
   const statusCode = resp && resp.status;
   const html = _dy_toString(resp && resp.bodyText);
@@ -1162,12 +1160,12 @@ async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
 
   const shortURL = _dy_firstURL(text) || (text.startsWith("http") ? text : "");
   if (shortURL) {
-    const resp = await _dy_requestWithSession({
+    const resp = await _dy_request({
       url: shortURL,
       method: "GET",
       headers: _dy_pickHeaders(cookie),
       timeout: 20
-    });
+    }, "none");
 
     const finalURL = _dy_toString((resp && resp.url) || shortURL);
     roomId = _dy_firstMatch(finalURL, /live\.douyin\.com\/(\d+)/);
@@ -1192,7 +1190,7 @@ globalThis.LiveParsePlugin = {
   },
 
   async getRooms(payload) {
-    const runtimePayload = _dy_requireCookie(payload, "getRooms");
+    const runtimePayload = _dy_runtimePayload(payload);
     const id = _dy_toString(runtimePayload.id);
     const parentId = _dy_toString(runtimePayload.parentId);
     const page = Number(runtimePayload.page || 1);
@@ -1201,7 +1199,7 @@ globalThis.LiveParsePlugin = {
   },
 
   async getPlayback(payload) {
-    const runtimePayload = _dy_requireCookie(payload, "getPlayback");
+    const runtimePayload = _dy_runtimePayload(payload);
     const roomId = _dy_toString(runtimePayload.roomId);
     const userId = _dy_toString(runtimePayload.userId);
     if (!roomId) _dy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
@@ -1210,7 +1208,7 @@ globalThis.LiveParsePlugin = {
   },
 
   async search(payload) {
-    const runtimePayload = _dy_requireCookie(payload, "search");
+    const runtimePayload = _dy_runtimePayload(payload);
     const keyword = _dy_toString(runtimePayload.keyword);
     const page = Number(runtimePayload.page || 1);
     if (!keyword) _dy_throw("INVALID_ARGS", "keyword is required", { field: "keyword" });
@@ -1218,7 +1216,7 @@ globalThis.LiveParsePlugin = {
   },
 
   async getRoomDetail(payload) {
-    const runtimePayload = _dy_requireCookie(payload, "getRoomDetail");
+    const runtimePayload = _dy_runtimePayload(payload);
     const roomId = _dy_toString(runtimePayload.roomId);
     const userId = _dy_toString(runtimePayload.userId);
     if (!roomId) _dy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
@@ -1227,13 +1225,13 @@ globalThis.LiveParsePlugin = {
   },
 
   async getLiveState(payload) {
-    const runtimePayload = _dy_requireCookie(payload, "getLiveState");
+    const runtimePayload = _dy_runtimePayload(payload);
     const latest = await this.getRoomDetail(runtimePayload);
     return { liveState: _dy_toString((latest && latest.liveState) || "3") };
   },
 
   async resolveShare(payload) {
-    const runtimePayload = _dy_requireCookie(payload, "resolveShare");
+    const runtimePayload = _dy_runtimePayload(payload);
     const shareCode = _dy_toString(runtimePayload.shareCode);
     if (!shareCode) _dy_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
     const roomId = await _dy_resolveRoomIdFromShareCode(shareCode, "");
@@ -1241,7 +1239,7 @@ globalThis.LiveParsePlugin = {
   },
 
   async getDanmaku(payload) {
-    const runtimePayload = _dy_requireCookie(payload, "getDanmaku");
+    const runtimePayload = _dy_runtimePayload(payload);
     const roomId = _dy_toString(runtimePayload.roomId);
     if (!roomId) _dy_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
 

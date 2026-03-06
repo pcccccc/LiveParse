@@ -81,13 +81,13 @@ function _soop_isValidBjId(val) {
 // ============================================================
 
 /**
- * 通用请求封装，统一走宿主 Cookie 托管能力。
+ * 通用请求封装，按需走宿主 Cookie 托管能力。
  */
-async function _soop_request(options) {
+async function _soop_request(options, authMode) {
   var headers = Object.assign({}, __soop_defaultHeaders, options.headers || {});
   return await Host.http.request({
     platformId: __soop_platformId,
-    authMode: "platform_cookie",
+    authMode: authMode || "none",
     request: {
       url: options.url,
       method: options.method || "GET",
@@ -133,7 +133,7 @@ async function _soop_fetchCategories() {
 /**
  * 获取分类下的房间列表（按 category_no）
  */
-async function _soop_fetchRooms(categoryNo, page) {
+async function _soop_fetchRooms(categoryNo, page, authMode) {
   var resp = await _soop_request({
     url:
       "https://sch.sooplive.co.kr/api.php?m=categoryContentsList&szType=live&nPageNo=" +
@@ -141,7 +141,7 @@ async function _soop_fetchRooms(categoryNo, page) {
       "&nListCnt=60&szPlatform=pc&szCateNo=" +
       encodeURIComponent(String(categoryNo)) +
       "&szOrder=view_cnt&strmLangType=",
-  });
+  }, authMode);
 
   var data = JSON.parse(resp.bodyText || "{}");
   if (!data.data || !data.data.list) {
@@ -156,7 +156,7 @@ async function _soop_fetchRooms(categoryNo, page) {
 /**
  * 获取 admin menu 下的房间列表（按 menuId）
  */
-async function _soop_fetchMenuRooms(menuId, page) {
+async function _soop_fetchMenuRooms(menuId, page, authMode) {
   var resp = await _soop_request({
     url:
       "https://live.sooplive.co.kr/api/explore/get_contents_list.php?szMenuId=" +
@@ -164,7 +164,7 @@ async function _soop_fetchMenuRooms(menuId, page) {
       "&szType=live&nPageNo=" +
       encodeURIComponent(String(page)) +
       "&nListCnt=60&szPlatform=pc&szOrder=view_cnt_desc&szTerm=1week&strmLangType=",
-  });
+  }, authMode);
 
   var data = JSON.parse(resp.bodyText || "{}");
   if (!data.data || !data.data.list) {
@@ -179,7 +179,7 @@ async function _soop_fetchMenuRooms(menuId, page) {
 /**
  * 调用 player_live_api（获取频道信息 / AID）
  */
-async function _soop_playerApi(bjId, broadNo, type, quality) {
+async function _soop_playerApi(bjId, broadNo, type, quality, authMode) {
   var bodyParts = [
     "bid=" + encodeURIComponent(String(bjId)),
     "bno=" + encodeURIComponent(String(broadNo || "")),
@@ -203,7 +203,7 @@ async function _soop_playerApi(bjId, broadNo, type, quality) {
       referer: "https://play.sooplive.co.kr/" + encodeURIComponent(String(bjId)),
     },
     body: bodyParts.join("&"),
-  });
+  }, authMode);
   console.log(
     "[soop][raw][player_live_api] bjId=" +
       String(bjId) +
@@ -231,22 +231,22 @@ async function _soop_playerApi(bjId, broadNo, type, quality) {
 /**
  * 获取频道信息（type=live）
  */
-async function _soop_getChannelInfo(bjId, broadNo) {
-  return await _soop_playerApi(bjId, broadNo, "live", null);
+async function _soop_getChannelInfo(bjId, broadNo, authMode) {
+  return await _soop_playerApi(bjId, broadNo, "live", null, authMode);
 }
 
 /**
  * 获取 AID（type=aid）
  */
-async function _soop_getAid(bjId, broadNo, quality) {
-  var channel = await _soop_playerApi(bjId, broadNo, "aid", quality);
+async function _soop_getAid(bjId, broadNo, quality, authMode) {
+  var channel = await _soop_playerApi(bjId, broadNo, "aid", quality, authMode);
   return _soop_str(channel.AID);
 }
 
 /**
  * 获取 HLS 播放地址（broad_stream_assign）
  */
-async function _soop_getStreamUrl(rmd, cdn, broadNo, quality) {
+async function _soop_getStreamUrl(rmd, cdn, broadNo, quality, authMode) {
   var returnType = __soop_cdnMapping[cdn] || cdn;
   var broadKey = broadNo + "-common-" + quality + "-hls";
 
@@ -261,7 +261,7 @@ async function _soop_getStreamUrl(rmd, cdn, broadNo, quality) {
       origin: "https://play.sooplive.co.kr",
       referer: "https://play.sooplive.co.kr/",
     },
-  });
+  }, authMode);
 
   var data = JSON.parse(resp.bodyText || "{}");
   return _soop_str(data.view_url);
@@ -465,9 +465,9 @@ globalThis.LiveParsePlugin = {
     var rawList;
     if (id.indexOf("menu_") === 0) {
       var menuId = id.substring(5);
-      rawList = await _soop_fetchMenuRooms(menuId, page);
+      rawList = await _soop_fetchMenuRooms(menuId, page, "platform_cookie");
     } else {
-      rawList = await _soop_fetchRooms(id, page);
+      rawList = await _soop_fetchRooms(id, page, "platform_cookie");
     }
 
     var rooms = [];
@@ -500,7 +500,7 @@ globalThis.LiveParsePlugin = {
     var broadNo = roomId;
 
     // Step 1: 获取频道信息
-    var channel = await _soop_getChannelInfo(bjId, broadNo);
+    var channel = await _soop_getChannelInfo(bjId, broadNo, "platform_cookie");
     if (Number(channel.RESULT) !== 1) {
       _soop_throw("NOT_FOUND", "channel not live or not found", {
         bjId: bjId,
@@ -537,10 +537,10 @@ globalThis.LiveParsePlugin = {
     for (var q = 0; q < qualities.length; q++) {
       var quality = qualities[q];
       try {
-        var aid = await _soop_getAid(bjId, bno, quality.name);
+        var aid = await _soop_getAid(bjId, bno, quality.name, "platform_cookie");
         if (!aid) continue;
 
-        var viewUrl = await _soop_getStreamUrl(rmd, cdn, bno, quality.name);
+        var viewUrl = await _soop_getStreamUrl(rmd, cdn, bno, quality.name, "platform_cookie");
         if (!viewUrl) continue;
 
         var finalUrl = viewUrl + "?aid=" + encodeURIComponent(aid);

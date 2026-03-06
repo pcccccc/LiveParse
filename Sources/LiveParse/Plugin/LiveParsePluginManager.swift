@@ -145,31 +145,39 @@ private extension LiveParsePluginManager {
     func selectBestCandidate(pluginId: String, pinnedVersion: String?, lastGood: String?) throws -> Candidate {
         let sandboxCandidates = try discoverSandboxCandidates(pluginId: pluginId)
         let builtInCandidates = try discoverBuiltInCandidates(pluginId: pluginId)
+        let allCandidates = sandboxCandidates + builtInCandidates
 
-        func find(version: String, in list: [Candidate]) -> Candidate? {
-            list.first { $0.manifest.version == version }
+        func preferredCandidate(in candidates: [Candidate]) -> Candidate? {
+            candidates.max { lhs, rhs in
+                let versionCompare = semverCompare(lhs.manifest.version, rhs.manifest.version)
+                if versionCompare != 0 {
+                    return versionCompare < 0
+                }
+                if lhs.location != rhs.location {
+                    return lhs.location == .builtIn && rhs.location == .sandbox
+                }
+                return lhs.rootDirectory.path < rhs.rootDirectory.path
+            }
         }
 
         if let pinnedVersion {
-            if let hit = find(version: pinnedVersion, in: sandboxCandidates) ?? find(version: pinnedVersion, in: builtInCandidates) {
+            if let hit = preferredCandidate(in: allCandidates.filter({ $0.manifest.version == pinnedVersion })) {
                 return hit
             }
             throw LiveParsePluginError.pluginNotFound("\(pluginId)@\(pinnedVersion)")
         }
 
-        if let bestSandbox = sandboxCandidates.sorted(by: { semverCompare($0.manifest.version, $1.manifest.version) > 0 }).first {
-            return bestSandbox
+        guard let best = preferredCandidate(in: allCandidates) else {
+            throw LiveParsePluginError.pluginNotFound(pluginId)
         }
 
-        if let lastGood, let hit = find(version: lastGood, in: builtInCandidates) {
+        if let lastGood,
+           semverCompare(lastGood, best.manifest.version) >= 0,
+           let hit = preferredCandidate(in: allCandidates.filter({ $0.manifest.version == lastGood })) {
             return hit
         }
 
-        if let bestBuiltIn = builtInCandidates.sorted(by: { semverCompare($0.manifest.version, $1.manifest.version) > 0 }).first {
-            return bestBuiltIn
-        }
-
-        throw LiveParsePluginError.pluginNotFound(pluginId)
+        return best
     }
 
     func discoverSandboxCandidates(pluginId: String) throws -> [Candidate] {

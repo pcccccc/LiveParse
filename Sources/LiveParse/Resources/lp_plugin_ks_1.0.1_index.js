@@ -9,10 +9,10 @@ const __lp_ks_playbackUserAgent = "libmpv";
 const __lp_ks_playbackHeaders = { "User-Agent": __lp_ks_playbackUserAgent };
 const __lp_ks_platformId = "ks";
 
-async function _ks_platformRequest(request) {
+async function _ks_platformRequest(request, authMode) {
   return await Host.http.request({
     platformId: __lp_ks_platformId,
-    authMode: "platform_cookie",
+    authMode: authMode || "none",
     request: request || {}
   });
 }
@@ -147,7 +147,7 @@ async function _ks_getSearchData(url, params, referer) {
   return data;
 }
 
-async function _ks_getLiveRoom(roomId) {
+async function _ks_getLiveRoom(roomId, authMode) {
   const url = `https://live.kuaishou.com/u/${encodeURIComponent(String(roomId))}`;
   const resp = await _ks_platformRequest({
     url,
@@ -156,7 +156,7 @@ async function _ks_getLiveRoom(roomId) {
       "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
     },
     timeout: 20
-  });
+  }, authMode);
 
   const html = String(resp.bodyText || "");
   const m = html.match(/<script>window\.__INITIAL_STATE__=\s*(.*?)\;/s);
@@ -321,7 +321,7 @@ async function _ks_getRoomDetail(roomId) {
 }
 
 async function _ks_getPlayback(roomId) {
-  const liveData = await _ks_getLiveRoom(roomId);
+  const liveData = await _ks_getLiveRoom(roomId, "platform_cookie");
   const playList = liveData && liveData.liveroom && liveData.liveroom.playList;
   const current = Array.isArray(playList) && playList.length > 0 ? playList[0] : null;
   if (!current) {

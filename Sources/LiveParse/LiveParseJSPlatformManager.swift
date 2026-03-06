@@ -402,14 +402,16 @@ public enum LiveParseJSPlatformManager {
             return
         }
 
-        if candidate.sourcePriority != existing.sourcePriority {
-            if candidate.sourcePriority > existing.sourcePriority {
-                storage[candidate.platform.pluginId] = candidate
-            }
+        let versionCompare = semverCompare(candidate.version, existing.version)
+        if versionCompare > 0 {
+            storage[candidate.platform.pluginId] = candidate
+            return
+        }
+        if versionCompare < 0 {
             return
         }
 
-        if semverCompare(candidate.version, existing.version) > 0 {
+        if candidate.sourcePriority > existing.sourcePriority {
             storage[candidate.platform.pluginId] = candidate
         }
     }
