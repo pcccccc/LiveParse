@@ -8,9 +8,10 @@
       "platform": "bilibili",
       "platformName": "哔哩哔哩",
       "zipURLs": [
-        "https://placeholder.invalid/liveparse/plugins/liveparse_bilibili_1.0.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.0.zip"
       ],
-      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_bilibili_1.0.0.zip",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.0.zip",
       "sha256": "6a265158db7256eb14b44edb12950271ade88a824746f3ab8f32699cb09a1f13",
       "changelog": [
         "第一次测试"
@@ -56,9 +57,10 @@
       "platform": "cc",
       "platformName": "网易CC",
       "zipURLs": [
-        "https://placeholder.invalid/liveparse/plugins/liveparse_cc_1.0.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_1.0.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_1.0.0.zip"
       ],
-      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_cc_1.0.0.zip",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_1.0.0.zip",
       "sha256": "ae8131c02644b1a9848335632fd3a799cd0902636393e45184e12e0c191ea5cf",
       "changelog": [
         "第一次测试"
@@ -104,9 +106,10 @@
       "platform": "douyin",
       "platformName": "抖音",
       "zipURLs": [
-        "https://placeholder.invalid/liveparse/plugins/liveparse_douyin_1.0.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.0.zip"
       ],
-      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_douyin_1.0.0.zip",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.0.zip",
       "sha256": "110eb87aa889aefc49605c92112dfd80167b11b285d1cab648410b80cb248592",
       "changelog": [
         "第一次测试"
@@ -152,9 +155,10 @@
       "platform": "douyu",
       "platformName": "斗鱼",
       "zipURLs": [
-        "https://placeholder.invalid/liveparse/plugins/liveparse_douyu_1.0.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.0.zip"
       ],
-      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_douyu_1.0.0.zip",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.0.zip",
       "sha256": "a5c2399e1a029ae726255e09b130e02c4b4115cc34693ffa5155a51083df81dd",
       "changelog": [
         "第一次测试"
@@ -200,9 +204,10 @@
       "platform": "huya",
       "platformName": "虎牙",
       "zipURLs": [
-        "https://placeholder.invalid/liveparse/plugins/liveparse_huya_1.0.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_1.0.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_1.0.0.zip"
       ],
-      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_huya_1.0.0.zip",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_1.0.0.zip",
       "sha256": "471d732bca617bdfa695aae72f3ed23acc8d7b469666dce8dbbdc6747622874f",
       "changelog": [
         "第一次测试"
@@ -248,9 +253,10 @@
       "platform": "ks",
       "platformName": "快手",
       "zipURLs": [
-        "https://placeholder.invalid/liveparse/plugins/liveparse_ks_1.0.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.0.zip"
       ],
-      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_ks_1.0.0.zip",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.0.zip",
       "sha256": "bdc5bb63367108afee5b3ebb835016b29d495dc73841aad2773423e82e4323fd",
       "changelog": [
         "第一次测试"
@@ -297,9 +303,10 @@
       "platform": "soop",
       "platformName": "SOOP",
       "zipURLs": [
-        "https://placeholder.invalid/liveparse/plugins/liveparse_soop_1.0.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.0.zip"
       ],
-      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_soop_1.0.0.zip",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.0.zip",
       "sha256": "1c57a81ac7c8da1ee14938a1bd3cc752a2f2dfed701e95d41a3206a4d1448850",
       "changelog": [
         "第一次测试"
@@ -346,9 +353,10 @@
       "platform": "youtube",
       "platformName": "YouTube",
       "zipURLs": [
-        "https://placeholder.invalid/liveparse/plugins/liveparse_youtube_1.0.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.0.zip"
       ],
-      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_youtube_1.0.0.zip",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.0.zip",
       "sha256": "0fc565c6336e7a5d2f63df195c6b827135f70f55f38a8e9504dd42042791ce15",
       "changelog": [
         "第一次测试"
@@ -394,9 +402,10 @@
       "platform": "yy",
       "platformName": "YY直播",
       "zipURLs": [
-        "https://placeholder.invalid/liveparse/plugins/liveparse_yy_1.0.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_1.0.0.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_1.0.0.zip"
       ],
-      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_yy_1.0.0.zip",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_1.0.0.zip",
       "sha256": "1ab93cdd1e10ca6b878111763d7dae868f04cee1737049b4f104476f40951f2b",
       "changelog": [
         "第一次测试"
