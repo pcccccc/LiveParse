@@ -109,10 +109,10 @@ Application Support/LiveParse/state.json
       "tvosBigIconDark": "assets/tv_huya_big_dark.png",
       "tvosSmallIconDark": "assets/tv_huya_small_dark.png",
       "zipURLs": [
-        "https://cdn-cn.example.com/liveparse/huya/2.3.1.zip",
+        "https://cdn-cn.placeholder.invalid/liveparse/huya/2.3.1.zip",
         "https://github.com/your-org/liveparse-plugins/releases/download/huya-v2.3.1/huya-2.3.1.zip"
       ],
-      "zipURL": "https://example.com/liveparse/huya/2.3.1.zip",
+      "zipURL": "https://placeholder.invalid/liveparse/huya/2.3.1.zip",
       "sha256": "<hex>",
       "signature": "<base64>",
       "signingKeyId": "main"
@@ -146,7 +146,7 @@ Application Support/LiveParse/state.json
 
 ```bash
 python3 Scripts/build_plugin_release.py \
-  --url-prefix https://cdn-cn.example.com/liveparse/plugins \
+  --url-prefix https://cdn-cn.placeholder.invalid/liveparse/plugins \
   --url-prefix https://github.com/your-org/liveparse-plugins/releases/download/latest
 ```
 

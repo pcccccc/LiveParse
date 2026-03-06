@@ -1,18 +1,46 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-02T07:06:31Z",
+  "generatedAt": "2026-03-06T02:18:56Z",
   "plugins": [
     {
       "pluginId": "bilibili",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "platform": "bilibili",
       "platformName": "哔哩哔哩",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_0.1.0.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_0.1.0.zip"
+        "https://placeholder.invalid/liveparse/plugins/liveparse_bilibili_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_0.1.0.zip",
-      "sha256": "0cdbd16b480eb0b8a4266a3f8d2514fed227865014bb335d8af257a7b95de338",
+      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_bilibili_1.0.0.zip",
+      "sha256": "6a265158db7256eb14b44edb12950271ade88a824746f3ab8f32699cb09a1f13",
+      "changelog": [
+        "第一次测试"
+      ],
+      "capabilities": {
+        "categories": {
+          "status": "available"
+        },
+        "rooms": {
+          "status": "available"
+        },
+        "playback": {
+          "status": "available"
+        },
+        "search": {
+          "status": "available"
+        },
+        "roomDetail": {
+          "status": "available"
+        },
+        "liveState": {
+          "status": "available"
+        },
+        "shareResolve": {
+          "status": "available"
+        },
+        "danmaku": {
+          "status": "available"
+        }
+      },
       "icon": "assets/live_card_bilibili.png",
       "iosIcon": "assets/pad_live_card_bilibili.png",
       "macosIcon": "assets/mini_live_card_bilibili.png",
@@ -24,15 +52,43 @@
     },
     {
       "pluginId": "cc",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "platform": "cc",
       "platformName": "网易CC",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_0.1.0.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_0.1.0.zip"
+        "https://placeholder.invalid/liveparse/plugins/liveparse_cc_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_0.1.0.zip",
-      "sha256": "4939a472f2285e1cf204982c964dcaaa9635410dbef10977d4c1cd06407ea2ba",
+      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_cc_1.0.0.zip",
+      "sha256": "ae8131c02644b1a9848335632fd3a799cd0902636393e45184e12e0c191ea5cf",
+      "changelog": [
+        "第一次测试"
+      ],
+      "capabilities": {
+        "categories": {
+          "status": "available"
+        },
+        "rooms": {
+          "status": "available"
+        },
+        "playback": {
+          "status": "available"
+        },
+        "search": {
+          "status": "available"
+        },
+        "roomDetail": {
+          "status": "available"
+        },
+        "liveState": {
+          "status": "available"
+        },
+        "shareResolve": {
+          "status": "available"
+        },
+        "danmaku": {
+          "status": "available"
+        }
+      },
       "icon": "assets/live_card_cc.png",
       "iosIcon": "assets/pad_live_card_cc.png",
       "macosIcon": "assets/mini_live_card_cc.png",
@@ -44,15 +100,43 @@
     },
     {
       "pluginId": "douyin",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "platform": "douyin",
       "platformName": "抖音",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_0.1.0.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_0.1.0.zip"
+        "https://placeholder.invalid/liveparse/plugins/liveparse_douyin_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_0.1.0.zip",
-      "sha256": "7f9b810671e671ea55685102b1ec7efe5a0884901d3021ef1b81c3fad834f440",
+      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_douyin_1.0.0.zip",
+      "sha256": "110eb87aa889aefc49605c92112dfd80167b11b285d1cab648410b80cb248592",
+      "changelog": [
+        "第一次测试"
+      ],
+      "capabilities": {
+        "categories": {
+          "status": "available"
+        },
+        "rooms": {
+          "status": "available"
+        },
+        "playback": {
+          "status": "available"
+        },
+        "search": {
+          "status": "available"
+        },
+        "roomDetail": {
+          "status": "available"
+        },
+        "liveState": {
+          "status": "available"
+        },
+        "shareResolve": {
+          "status": "available"
+        },
+        "danmaku": {
+          "status": "available"
+        }
+      },
       "icon": "assets/live_card_douyin.png",
       "iosIcon": "assets/pad_live_card_douyin.png",
       "macosIcon": "assets/mini_live_card_douyin.png",
@@ -64,15 +148,43 @@
     },
     {
       "pluginId": "douyu",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "platform": "douyu",
       "platformName": "斗鱼",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_0.1.0.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_0.1.0.zip"
+        "https://placeholder.invalid/liveparse/plugins/liveparse_douyu_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_0.1.0.zip",
-      "sha256": "d70c62a74f79e1a7166be31c528588b901fbb4cff10e88e29455ef2583a8a7be",
+      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_douyu_1.0.0.zip",
+      "sha256": "a5c2399e1a029ae726255e09b130e02c4b4115cc34693ffa5155a51083df81dd",
+      "changelog": [
+        "第一次测试"
+      ],
+      "capabilities": {
+        "categories": {
+          "status": "available"
+        },
+        "rooms": {
+          "status": "available"
+        },
+        "playback": {
+          "status": "available"
+        },
+        "search": {
+          "status": "available"
+        },
+        "roomDetail": {
+          "status": "available"
+        },
+        "liveState": {
+          "status": "available"
+        },
+        "shareResolve": {
+          "status": "available"
+        },
+        "danmaku": {
+          "status": "available"
+        }
+      },
       "icon": "assets/live_card_douyu.png",
       "iosIcon": "assets/pad_live_card_douyu.png",
       "macosIcon": "assets/mini_live_card_douyu.png",
@@ -84,15 +196,43 @@
     },
     {
       "pluginId": "huya",
-      "version": "0.1.1",
+      "version": "1.0.0",
       "platform": "huya",
       "platformName": "虎牙",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_0.1.1.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_0.1.1.zip"
+        "https://placeholder.invalid/liveparse/plugins/liveparse_huya_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_0.1.1.zip",
-      "sha256": "c15c1a7b5658df32d639e7008e9dbd3159a8b5d8e0d1e68a853147ecc25bd6c9",
+      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_huya_1.0.0.zip",
+      "sha256": "471d732bca617bdfa695aae72f3ed23acc8d7b469666dce8dbbdc6747622874f",
+      "changelog": [
+        "第一次测试"
+      ],
+      "capabilities": {
+        "categories": {
+          "status": "available"
+        },
+        "rooms": {
+          "status": "available"
+        },
+        "playback": {
+          "status": "available"
+        },
+        "search": {
+          "status": "available"
+        },
+        "roomDetail": {
+          "status": "available"
+        },
+        "liveState": {
+          "status": "available"
+        },
+        "shareResolve": {
+          "status": "available"
+        },
+        "danmaku": {
+          "status": "available"
+        }
+      },
       "icon": "assets/live_card_huya.png",
       "iosIcon": "assets/pad_live_card_huya.png",
       "macosIcon": "assets/mini_live_card_huya.png",
@@ -104,15 +244,44 @@
     },
     {
       "pluginId": "ks",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "platform": "ks",
       "platformName": "快手",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_0.1.0.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_0.1.0.zip"
+        "https://placeholder.invalid/liveparse/plugins/liveparse_ks_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_0.1.0.zip",
-      "sha256": "a55ec874c02525f4bf848afe4d4a55497276075dc1fbfd1ed27c21bd5356013b",
+      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_ks_1.0.0.zip",
+      "sha256": "bdc5bb63367108afee5b3ebb835016b29d495dc73841aad2773423e82e4323fd",
+      "changelog": [
+        "第一次测试"
+      ],
+      "capabilities": {
+        "categories": {
+          "status": "available"
+        },
+        "rooms": {
+          "status": "available"
+        },
+        "playback": {
+          "status": "partial",
+          "reason": "不稳定，报错请使用PC版本快手拖动滑块验证"
+        },
+        "search": {
+          "status": "available"
+        },
+        "roomDetail": {
+          "status": "available"
+        },
+        "liveState": {
+          "status": "available"
+        },
+        "shareResolve": {
+          "status": "available"
+        },
+        "danmaku": {
+          "status": "available"
+        }
+      },
       "icon": "assets/live_card_ks.png",
       "iosIcon": "assets/pad_live_card_ks.png",
       "macosIcon": "assets/mini_live_card_ks.png",
@@ -124,15 +293,44 @@
     },
     {
       "pluginId": "soop",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "platform": "soop",
       "platformName": "SOOP",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_0.1.0.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_0.1.0.zip"
+        "https://placeholder.invalid/liveparse/plugins/liveparse_soop_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_0.1.0.zip",
-      "sha256": "0323f64a0528a9712f49d6e1c1f4dd49704d27b48d98b9cc25da7a4089036e6b",
+      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_soop_1.0.0.zip",
+      "sha256": "1c57a81ac7c8da1ee14938a1bd3cc752a2f2dfed701e95d41a3206a4d1448850",
+      "changelog": [
+        "第一次测试"
+      ],
+      "capabilities": {
+        "categories": {
+          "status": "available"
+        },
+        "rooms": {
+          "status": "available"
+        },
+        "playback": {
+          "status": "partial",
+          "reason": "19+ 需要登录"
+        },
+        "search": {
+          "status": "available"
+        },
+        "roomDetail": {
+          "status": "available"
+        },
+        "liveState": {
+          "status": "available"
+        },
+        "shareResolve": {
+          "status": "available"
+        },
+        "danmaku": {
+          "status": "available"
+        }
+      },
       "icon": "assets/live_card_soop.png",
       "iosIcon": "assets/pad_live_card_soop.png",
       "macosIcon": "assets/mini_live_card_soop.png",
@@ -144,15 +342,43 @@
     },
     {
       "pluginId": "youtube",
-      "version": "0.2.1",
+      "version": "1.0.0",
       "platform": "youtube",
       "platformName": "YouTube",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.1.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.1.zip"
+        "https://placeholder.invalid/liveparse/plugins/liveparse_youtube_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_0.2.1.zip",
-      "sha256": "4ca666c9351cf961c0ddecf0b3c00b97ef9fb9ca127797a1ed4d1ef880cf4fed",
+      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_youtube_1.0.0.zip",
+      "sha256": "0fc565c6336e7a5d2f63df195c6b827135f70f55f38a8e9504dd42042791ce15",
+      "changelog": [
+        "第一次测试"
+      ],
+      "capabilities": {
+        "categories": {
+          "status": "available"
+        },
+        "rooms": {
+          "status": "available"
+        },
+        "playback": {
+          "status": "available"
+        },
+        "search": {
+          "status": "available"
+        },
+        "roomDetail": {
+          "status": "available"
+        },
+        "liveState": {
+          "status": "available"
+        },
+        "shareResolve": {
+          "status": "available"
+        },
+        "danmaku": {
+          "status": "available"
+        }
+      },
       "icon": "assets/live_card_youtube.png",
       "iosIcon": "assets/pad_live_card_youtube.png",
       "macosIcon": "assets/mini_live_card_youtube.png",
@@ -160,22 +386,47 @@
       "tvosBigIcon": "assets/tv_youtube_big.png",
       "tvosSmallIcon": "assets/tv_youtube_small.png",
       "tvosBigIconDark": "assets/tv_youtube_big_dark.png",
-      "tvosSmallIconDark": "assets/tv_youtube_small_dark.png",
-      "changelog": [
-        "更新图标资源"
-      ]
+      "tvosSmallIconDark": "assets/tv_youtube_small_dark.png"
     },
     {
       "pluginId": "yy",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "platform": "yy",
       "platformName": "YY直播",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_0.1.0.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_0.1.0.zip"
+        "https://placeholder.invalid/liveparse/plugins/liveparse_yy_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_0.1.0.zip",
-      "sha256": "7239e342c42f66b4b70e157f27a6c9c6ec399db0e1d32f5b93193feed3597309",
+      "zipURL": "https://placeholder.invalid/liveparse/plugins/liveparse_yy_1.0.0.zip",
+      "sha256": "1ab93cdd1e10ca6b878111763d7dae868f04cee1737049b4f104476f40951f2b",
+      "changelog": [
+        "第一次测试"
+      ],
+      "capabilities": {
+        "categories": {
+          "status": "available"
+        },
+        "rooms": {
+          "status": "available"
+        },
+        "playback": {
+          "status": "available"
+        },
+        "search": {
+          "status": "available"
+        },
+        "roomDetail": {
+          "status": "available"
+        },
+        "liveState": {
+          "status": "available"
+        },
+        "shareResolve": {
+          "status": "available"
+        },
+        "danmaku": {
+          "status": "available"
+        }
+      },
       "icon": "assets/live_card_yy.png",
       "iosIcon": "assets/pad_live_card_yy.png",
       "macosIcon": "assets/mini_live_card_yy.png",

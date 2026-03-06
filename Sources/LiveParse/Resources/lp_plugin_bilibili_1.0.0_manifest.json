@@ -1,0 +1,39 @@
+{
+  "pluginId": "bilibili",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "displayName": "Bilibili (JS PoC)",
+  "liveTypes": [
+    "0"
+  ],
+  "entry": "lp_plugin_bilibili_1.0.0_index.js",
+  "capabilities": {
+    "categories": {
+      "status": "available"
+    },
+    "rooms": {
+      "status": "available"
+    },
+    "playback": {
+      "status": "available"
+    },
+    "search": {
+      "status": "available"
+    },
+    "roomDetail": {
+      "status": "available"
+    },
+    "liveState": {
+      "status": "available"
+    },
+    "shareResolve": {
+      "status": "available"
+    },
+    "danmaku": {
+      "status": "available"
+    }
+  },
+  "changelog": [
+    "第一次测试"
+  ]
+}

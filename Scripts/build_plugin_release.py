@@ -176,6 +176,41 @@ def normalize_changelog(raw: Any) -> list[str]:
     return results
 
 
+def normalize_capabilities(raw: Any) -> dict[str, dict[str, str]]:
+    if not isinstance(raw, dict):
+        return {}
+
+    normalized: dict[str, dict[str, str]] = {}
+    for feature, value in raw.items():
+        if not isinstance(feature, str):
+            continue
+        key = feature.strip()
+        if not key:
+            continue
+
+        status = ""
+        reason = ""
+        if isinstance(value, str):
+            status = value.strip().lower()
+        elif isinstance(value, dict):
+            raw_status = value.get("status")
+            if isinstance(raw_status, str):
+                status = raw_status.strip().lower()
+            raw_reason = value.get("reason")
+            if isinstance(raw_reason, str):
+                reason = raw_reason.strip()
+
+        if status not in {"available", "partial", "unavailable"}:
+            continue
+
+        entry: dict[str, str] = {"status": status}
+        if status == "partial" and reason:
+            entry["reason"] = reason
+        normalized[key] = entry
+
+    return normalized
+
+
 def normalized_prefix(prefix: str) -> str:
     return prefix.rstrip("/")
 
@@ -433,6 +468,9 @@ def main() -> int:
         changelog = normalize_changelog(manifest.get("changelog"))
         if changelog:
             item["changelog"] = changelog
+        capabilities = normalize_capabilities(manifest.get("capabilities"))
+        if capabilities:
+            item["capabilities"] = capabilities
         item.update(icon_fields)
         index_plugins.append(item)
 

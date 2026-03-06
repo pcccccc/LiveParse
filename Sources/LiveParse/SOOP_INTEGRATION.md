@@ -29,8 +29,8 @@
 
 | 文件 | 用途 |
 |------|------|
-| `Resources/lp_plugin_soop_0.1.0_manifest.json` | 插件清单 |
-| `Resources/lp_plugin_soop_0.1.0_index.js` | JS 插件主实现（~712行）|
+| `Resources/lp_plugin_soop_1.0.0_manifest.json` | 插件清单 |
+| `Resources/lp_plugin_soop_1.0.0_index.js` | JS 插件主实现（~712行）|
 | `Danmu/Soop/SoopSocketDataParser.swift` | 弹幕 WebSocket 协议解析器 |
 | `Danmu/WebSocketConnection.swift` | WebSocket 连接层（已添加 SOOP 支持）|
 | `LiveModel.swift` | LiveType: `soop = "8"` |
@@ -176,6 +176,6 @@ get_menu_list.php 返回两个一级菜单:
 
 修改:
   - iOS/.../Views/Setting/PlatformAccountLoginView.swift  (添加 SOOP 入口)
-  - lp_plugin_soop_0.1.0_index.js                        (读取注入的 Cookie)
+  - lp_plugin_soop_1.0.0_index.js                        (读取注入的 Cookie)
   - macOS/tvOS 对应的登录页面
 ```

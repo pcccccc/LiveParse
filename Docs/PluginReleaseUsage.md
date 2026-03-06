@@ -19,8 +19,8 @@
 
 示例：
 
-- `lp_plugin_huya_0.1.1_manifest.json`
-- `lp_plugin_huya_0.1.1_index.js`
+- `lp_plugin_huya_1.0.0_manifest.json`
+- `lp_plugin_huya_1.0.0_index.js`
 
 ### 1.2 插件图标（随 zip 发布，不依赖 App 资源）
 

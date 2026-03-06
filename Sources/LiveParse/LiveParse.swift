@@ -5,11 +5,13 @@ import Foundation
 
 
 public final class LiveParsePlatformInfo: Codable {
+    public let pluginId: String
     public let liveType: LiveType
     public let livePlatformName: String
     public let description: String
-    
-    init(liveType: LiveType, livePlatformName: String, description: String) {
+
+    init(pluginId: String, liveType: LiveType, livePlatformName: String, description: String) {
+        self.pluginId = pluginId
         self.liveType = liveType
         self.livePlatformName = livePlatformName
         self.description = description
@@ -17,48 +19,48 @@ public final class LiveParsePlatformInfo: Codable {
 }
 
 public final class LiveParseTools {
+    private static let builtInNames: [String: String] = [
+        LiveType.bilibili.rawValue: "哔哩哔哩",
+        LiveType.huya.rawValue: "虎牙",
+        LiveType.douyin.rawValue: "抖音",
+        LiveType.douyu.rawValue: "斗鱼",
+        LiveType.cc.rawValue: "网易CC",
+        LiveType.ks.rawValue: "快手",
+        LiveType.yy.rawValue: "YY直播",
+        LiveType.youtube.rawValue: "YouTube",
+        LiveType.soop.rawValue: "SOOP"
+    ]
+
+    private static let builtInDescriptions: [String: String] = [
+        LiveType.bilibili.rawValue: "超清直播须在设置扫码",
+        LiveType.huya.rawValue: "竞技由我，玩在虎牙",
+        LiveType.douyin.rawValue: "无法使用请在PC浏览器扫码登录",
+        LiveType.douyu.rawValue: "每个人的直播平台",
+        LiveType.cc.rawValue: "网易游戏直播(暂无弹幕)",
+        LiveType.ks.rawValue: "无法播放请手动打开任意直播间通过滑块验证码(暂无弹幕)",
+        LiveType.yy.rawValue: "全民娱乐的互动直播平台",
+        LiveType.youtube.rawValue: "全球视频平台直播(已支持直播弹幕轮询)",
+        LiveType.soop.rawValue: "韩国直播平台(原AfreecaTV)"
+    ]
+
     public class func getLivePlatformName(_ liveType: LiveType) -> String {
-        switch liveType {
-        case .bilibili:
-            return "哔哩哔哩"
-        case .huya:
-            return "虎牙"
-        case .douyin:
-            return "抖音"
-        case .douyu:
-            return "斗鱼"
-        case .cc:
-            return "网易CC"
-        case .ks:
-            return "快手"
-        case .yy:
-            return "YY直播"
-        case .youtube:
-            return "YouTube"
-        case .soop:
-            return "SOOP"
+        if let name = builtInNames[liveType.rawValue] {
+            return name
         }
+        if let platform = LiveParseJSPlatformManager.platform(for: liveType) {
+            return platform.displayName
+        }
+        return "平台\(liveType.rawValue)"
     }
 
     public class func getAllSupportPlatform() -> [LiveParsePlatformInfo] {
-        let descriptions: [LiveType: String] = [
-            .bilibili: "超清直播须在设置扫码",
-            .huya: "竞技由我，玩在虎牙",
-            .douyin: "无法使用请在PC浏览器扫码登录",
-            .douyu: "每个人的直播平台",
-            .cc: "网易游戏直播(暂无弹幕)",
-            .ks: "无法播放请手动打开任意直播间通过滑块验证码(暂无弹幕)",
-            .yy: "全民娱乐的互动直播平台",
-            .youtube: "全球视频平台直播(已支持直播弹幕轮询)",
-            .soop: "韩国直播平台(原AfreecaTV)"
-        ]
-
         return LiveParseJSPlatformManager.availablePlatforms.map { platform in
             let liveType = platform.liveType
             return LiveParsePlatformInfo(
+                pluginId: platform.pluginId,
                 liveType: liveType,
                 livePlatformName: getLivePlatformName(liveType),
-                description: descriptions[liveType] ?? ""
+                description: builtInDescriptions[liveType.rawValue] ?? ""
             )
         }
     }

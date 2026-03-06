@@ -1,8 +1,0 @@
-{
-  "pluginId": "huya",
-  "version": "0.1.1",
-  "apiVersion": 1,
-  "displayName": "Huya (JS PoC)",
-  "liveTypes": ["1"],
-  "entry": "lp_plugin_huya_0.1.1_index.js"
-}

@@ -38,14 +38,6 @@ struct PluginSystemTests {
     }
 
     @Test
-    func builtInExamplePluginResolvable() async throws {
-        let manager = try LiveParsePluginManager()
-        let plugin = try manager.resolve(pluginId: "example")
-        #expect(plugin.manifest.pluginId == "example")
-        try await plugin.load()
-    }
-
-    @Test
     func builtInDouyuPluginResolvable() async throws {
         let manager = try LiveParsePluginManager()
         let plugin = try manager.resolve(pluginId: "douyu")

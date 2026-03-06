@@ -139,6 +139,10 @@ Swift 宿主 (Host)                    JS 插件 (JavaScriptCore)
 - `lp_plugin_{平台}_{版本}_manifest.json` — 插件清单
 - `lp_plugin_{平台}_{版本}_index.js` — 插件入口脚本
 
+插件开发与封装指南：
+- `Docs/PluginAuthoringGuide.md`
+- `Docs/PluginAuthoringAIPrompt.md`（给 AI 直接读取的提示词模板）
+
 ## 参考及引用
 
 [dart_simple_live](https://github.com/xiaoyaocz/dart_simple_live/)

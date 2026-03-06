@@ -121,16 +121,57 @@ public struct LiveMainListModel: Codable {
     }
 }
 
-public enum LiveType: String, Codable, Sendable {
-    case bilibili = "0",
-         huya = "1",
-         douyin = "2",
-         douyu = "3",
-         cc = "4",
-         ks = "5",
-         yy = "6",
-         youtube = "7",
-         soop = "8"
+public struct LiveType: RawRepresentable, Hashable, Codable, Sendable, ExpressibleByStringLiteral, CustomStringConvertible {
+    public let rawValue: String
+
+    public init?(rawValue: String) {
+        let normalized = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return nil }
+        self.rawValue = normalized
+    }
+
+    public init(stringLiteral value: String) {
+        self.rawValue = value
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let stringValue = try? container.decode(String.self),
+           let liveType = LiveType(rawValue: stringValue) {
+            self = liveType
+            return
+        }
+        if let intValue = try? container.decode(Int.self),
+           let liveType = LiveType(rawValue: String(intValue)) {
+            self = liveType
+            return
+        }
+        throw DecodingError.dataCorruptedError(
+            in: container,
+            debugDescription: "LiveType must be a non-empty string or integer."
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
+    public var description: String { rawValue }
+
+    public static let bilibili: LiveType = .init(rawValue: "0")!
+    public static let huya: LiveType = .init(rawValue: "1")!
+    public static let douyin: LiveType = .init(rawValue: "2")!
+    public static let douyu: LiveType = .init(rawValue: "3")!
+    public static let cc: LiveType = .init(rawValue: "4")!
+    public static let ks: LiveType = .init(rawValue: "5")!
+    public static let yy: LiveType = .init(rawValue: "6")!
+    public static let youtube: LiveType = .init(rawValue: "7")!
+    public static let soop: LiveType = .init(rawValue: "8")!
+
+    public static let builtIn: [LiveType] = [
+        .bilibili, .huya, .douyin, .douyu, .cc, .ks, .yy, .youtube, .soop
+    ]
 }
 
 public enum LiveState: String, Codable {
