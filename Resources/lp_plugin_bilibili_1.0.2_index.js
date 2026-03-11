@@ -567,6 +567,6 @@ globalThis.LiveParsePlugin = {
     const roomId = String(payload && payload.roomId ? payload.roomId : "");
     if (!roomId) _bili_throw("INVALID_ARGS", "roomId is required", { field: "roomId" });
     const headers = await _bili_getHeaders();
-    return await _bili_getDanmukuArgs(roomId, headers);
+    return await _bili_getDanmukuArgs(roomId, headers, "platform_cookie");
   }
 };
