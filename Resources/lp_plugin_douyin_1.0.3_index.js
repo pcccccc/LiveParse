@@ -614,10 +614,23 @@ function _dy_enrichCookie(cookie) {
   return enriched;
 }
 
-// 获取新鲜匿名 cookie（ttwid + __ac_nonce + msToken）
+// 获取匿名 cookie（ttwid + __ac_nonce + msToken）
 // ttwid 通过 bytedance 注册接口获取，__ac_nonce 和 msToken 随机生成
 // 注意：不使用用户的 auth cookie 调用 API，否则会触发 444 反爬
+// 24 小时缓存，避免频繁调用注册接口
+const _dy_cookie_cache = {
+  cookie: "",
+  expireAt: 0
+};
+const _dy_cookie_ttl = 24 * 60 * 60 * 1000; // 24h
+
 async function _dy_getCookie(roomId) {
+  const now = Date.now();
+  if (_dy_cookie_cache.cookie && now < _dy_cookie_cache.expireAt) {
+    console.log(`[douyin] _dy_getCookie: using cached cookie, ttl=${Math.round((_dy_cookie_cache.expireAt - now) / 1000)}s`);
+    return _dy_cookie_cache.cookie;
+  }
+
   let ttwid = "";
   try {
     const resp = await _dy_request({
@@ -658,6 +671,10 @@ async function _dy_getCookie(roomId) {
   dyCookie += "__ac_nonce=" + _dy_randomString(21, "0123456789abcdef") + ";";
   dyCookie += "msToken=" + _dy_generateMsToken() + ";";
   console.log(`[douyin] _dy_getCookie: ttwid=${ttwid ? "yes" : "no"}, cookieLen=${dyCookie.length}`);
+
+  _dy_cookie_cache.cookie = dyCookie;
+  _dy_cookie_cache.expireAt = now + _dy_cookie_ttl;
+
   return dyCookie;
 }
 
@@ -1263,6 +1280,9 @@ globalThis.LiveParsePlugin = {
       signature = _dy_toString(get_sign(xmsStub)) || "";
     }
 
+    // 获取匿名 cookie（ttwid + __ac_nonce + msToken）用于 WebSocket 连接
+    const dyCookie = await _dy_getCookie(roomId);
+
     return {
       args: {
         room_id: finalRoomId,
@@ -1281,7 +1301,7 @@ globalThis.LiveParsePlugin = {
         browser_name: "Mozilla",
         browser_version: _dy_ua
       },
-      headers: { "User-Agent": _dy_ua }
+      headers: { "User-Agent": _dy_ua, "cookie": dyCookie }
     };
   }
 };

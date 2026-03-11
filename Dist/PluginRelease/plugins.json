@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-11T09:14:18Z",
+  "generatedAt": "2026-03-11T09:50:53Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -102,17 +102,17 @@
     },
     {
       "pluginId": "douyin",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "platform": "douyin",
       "platformName": "抖音",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.2.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.2.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.3.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.3.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.2.zip",
-      "sha256": "b0c37c6114ffa56b7a4f5785346e037042500479c2b7a9f10da461cc04f1176f",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.3.zip",
+      "sha256": "5a3ca1c1b95d32c5027392b96c3f10611a5658e89a3383102881ad0f5f0d0adf",
       "changelog": [
-        "第一次测试"
+        "修复弹幕连接：getDanmaku 添加 cookie 认证 + getCookie 24h 缓存"
       ],
       "capabilities": {
         "categories": {
