@@ -81,7 +81,7 @@ TVOS_PLATFORM_BIG_SMALL_NAMES = {
 
 def parse_args() -> argparse.Namespace:
     repo_root = pathlib.Path(__file__).resolve().parents[1]
-    default_resources = repo_root / "Sources" / "LiveParse" / "Resources"
+    default_resources = repo_root / "Resources"
     default_output = repo_root / "Dist" / "PluginRelease"
 
     parser = argparse.ArgumentParser(

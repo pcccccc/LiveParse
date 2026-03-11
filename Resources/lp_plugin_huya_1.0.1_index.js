@@ -182,10 +182,6 @@ async function _huya_getCdnTokenInfoEx(streamName) {
   const name = String(streamName || "");
   if (!name) return "";
 
-  if ((typeof Taf === "undefined" || typeof HUYA === "undefined") &&
-      globalThis.Host && Host.runtime && typeof Host.runtime.loadBuiltinScript === "function") {
-    Host.runtime.loadBuiltinScript("huya.js");
-  }
   if (typeof Taf === "undefined" || typeof HUYA === "undefined") {
     _huya_throw("INVALID_RESPONSE", "huya.js runtime not available", { streamName: name });
   }

@@ -1,3 +1,39 @@
+// YY Host API — 内联初始化，不再依赖外部 __lp_host_yy.js
+(function () {
+  if (typeof Host === "undefined") { globalThis.Host = {}; }
+  if (typeof Host.yy === "undefined") { Host.yy = {}; }
+  if (typeof Host.yy.getStreamInfo !== "function") {
+    Host.yy.getStreamInfo = function(roomId, options) {
+      return new Promise(function(resolve, reject) {
+        var hasLegacyAPI = typeof __lp_yy_get_stream_info === "function";
+        var hasExtendedAPI = typeof __lp_yy_get_stream_info_ex === "function";
+        if (!hasLegacyAPI && !hasExtendedAPI) {
+          reject(new Error("YY Host API not available"));
+          return;
+        }
+        var onResolve = function(rawResult) {
+          try {
+            var result = rawResult;
+            if (typeof rawResult === "string") {
+              result = JSON.parse(rawResult || "{}");
+            } else if (!rawResult || typeof rawResult !== "object") {
+              result = {};
+            }
+            resolve(result);
+          } catch (e) { reject(e); }
+        };
+        var onReject = function(error) { reject(new Error(String(error))); };
+        var safeOptions = options && typeof options === "object" ? options : {};
+        if (hasExtendedAPI) {
+          __lp_yy_get_stream_info_ex(String(roomId), safeOptions, onResolve, onReject);
+        } else {
+          __lp_yy_get_stream_info(String(roomId), onResolve, onReject);
+        }
+      });
+    };
+  }
+})();
+
 const __lp_yy_defaultHeaders = {
   "user-agent": " Platform/iOS17.5.1 APP/yymip8.40.0 Model/iPhone Browerser:Default Scale/3.00 YY(ClientVersion:8.40.0 ClientEdition:yymip) HostName/yy HostVersion/8.40.0 HostId/1 UnionVersion/2.690.0 Build1492 HostExtendInfo/b576b278cba95c5100f84a69b26dc36bf44f080608b937825dcd64ee5911351f74dbda4ac85cfb011f32eb00b7c16ecc6bad4eaa3cd9f69c923177e74f6212682492886a946abdcf921a84c93ff329d4fd9e2bc67f5fe727d9a7b10ee65fbbbf",
   "accept-language": "zh-Hans-CN;q=1",

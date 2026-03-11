@@ -1,14 +1,14 @@
 {
-  "pluginId": "douyin",
+  "pluginId": "huya",
   "version": "1.0.1",
   "apiVersion": 1,
-  "displayName": "Douyin (JS PoC)",
+  "displayName": "Huya (JS PoC)",
   "liveTypes": [
-    "2"
+    "1"
   ],
-  "entry": "lp_plugin_douyin_1.0.1_index.js",
+  "entry": "lp_plugin_huya_1.0.1_index.js",
   "preloadScripts": [
-    "webmssdk.js"
+    "huya.js"
   ],
   "capabilities": {
     "categories": {

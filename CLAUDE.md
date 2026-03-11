@@ -4,61 +4,39 @@
 
 ## 项目概述
 
-LiveParse 是一个 Swift Package，负责解析 8 个直播平台的 API（哔哩哔哩、斗鱼、虎牙、抖音、快手、YY、网易CC、SOOP）。当前运行模式为**纯 JS 插件模式**，所有平台解析逻辑均由 JavaScript 插件实现。
+LiveParse 是一个直播平台 JS 插件仓库，提供 9 个直播平台（哔哩哔哩、斗鱼、虎牙、抖音、快手、YY、网易CC、SOOP、YouTube）的 API 解析插件。
 
-## 构建与测试
+插件运行时与管理器已迁移至主工程 [AngelLive](https://github.com/pcccccc/AngelLive)（`AngelLiveCore` 模块），本仓库仅维护 JS 插件源码、插件文档和发布产物。
 
-```bash
-swift build
-swift test
-```
-
-抖音测试需要手动填入 Cookie：编辑 `Tests/LiveParseTests/DouyinTests.swift` 中的 `douyinTestCookie` 常量。
-
-## 架构
-
-### 运行模式
-
-纯 JS 插件模式（`enableJSPlugins = true`，`pluginFallbackToSwiftImplementation = false`）。旧平台 Swift 解析文件（`Douyin.swift` 等）已全部删除。
-
-### 目录结构
+## 目录结构
 
 ```
-Sources/LiveParse/
-├── Plugin/                              # 插件基础设施
-│   ├── JSRuntime.swift                  # JavaScriptCore 运行时封装（DispatchQueue 隔离）
-│   ├── LiveParsePluginManager.swift     # 插件加载、解析、调用管理
-│   ├── LiveParseLoadedPlugin.swift      # 已加载插件实例（actor）
-│   ├── LiveParsePluginManifest.swift    # manifest.json 模型
-│   ├── LiveParsePlugins.swift           # 全局共享入口 LiveParsePlugins.shared
-│   ├── LiveParsePluginError.swift       # 错误类型与标准错误码
-│   ├── LiveParsePluginStorage.swift     # 插件持久化（沙盒目录管理）
-│   ├── LiveParsePluginState.swift       # 插件状态模型
-│   ├── LiveParsePluginInstaller.swift   # 插件安装
-│   ├── LiveParsePluginUpdater.swift     # 插件更新
-│   └── LiveParseRemotePluginIndex.swift # 远端索引
-├── Danmu/                               # 弹幕 WebSocket 连接与协议解析
-│   ├── WebSocketConnection.swift        # WebSocket 客户端（支持 6 个平台弹幕）
-│   ├── Bilibili/                        # Protobuf 解析
-│   ├── Douyin/                          # Protobuf 解析
-│   ├── Douyu/                           # 自定义协议解析
-│   ├── Huya/                            # Tars 协议解析
-│   ├── CC/                              # 自定义协议解析
-│   └── Soop/                            # 文本帧协议解析
-├── Resources/                           # JS 插件资源
+LiveParse/
+├── Resources/                           # JS 插件源码
 │   ├── lp_plugin_{平台}_{版本}_manifest.json
 │   ├── lp_plugin_{平台}_{版本}_index.js
-│   └── webmssdk.js                      # 抖音签名依赖（preloadScript）
-├── LiveParse.swift                      # 公共 API 入口、平台名称映射
-├── LiveModel.swift                      # 数据模型（LiveModel, LiveQualityModel, LiveState）
-├── LiveParseJSPlatformManager.swift     # JS 平台调度层（v1→v2 方法名兼容）
-├── LiveParseError+Enhanced.swift        # 增强错误报告
-├── BiliBiliCookie.swift                 # Bilibili Cookie 管理
-├── NetworkRequestHelper.swift           # HTTP 工具
-└── String+Extension.swift               # 字符串扩展
+│   ├── plugin_assets/                   # 平台图标资源
+│   ├── webmssdk.js                      # 抖音签名依赖（preloadScript）
+│   ├── huya.js                          # 虎牙辅助脚本
+│   ├── __lp_host_yy.js                  # YY Host 桥接脚本
+│   └── douyin_categories.json           # 抖音分类数据
+├── Docs/                                # 插件开发文档
+│   ├── PluginAuthoringGuide.md          # 插件开发指南
+│   ├── PluginAuthoringAIPrompt.md       # AI 插件开发提示词模板
+│   ├── PluginSystem.md                  # 插件系统架构
+│   ├── PluginReleaseUsage.md            # 发布与使用说明
+│   └── CookieSessionMigrationPlan.md    # Cookie 会话迁移方案
+├── Dist/PluginRelease/                  # 发布产物
+│   ├── plugins.json                     # 插件索引
+│   ├── checksums.txt                    # 校验和
+│   └── zips/                            # 插件 ZIP 包
+├── Scripts/                             # 构建脚本
+│   └── build_plugin_release.py          # 插件打包脚本
+├── README.md
+└── LICENSE
 ```
 
-### 插件 API（v2 方法名）
+## 插件 API（v2 方法名）
 
 每个 JS 插件导出 `globalThis.LiveParsePlugin`，包含以下方法：
 
@@ -73,65 +51,27 @@ Sources/LiveParse/
 | `resolveShare` | `getRoomInfoFromShareCode` | 解析分享码 |
 | `getDanmaku` | `getDanmukuArgs` | 获取弹幕参数 |
 
-### 关键机制
+## 插件开发规范
 
-- **preloadScripts**：manifest 中声明预加载脚本，在入口脚本之前执行（如抖音的 `webmssdk.js`）
-- **浏览器环境 shim**：JSRuntime 启动时注入 `window`/`document`/`navigator` 全局对象
-- **Cookie 流**：
-  - 抖音：通过 `setCookie`/`clearCookie` 管理 runtime cookie，API 调用使用匿名 ttwid cookie 避免 444
-  - B站：通过 `payload.cookie` 传入（`injectCookieIfNeeded` 自动注入）
-  - 其他平台：无需 Cookie
-- **Host 桥接**：
-  - `Host.http.request(options)` — 网络请求（Promise）
-  - `Host.crypto.md5(input)` — MD5 计算
-  - `Host.storage.get/set` — 键值存储
-  - `Host.time.nowMillis()` — 时间戳
-  - `Host.raise(code, msg, ctx)` / `Host.makeError(code, msg, ctx)` — 错误上报
-- **签名机制**：抖音使用 ABogus 签名（SM3 + RC4 + bigArray transform），弹幕使用 webmssdk 的 X-Bogus 签名
+1. 每个插件必须提供 `manifest.json`，声明 `pluginId`、`version`、`apiVersion`、`entry`。
+2. 插件文件命名：`lp_plugin_<pluginId>_<version>_manifest.json` + `lp_plugin_<pluginId>_<version>_index.js`。
+3. 如需预加载脚本（如签名库），在 manifest 的 `preloadScripts` 中声明。
+4. 详细开发指南见 `Docs/PluginAuthoringGuide.md`。
 
-## 平台要求
+## Host 桥接 API
 
-- Swift 6.2（swift-tools-version）
-- macOS 13+ / iOS 16+ / tvOS 16+
+宿主通过 JavaScriptCore 向插件暴露以下能力：
 
-## 依赖
+- `Host.http.request(options)` — 网络请求（Promise）
+- `Host.crypto.md5(input)` — MD5 计算
+- `Host.storage.get/set` — 键值存储
+- `Host.time.nowMillis()` — 时间戳
+- `Host.raise(code, msg, ctx)` / `Host.makeError(code, msg, ctx)` — 错误上报
 
-- **Alamofire** — HTTP 网络
-- **SwiftyJSON** — JSON 解析
-- **Starscream** — WebSocket 客户端
-- **SWCompression** — 压缩/解压
-- **SwiftProtobuf** — Protobuf（B站/抖音弹幕）
-- **GMObjC** — 加密工具
-- **JavaScriptCore**（系统框架）— JS 运行时
-
-## 支持的平台
-
-| 平台 | 分类 | 房间 | 播放 | 搜索 | 详情 | 状态 | 分享码 | 弹幕 | 需要 Cookie |
-|------|------|------|------|------|------|------|--------|------|-------------|
-| 哔哩哔哩 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否（超清需要） |
-| 斗鱼 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否 |
-| 虎牙 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否 |
-| 抖音 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 是 |
-| 快手 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 否 |
-| YY | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 否 |
-| 网易CC | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 否 |
-| SOOP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 否（登录待开发） |
-
-## 测试
+## 发布流程
 
 ```bash
-# 全量测试
-swift test
-
-# 按平台测试
-swift test --filter BilibiliTests
-swift test --filter DouyinTests     # 需要手动填 Cookie
-swift test --filter HuyaTests
-swift test --filter DouyuTests
-swift test --filter KuaiShouTests
-swift test --filter NeteaseCCTests
-swift test --filter YYTests
-
-# 插件系统测试
-swift test --filter PluginSystemTests
+python3 Scripts/build_plugin_release.py
 ```
+
+产物输出至 `Dist/PluginRelease/`。

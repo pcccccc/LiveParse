@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-06T07:03:15Z",
+  "generatedAt": "2026-03-11T07:05:22Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -8,9 +8,9 @@
       "platform": "bilibili",
       "platformName": "哔哩哔哩",
       "zipURLs": [
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.1.zip"
+        "https://example.invalid/liveparse/plugins/liveparse_bilibili_1.0.1.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.1.zip",
+      "zipURL": "https://example.invalid/liveparse/plugins/liveparse_bilibili_1.0.1.zip",
       "sha256": "9971ad095b4f23ad78c51007d902c5aefb6b5fe744a24ddaac0ebe28f5b38eac",
       "changelog": [
         "第一次测试"
@@ -56,9 +56,9 @@
       "platform": "cc",
       "platformName": "网易CC",
       "zipURLs": [
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_1.0.0.zip"
+        "https://example.invalid/liveparse/plugins/liveparse_cc_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_1.0.0.zip",
+      "zipURL": "https://example.invalid/liveparse/plugins/liveparse_cc_1.0.0.zip",
       "sha256": "ae8131c02644b1a9848335632fd3a799cd0902636393e45184e12e0c191ea5cf",
       "changelog": [
         "第一次测试"
@@ -100,14 +100,14 @@
     },
     {
       "pluginId": "douyin",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "platform": "douyin",
       "platformName": "抖音",
       "zipURLs": [
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.1.zip"
+        "https://example.invalid/liveparse/plugins/liveparse_douyin_1.0.2.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.1.zip",
-      "sha256": "39bed0adf65cf5ec53db4b9498bd0ada37e75a54ee0a1d0fdc6345ddb091fd03",
+      "zipURL": "https://example.invalid/liveparse/plugins/liveparse_douyin_1.0.2.zip",
+      "sha256": "b0c37c6114ffa56b7a4f5785346e037042500479c2b7a9f10da461cc04f1176f",
       "changelog": [
         "第一次测试"
       ],
@@ -152,9 +152,9 @@
       "platform": "douyu",
       "platformName": "斗鱼",
       "zipURLs": [
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.0.zip"
+        "https://example.invalid/liveparse/plugins/liveparse_douyu_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.0.zip",
+      "zipURL": "https://example.invalid/liveparse/plugins/liveparse_douyu_1.0.0.zip",
       "sha256": "a5c2399e1a029ae726255e09b130e02c4b4115cc34693ffa5155a51083df81dd",
       "changelog": [
         "第一次测试"
@@ -196,14 +196,14 @@
     },
     {
       "pluginId": "huya",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "platform": "huya",
       "platformName": "虎牙",
       "zipURLs": [
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_1.0.0.zip"
+        "https://example.invalid/liveparse/plugins/liveparse_huya_1.0.1.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_1.0.0.zip",
-      "sha256": "471d732bca617bdfa695aae72f3ed23acc8d7b469666dce8dbbdc6747622874f",
+      "zipURL": "https://example.invalid/liveparse/plugins/liveparse_huya_1.0.1.zip",
+      "sha256": "02221e205eb3f24bd228e75ed75948c4ab70367e4b43b316efb184a2c54a8741",
       "changelog": [
         "第一次测试"
       ],
@@ -248,9 +248,9 @@
       "platform": "ks",
       "platformName": "快手",
       "zipURLs": [
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.1.zip"
+        "https://example.invalid/liveparse/plugins/liveparse_ks_1.0.1.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.1.zip",
+      "zipURL": "https://example.invalid/liveparse/plugins/liveparse_ks_1.0.1.zip",
       "sha256": "cac740698a17267704a138884afae4e3e1a508369c7e927e87614aa09ba9ec34",
       "changelog": [
         "第一次测试"
@@ -297,9 +297,9 @@
       "platform": "soop",
       "platformName": "SOOP",
       "zipURLs": [
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.1.zip"
+        "https://example.invalid/liveparse/plugins/liveparse_soop_1.0.1.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.1.zip",
+      "zipURL": "https://example.invalid/liveparse/plugins/liveparse_soop_1.0.1.zip",
       "sha256": "2bf2477988012039efb5ab8d711b9f79bd96c4045ebf83391614517ff85d4477",
       "changelog": [
         "第一次测试"
@@ -346,9 +346,9 @@
       "platform": "youtube",
       "platformName": "YouTube",
       "zipURLs": [
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.0.zip"
+        "https://example.invalid/liveparse/plugins/liveparse_youtube_1.0.0.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.0.zip",
+      "zipURL": "https://example.invalid/liveparse/plugins/liveparse_youtube_1.0.0.zip",
       "sha256": "0fc565c6336e7a5d2f63df195c6b827135f70f55f38a8e9504dd42042791ce15",
       "changelog": [
         "第一次测试"
@@ -390,14 +390,14 @@
     },
     {
       "pluginId": "yy",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "platform": "yy",
       "platformName": "YY直播",
       "zipURLs": [
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_1.0.0.zip"
+        "https://example.invalid/liveparse/plugins/liveparse_yy_1.0.1.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_1.0.0.zip",
-      "sha256": "1ab93cdd1e10ca6b878111763d7dae868f04cee1737049b4f104476f40951f2b",
+      "zipURL": "https://example.invalid/liveparse/plugins/liveparse_yy_1.0.1.zip",
+      "sha256": "d350c754969ebea023969e9b251fe8ef55b2e8e6bfb975a1bee55b09af3bbed4",
       "changelog": [
         "第一次测试"
       ],

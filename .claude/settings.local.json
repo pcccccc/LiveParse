@@ -10,7 +10,9 @@
       "Bash(xcodebuild -list:*)",
       "Bash(xcodebuild test:*)",
       "Bash(xcodebuild -version:*)",
-      "Bash(xcodebuild:*)"
+      "Bash(xcodebuild:*)",
+      "Bash(cd /Users/pangchong/Desktop/Git_Mini/LiveParse/Sources/LiveParse && rm -f BiliBiliCookie.swift LiveModel.swift LiveParseError+Enhanced.swift LiveParseJSPlatformManager.swift NetworkRequestHelper.swift String+Extension.swift && rm -rf Danmu/ Tars/)",
+      "Bash(cd /Users/pangchong/Desktop/Git_Mini/LiveParse && rm -f Package.swift Package.resolved && rm -rf Tests/ && mv Sources/LiveParse/Resources/ ./Resources && rm -rf Sources/)"
     ],
     "deny": [],
     "ask": []
