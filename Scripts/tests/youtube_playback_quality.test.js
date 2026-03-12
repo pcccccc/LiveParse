@@ -7,8 +7,9 @@ const {
   _yt_parseM3U8VariantsFromText,
   _yt_compareVariantForPreferQn,
   _yt_compareManifestProbeResult,
+  _yt_manifestCandidateScore,
   _yt_buildPlayback,
-} = require("../../Resources/lp_plugin_youtube_1.0.2_index.js");
+} = require("../../Resources/lp_plugin_youtube_1.0.3_index.js");
 
 test("YouTube plugin parses 1080p60 labels and sorts qualities from highest to lowest", () => {
   const manifest = `#EXTM3U
@@ -148,6 +149,23 @@ test("YouTube plugin prefers the manifest candidate with the strongest real vari
   assert.equal(probeResults[0].preferredVariant.title, "1080p60");
 });
 
+test("YouTube plugin penalizes demuxed preview manifests below real masters", () => {
+  const videoId = "video1234567";
+  const demuxed = {
+    source: "youtubei_ios",
+    url: `https://manifest.googlevideo.com/api/manifest/hls_variant/id/${videoId}.1/source/yt_live_broadcast/demuxed/1/ip/0.0.0.0/playlist_type/DVR/itag/96/index.m3u8`
+  };
+  const realMaster = {
+    source: "watch_player_response",
+    url: `https://manifest.googlevideo.com/api/manifest/hls_variant/id/${videoId}.1/source/yt_live_broadcast/ip/0.0.0.0/playlist_type/DVR/index.m3u8`
+  };
+
+  assert.ok(
+    _yt_manifestCandidateScore(realMaster, videoId) >
+      _yt_manifestCandidateScore(demuxed, videoId)
+  );
+});
+
 test("YouTube plugin returns only real quality entries when variant ladder exists", () => {
   const playback = _yt_buildPlayback(
     "room123",
@@ -168,6 +186,14 @@ test("YouTube plugin returns only real quality entries when variant ladder exist
         itag: 95,
         title: "720p",
         url: "https://example.com/720p.m3u8"
+      },
+      {
+        qn: 0,
+        fps: 0,
+        bandwidth: 64000,
+        itag: 140,
+        title: "",
+        url: "https://example.com/audio-only.m3u8"
       }
     ],
     {
@@ -184,5 +210,34 @@ test("YouTube plugin returns only real quality entries when variant ladder exist
   assert.equal(
     playback[0].qualitys[0].url,
     "https://example.com/1080p60.m3u8"
+  );
+});
+
+test("YouTube plugin playback headers use watch-page referer for the selected room", () => {
+  const playback = _yt_buildPlayback(
+    "abc123def45",
+    "https://example.com/master.m3u8",
+    [
+      {
+        qn: 1080,
+        fps: 60,
+        bandwidth: 5100000,
+        itag: 301,
+        title: "1080p60",
+        url: "https://example.com/1080p60.m3u8"
+      }
+    ],
+    {
+      sourceTag: "youtubei_ios"
+    }
+  );
+
+  assert.equal(
+    playback[0].qualitys[0].headers.referer,
+    "https://www.youtube.com/watch?v=abc123def45"
+  );
+  assert.equal(
+    playback[0].qualitys[0].headers["accept-language"],
+    "en-US,en;q=0.9"
   );
 });

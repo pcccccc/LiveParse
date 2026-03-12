@@ -563,18 +563,22 @@ function _yt_expandManifestCandidates(candidates) {
   return out;
 }
 
+function _yt_isDemuxedManifestURL(url) {
+  return _yt_str(url).indexOf("/demuxed/1/") >= 0;
+}
+
 function _yt_manifestCandidateScore(candidate, expectedVideoId) {
   var source = _yt_str(candidate && candidate.source);
   var url = _yt_str(candidate && candidate.url);
   var score = 0;
 
-  if (source.indexOf("_strip_n") >= 0) score += 30;
-  if (source.indexOf("youtubei_ios") >= 0) score += 260;
-  else if (source.indexOf("youtubei_android") >= 0) score += 220;
-  else if (source.indexOf("youtubei_web") >= 0) score += 210;
-  else if (source.indexOf("youtubei_tv") >= 0) score += 190;
-  else if (source.indexOf("watch_player_response") >= 0) score += 120;
-  else if (source.indexOf("watch_html_regex") >= 0) score += 110;
+  if (source.indexOf("_strip_n") >= 0) score += 220;
+  if (source.indexOf("watch_player_response") >= 0) score += 130;
+  else if (source.indexOf("watch_html_regex") >= 0) score += 120;
+  else if (source.indexOf("youtubei_ios") >= 0) score += 95;
+  else if (source.indexOf("youtubei_web") >= 0) score += 90;
+  else if (source.indexOf("youtubei_android") >= 0) score += 85;
+  else if (source.indexOf("youtubei_tv") >= 0) score += 80;
 
   if (expectedVideoId) {
     if (url.indexOf("/id/" + expectedVideoId + ".") >= 0) score += 180;
@@ -584,6 +588,8 @@ function _yt_manifestCandidateScore(candidate, expectedVideoId) {
   if (url.indexOf("/source/yt_live_broadcast/") >= 0) score += 50;
   if (url.indexOf("/playlist_type/DVR/") >= 0) score += 20;
   if (url.indexOf("/ip/0.0.0.0/") >= 0) score += 120;
+  if (!_yt_isDemuxedManifestURL(url)) score += 260;
+  else score -= 180;
   var ipMatch = url.match(/\/ip\/([^/]+)\//);
   if (ipMatch && ipMatch[1]) {
     var ipToken = _yt_str(ipMatch[1]).toLowerCase();
@@ -592,7 +598,6 @@ function _yt_manifestCandidateScore(candidate, expectedVideoId) {
   }
 
   if (url.indexOf("/n/") >= 0) score -= 320;
-  if (url.indexOf("manifest.googlevideo.com/api/manifest") >= 0) score += 20;
 
   return score;
 }
@@ -750,7 +755,7 @@ function _yt_extractItag(url) {
 }
 
 function _yt_qualityTitle(height, fps) {
-  if (height <= 0) return "auto";
+  if (height <= 0) return "";
   var roundedFps = Math.round(fps || 0);
   if (roundedFps >= 50) return height + "p" + roundedFps;
   return height + "p";
@@ -1112,41 +1117,24 @@ function _yt_pickFirstSegmentURL(mediaText, mediaURL) {
 
 function _yt_pickPlaybackFallbackCandidate(sorted) {
   if (!Array.isArray(sorted) || sorted.length === 0) return null;
-  var preferredSources = [
-    "youtubei_ios",
-    "youtubei_android",
-    "youtubei_web",
-    "youtubei_tv",
-    "watch_player_response_strip_n",
-    "watch_player_response",
-    "watch_html_regex"
-  ];
-
-  for (var i = 0; i < preferredSources.length; i += 1) {
-    var source = preferredSources[i];
-    for (var j = 0; j < sorted.length; j += 1) {
-      var candidate = sorted[j] || {};
-      if (_yt_str(candidate.source).indexOf(source) >= 0) {
-        return candidate;
-      }
-    }
-  }
-
   return sorted[0];
 }
 
 async function _yt_collectPlaybackManifestCandidates(videoId, watchHTML) {
-  var base = _yt_extractManifestFromWatchHTML(watchHTML, videoId);
+  var playerResponse = _yt_extractWatchPlayerResponse(watchHTML);
+  var watchCandidates = _yt_collectManifestCandidatesFromPlayerResponse(
+    playerResponse,
+    "watch_player_response",
+    videoId
+  ).concat(_yt_collectManifestCandidatesFromLegacyHTML(watchHTML, videoId));
   var youtubeiCandidates = await _yt_collectYoutubeiManifestCandidates(videoId, watchHTML);
   var merged = [];
 
-  // youtubei 候选优先；只有在 youtubei 完全拿不到时才回退 watch 页面候选。
-  if (youtubeiCandidates.length > 0) {
-    for (var i = 0; i < youtubeiCandidates.length; i += 1) {
-      merged.push(youtubeiCandidates[i]);
-    }
-  } else if (base && base.url) {
-    merged.push(base);
+  for (var i = 0; i < watchCandidates.length; i += 1) {
+    merged.push(watchCandidates[i]);
+  }
+  for (var j = 0; j < youtubeiCandidates.length; j += 1) {
+    merged.push(youtubeiCandidates[j]);
   }
 
   // 优先用非 IPv6 绑定的 manifest，降低播放器网络栈与签名 IP 不一致导致的 403。
@@ -1176,7 +1164,7 @@ async function _yt_pickPlaybackProbeResult(videoId, watchHTML, options) {
   var sortedCandidates = await _yt_collectPlaybackManifestCandidates(videoId, watchHTML);
   if (sortedCandidates.length === 0) return null;
 
-  var probeCount = Math.min(sortedCandidates.length, 4);
+  var probeCount = Math.min(sortedCandidates.length, 8);
   var results = [];
   for (var i = 0; i < probeCount; i += 1) {
     var candidate = sortedCandidates[i] || {};
@@ -1360,18 +1348,20 @@ function _yt_buildPlayback(videoId, manifestURL, variants, options) {
 
   var opts = options && typeof options === "object" ? options : {};
   var preferQn = Math.max(0, _yt_toInt(opts.preferQn, 0));
-  var playbackProfile = _yt_pickPlaybackProfile(opts.sourceTag);
+  var playbackProfile = _yt_pickPlaybackProfile(opts.sourceTag, videoId);
   _yt_log("[youtube] playback profile source=" + _yt_str(opts.sourceTag) + ", ua=" + _yt_str(playbackProfile.userAgent));
   var qualitys = [];
 
   if (Array.isArray(variants) && variants.length > 0) {
     for (var i = 0; i < variants.length; i += 1) {
       var item = variants[i] || {};
-      if (!_yt_str(item.url)) continue;
+      var title = _yt_str(item.title);
+      var qn = _yt_toInt(item.qn, 0);
+      if (!_yt_str(item.url) || !title || qn <= 0) continue;
       qualitys.push({
         roomId: _yt_str(videoId),
-        title: _yt_str(item.title) || "auto",
-        qn: _yt_toInt(item.qn, 0),
+        title: title,
+        qn: qn,
         url: _yt_str(item.url),
         liveCodeType: "m3u8",
         liveType: __yt_liveType,
@@ -1381,7 +1371,7 @@ function _yt_buildPlayback(videoId, manifestURL, variants, options) {
     }
   }
 
-  // 先对具体清晰度去重，再把 auto 放到最后，便于手动切清晰度。
+  // 只保留真实清晰度条目，避免把预览/音频轨伪装成 auto 暴露给播放器。
   var dedupVariants = [];
   var seen = {};
   for (var j = 0; j < qualitys.length; j += 1) {
@@ -1424,7 +1414,7 @@ function _yt_buildPlayback(videoId, manifestURL, variants, options) {
   ];
 }
 
-function _yt_pickPlaybackProfile(sourceTag) {
+function _yt_pickPlaybackProfile(sourceTag, videoId) {
   var source = _yt_str(sourceTag);
   var ua = __yt_playbackUserAgent;
   if (source.indexOf("youtubei_ios") >= 0) {
@@ -1437,8 +1427,9 @@ function _yt_pickPlaybackProfile(sourceTag) {
     userAgent: ua,
     headers: {
       "user-agent": ua,
-      referer: "https://www.youtube.com/",
-      origin: "https://www.youtube.com"
+      referer: "https://www.youtube.com/watch?v=" + encodeURIComponent(_yt_str(videoId)),
+      origin: "https://www.youtube.com",
+      "accept-language": "en-US,en;q=0.9"
     }
   };
 }
@@ -1450,7 +1441,12 @@ async function _yt_probeLiveInfo(input) {
   var title = _yt_extractWatchTitle(watch.text, resolved.videoId);
   var channel = _yt_extractWatchChannelInfo(watch.text);
   var cover = _yt_extractMeta(watch.text, "og:image");
-  var manifestCandidate = _yt_extractManifestFromWatchHTML(watch.text, resolved.videoId);
+  var manifestCandidate = await _yt_resolveBestManifestCandidate(resolved.videoId, watch.text, {
+    verifyManifest: false
+  });
+  if (!manifestCandidate || !manifestCandidate.url) {
+    manifestCandidate = _yt_extractManifestFromWatchHTML(watch.text, resolved.videoId);
+  }
   var hlsManifestUrl = _yt_str(manifestCandidate && manifestCandidate.url);
 
   return {
@@ -2178,6 +2174,7 @@ if (typeof module !== "undefined" && module.exports) {
     _yt_compareVariantQualityDesc: _yt_compareVariantQualityDesc,
     _yt_compareVariantForPreferQn: _yt_compareVariantForPreferQn,
     _yt_compareManifestProbeResult: _yt_compareManifestProbeResult,
+    _yt_manifestCandidateScore: _yt_manifestCandidateScore,
     _yt_buildPlayback: _yt_buildPlayback,
     _yt_qualityTitle: _yt_qualityTitle
   };
