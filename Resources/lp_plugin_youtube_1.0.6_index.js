@@ -1435,6 +1435,7 @@ function _yt_pickPlaybackProfile(sourceTag, videoId) {
   return {
     userAgent: ua,
     headers: {
+      "User-Agent": ua,
       Referer: "https://www.youtube.com/watch?v=" + encodeURIComponent(_yt_str(videoId)),
       Origin: "https://www.youtube.com",
       "Accept-Language": "en-US,en;q=0.9"

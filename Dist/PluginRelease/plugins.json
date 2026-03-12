@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-12T08:42:52Z",
+  "generatedAt": "2026-03-12T09:01:07Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -349,17 +349,17 @@
     },
     {
       "pluginId": "youtube",
-      "version": "1.0.5",
+      "version": "1.0.6",
       "platform": "youtube",
       "platformName": "YouTube",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.5.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.5.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.6.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.6.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.5.zip",
-      "sha256": "1f612102dc313ff47173091c75a7353fef53a48c9473886e6575a726676fd46a",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.6.zip",
+      "sha256": "e1b06061d7c60c88c3e936206588d15abf9c864e1c83247d2db62cd6e1432040",
       "changelog": [
-        "对齐播放输出的 UA 与请求头，修正黑屏问题",
+        "对齐播放输出字段，显式传递 User-Agent 与请求头",
         "按真实清晰度从高到低返回，并默认选中最高画质"
       ],
       "capabilities": {

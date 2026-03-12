@@ -9,7 +9,7 @@ const {
   _yt_compareManifestProbeResult,
   _yt_manifestCandidateScore,
   _yt_buildPlayback,
-} = require("../../Resources/lp_plugin_youtube_1.0.5_index.js");
+} = require("../../Resources/lp_plugin_youtube_1.0.6_index.js");
 
 test("YouTube plugin parses 1080p60 labels and sorts qualities from highest to lowest", () => {
   const manifest = `#EXTM3U
@@ -285,6 +285,10 @@ test("YouTube plugin playback headers use watch-page referer for the selected ro
     "com.google.ios.youtube/20.03.02 (iPhone16,2; U; CPU iOS 17_7_2 like Mac OS X;)"
   );
   assert.equal(
+    playback[0].qualitys[0].headers["User-Agent"],
+    "com.google.ios.youtube/20.03.02 (iPhone16,2; U; CPU iOS 17_7_2 like Mac OS X;)"
+  );
+  assert.equal(
     playback[0].qualitys[0].headers.Referer,
     "https://www.youtube.com/watch?v=abc123def45"
   );
@@ -295,9 +299,5 @@ test("YouTube plugin playback headers use watch-page referer for the selected ro
   assert.equal(
     playback[0].qualitys[0].headers["Accept-Language"],
     "en-US,en;q=0.9"
-  );
-  assert.equal(
-    Object.prototype.hasOwnProperty.call(playback[0].qualitys[0].headers, "user-agent"),
-    false
   );
 });
