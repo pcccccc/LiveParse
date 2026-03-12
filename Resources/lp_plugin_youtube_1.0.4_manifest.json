@@ -1,16 +1,16 @@
 {
   "pluginId": "youtube",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "apiVersion": 1,
   "displayName": "YouTube (JS PoC)",
   "changelog": [
-    "修正直播播放链路，优先规避无声预览流",
+    "对齐研究脚本的候选排序，优先返回带音频的直播流",
     "按真实清晰度从高到低返回，并默认选中最高画质"
   ],
   "liveTypes": [
     "7"
   ],
-  "entry": "lp_plugin_youtube_1.0.3_index.js",
+  "entry": "lp_plugin_youtube_1.0.4_index.js",
   "capabilities": {
     "categories": {
       "status": "available"

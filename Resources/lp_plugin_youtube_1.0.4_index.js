@@ -781,6 +781,18 @@ function _yt_compareVariantQualityDesc(lhs, rhs) {
   return _yt_str(lhs && lhs.url).localeCompare(_yt_str(rhs && rhs.url));
 }
 
+function _yt_compareVariantDisplayQuality(lhs, rhs) {
+  var leftHeight = _yt_toInt(lhs && lhs.qn, 0);
+  var rightHeight = _yt_toInt(rhs && rhs.qn, 0);
+  if (leftHeight !== rightHeight) return rightHeight - leftHeight;
+
+  var leftFps = _yt_parseFrameRate(lhs && lhs.fps);
+  var rightFps = _yt_parseFrameRate(rhs && rhs.fps);
+  if (leftFps !== rightFps) return rightFps - leftFps;
+
+  return 0;
+}
+
 function _yt_compareVariantForPreferQn(lhs, rhs, preferQn) {
   var leftQn = _yt_toInt(lhs && lhs.qn, 0);
   var rightQn = _yt_toInt(rhs && rhs.qn, 0);
@@ -1148,14 +1160,18 @@ async function _yt_collectPlaybackManifestCandidates(videoId, watchHTML) {
 function _yt_compareManifestProbeResult(lhs, rhs, preferQn, videoId) {
   var compareVariant = preferQn > 0
     ? _yt_compareVariantForPreferQn(lhs && lhs.preferredVariant, rhs && rhs.preferredVariant, preferQn)
-    : _yt_compareVariantQualityDesc(lhs && lhs.preferredVariant, rhs && rhs.preferredVariant);
+    : _yt_compareVariantDisplayQuality(lhs && lhs.preferredVariant, rhs && rhs.preferredVariant);
   if (compareVariant !== 0) return compareVariant;
+
+  var leftScore = _yt_manifestCandidateScore(lhs && lhs.candidate, videoId);
+  var rightScore = _yt_manifestCandidateScore(rhs && rhs.candidate, videoId);
+  if (leftScore !== rightScore) return rightScore - leftScore;
 
   var leftCount = Array.isArray(lhs && lhs.variants) ? lhs.variants.length : 0;
   var rightCount = Array.isArray(rhs && rhs.variants) ? rhs.variants.length : 0;
   if (leftCount !== rightCount) return rightCount - leftCount;
 
-  return _yt_manifestCandidateScore(rhs && rhs.candidate, videoId) - _yt_manifestCandidateScore(lhs && lhs.candidate, videoId);
+  return 0;
 }
 
 async function _yt_pickPlaybackProbeResult(videoId, watchHTML, options) {

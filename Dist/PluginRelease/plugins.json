@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-12T07:58:11Z",
+  "generatedAt": "2026-03-12T08:12:32Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -349,17 +349,17 @@
     },
     {
       "pluginId": "youtube",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "platform": "youtube",
       "platformName": "YouTube",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.3.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.3.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.4.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.4.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.3.zip",
-      "sha256": "2760bb0df03bfcbf7b92ba1c2f78999bd69fa28035718a5a32e387c87ac26aeb",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.4.zip",
+      "sha256": "3cc0a709764933245c3b60f833de692fee737d9bfefecca4fad226c2900ace4f",
       "changelog": [
-        "修正直播播放链路，优先规避无声预览流",
+        "对齐研究脚本的候选排序，优先返回带音频的直播流",
         "按真实清晰度从高到低返回，并默认选中最高画质"
       ],
       "capabilities": {

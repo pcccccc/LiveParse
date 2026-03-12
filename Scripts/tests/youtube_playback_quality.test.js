@@ -9,7 +9,7 @@ const {
   _yt_compareManifestProbeResult,
   _yt_manifestCandidateScore,
   _yt_buildPlayback,
-} = require("../../Resources/lp_plugin_youtube_1.0.3_index.js");
+} = require("../../Resources/lp_plugin_youtube_1.0.4_index.js");
 
 test("YouTube plugin parses 1080p60 labels and sorts qualities from highest to lowest", () => {
   const manifest = `#EXTM3U
@@ -147,6 +147,54 @@ test("YouTube plugin prefers the manifest candidate with the strongest real vari
 
   assert.equal(probeResults[0].candidate.source, "youtubei_web");
   assert.equal(probeResults[0].preferredVariant.title, "1080p60");
+});
+
+test("YouTube plugin follows research ordering: candidate score outranks variant count", () => {
+  const probeResults = [
+    {
+      candidate: {
+        source: "youtubei_ios",
+        url: "https://example.com/ios/master.m3u8"
+      },
+      variants: [
+        { qn: 1080, fps: 60, bandwidth: 5100000, itag: 312, title: "1080p60", url: "https://example.com/ios/1080p60.m3u8" },
+        { qn: 720, fps: 60, bandwidth: 3200000, itag: 311, title: "720p60", url: "https://example.com/ios/720p60.m3u8" },
+        { qn: 480, fps: 30, bandwidth: 1200000, itag: 231, title: "480p", url: "https://example.com/ios/480p.m3u8" }
+      ],
+      preferredVariant: {
+        qn: 1080,
+        fps: 60,
+        bandwidth: 5100000,
+        itag: 312,
+        title: "1080p60",
+        url: "https://example.com/ios/1080p60.m3u8"
+      }
+    },
+    {
+      candidate: {
+        source: "watch_player_response_strip_n",
+        url: "https://example.com/watch/master.m3u8"
+      },
+      variants: [
+        { qn: 1080, fps: 60, bandwidth: 5000000, itag: 301, title: "1080p60", url: "https://example.com/watch/1080p60.m3u8" },
+        { qn: 720, fps: 60, bandwidth: 3000000, itag: 300, title: "720p60", url: "https://example.com/watch/720p60.m3u8" }
+      ],
+      preferredVariant: {
+        qn: 1080,
+        fps: 60,
+        bandwidth: 5000000,
+        itag: 301,
+        title: "1080p60",
+        url: "https://example.com/watch/1080p60.m3u8"
+      }
+    }
+  ];
+
+  probeResults.sort(function (a, b) {
+    return _yt_compareManifestProbeResult(a, b, 0, "video1234567");
+  });
+
+  assert.equal(probeResults[0].candidate.source, "watch_player_response_strip_n");
 });
 
 test("YouTube plugin penalizes demuxed preview manifests below real masters", () => {
