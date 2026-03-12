@@ -16,3 +16,4 @@ Dist/*
 Dist/PluginRelease/*
 !Dist/PluginRelease/plugins.json
 !Dist/PluginRelease/checksums.txt
+!Dist/PluginRelease/keys.json
