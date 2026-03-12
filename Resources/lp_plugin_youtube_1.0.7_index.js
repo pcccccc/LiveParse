@@ -610,6 +610,10 @@ function _yt_isIPv6BoundManifestURL(url) {
   return token.indexOf(":") >= 0 || token.indexOf("%3a") >= 0;
 }
 
+function _yt_isIOSManifestCandidate(candidate) {
+  return _yt_str(candidate && candidate.source).indexOf("youtubei_ios") >= 0;
+}
+
 function _yt_pickBestManifestCandidate(candidates, expectedVideoId) {
   if (!Array.isArray(candidates) || candidates.length === 0) return null;
 
@@ -897,6 +901,8 @@ async function _yt_fetchYoutubeiPlayerResponseByProfile(videoId, watchHTML, prof
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Origin: "https://www.youtube.com",
+        Referer: "https://www.youtube.com/watch?v=" + encodeURIComponent(_yt_str(videoId)),
         "User-Agent": __yt_ua,
         "Accept-Language": "en-US,en;q=0.9"
       },
@@ -1129,6 +1135,9 @@ function _yt_pickFirstSegmentURL(mediaText, mediaURL) {
 
 function _yt_pickPlaybackFallbackCandidate(sorted) {
   if (!Array.isArray(sorted) || sorted.length === 0) return null;
+  for (var i = 0; i < sorted.length; i += 1) {
+    if (_yt_isIOSManifestCandidate(sorted[i])) return sorted[i];
+  }
   return sorted[0];
 }
 
@@ -1210,6 +1219,12 @@ async function _yt_pickPlaybackProbeResult(videoId, watchHTML, options) {
   results.sort(function (lhs, rhs) {
     return _yt_compareManifestProbeResult(lhs, rhs, preferQn, videoId);
   });
+  for (var j = 0; j < results.length; j += 1) {
+    if (_yt_isIOSManifestCandidate(results[j] && results[j].candidate)) {
+      _yt_log("[youtube] prefer ios playback manifest source=" + _yt_str(results[j] && results[j].candidate && results[j].candidate.source));
+      return results[j];
+    }
+  }
   return results[0];
 }
 
@@ -1222,7 +1237,7 @@ async function _yt_resolveBestManifestCandidate(videoId, watchHTML, options) {
 
   // 默认关闭深度预检，显著缩短从解析到播放的等待时间。
   if (!verifyManifest) {
-    return sorted[0];
+    return _yt_pickPlaybackFallbackCandidate(sorted);
   }
 
   // 调试模式下才做可播性校验。
@@ -1435,7 +1450,6 @@ function _yt_pickPlaybackProfile(sourceTag, videoId) {
   return {
     userAgent: ua,
     headers: {
-      "User-Agent": ua,
       Referer: "https://www.youtube.com/watch?v=" + encodeURIComponent(_yt_str(videoId)),
       Origin: "https://www.youtube.com",
       "Accept-Language": "en-US,en;q=0.9"
@@ -2185,6 +2199,7 @@ if (typeof module !== "undefined" && module.exports) {
     _yt_compareManifestProbeResult: _yt_compareManifestProbeResult,
     _yt_manifestCandidateScore: _yt_manifestCandidateScore,
     _yt_buildPlayback: _yt_buildPlayback,
+    _yt_pickPlaybackFallbackCandidate: _yt_pickPlaybackFallbackCandidate,
     _yt_qualityTitle: _yt_qualityTitle
   };
 }

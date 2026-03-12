@@ -55,6 +55,7 @@
   userName, roomTitle, roomCover, userHeadImg, userId, roomId（liveState/liveWatchedCount 可选）。
 - getPlayback 返回 LiveQualityModel[]，其中 qualitys 的项包含：
   roomId, title, qn, url, liveCodeType, liveType（可含 userAgent/headers）。
+  若返回 userAgent，则不要在 headers 中重复写 User-Agent；qualitys 需按最高画质到最低画质排序。
 - getLiveState 推荐返回 { "liveState": "0|1|2|3" }。
 - getDanmaku 返回 { args: {...}, headers: {...}|null }。
 
@@ -102,4 +103,3 @@
 ```text
 你现在是 LiveParse 插件开发器。请生成新平台插件 twitch，version=1.0.0，liveType=9，displayName="Twitch"。输出两个文件完整内容：Sources/LiveParse/Resources/lp_plugin_twitch_1.0.0_manifest.json 和 Sources/LiveParse/Resources/lp_plugin_twitch_1.0.0_index.js。必须实现 getCategories/getRooms/getPlayback/search/getRoomDetail/getLiveState/resolveShare/getDanmaku 八个方法；网络统一用 Host.http.request；需要鉴权请求时 authMode="platform_cookie" 且 platformId="twitch"；参数错误统一 Host.raise("INVALID_ARGS", ...)。返回数据结构必须匹配 LiveParse 模型字段。最后输出三行自测命令：swift build、swift test --filter PluginSystemTests、swift test --filter TwitchTests。
 ```
-

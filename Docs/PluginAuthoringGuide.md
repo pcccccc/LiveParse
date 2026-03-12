@@ -148,6 +148,12 @@ globalThis.LiveParsePlugin = {
 ]
 ```
 
+约定：
+
+- `qualitys` 里的清晰度项应按实际画质从高到低排序，默认首项即宿主默认选中的最高画质。
+- 播放 `User-Agent` 放在 `userAgent` 字段；`headers` 只放额外请求头（如 `Referer`、`Origin`）。
+- 不要在 `headers` 里重复写 `User-Agent`，宿主会按 `userAgent` 统一下发，重复传递可能导致播放器链路不一致。
+
 ### 4.4 getLiveState
 
 宿主可接受以下几类返回：

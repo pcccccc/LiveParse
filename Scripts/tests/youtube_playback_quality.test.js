@@ -9,7 +9,8 @@ const {
   _yt_compareManifestProbeResult,
   _yt_manifestCandidateScore,
   _yt_buildPlayback,
-} = require("../../Resources/lp_plugin_youtube_1.0.6_index.js");
+  _yt_pickPlaybackFallbackCandidate,
+} = require("../../Resources/lp_plugin_youtube_1.0.7_index.js");
 
 test("YouTube plugin parses 1080p60 labels and sorts qualities from highest to lowest", () => {
   const manifest = `#EXTM3U
@@ -197,6 +198,22 @@ test("YouTube plugin follows research ordering: candidate score outranks variant
   assert.equal(probeResults[0].candidate.source, "watch_player_response_strip_n");
 });
 
+test("YouTube plugin actual playback fallback prefers youtubei_ios over watch manifests", () => {
+  const picked = _yt_pickPlaybackFallbackCandidate([
+    {
+      source: "watch_player_response_strip_n",
+      url: "https://example.com/watch/master.m3u8"
+    },
+    {
+      source: "youtubei_ios",
+      url: "https://example.com/ios/master.m3u8"
+    }
+  ]);
+
+  assert.equal(picked.source, "youtubei_ios");
+  assert.equal(picked.url, "https://example.com/ios/master.m3u8");
+});
+
 test("YouTube plugin penalizes demuxed preview manifests below real masters", () => {
   const videoId = "video1234567";
   const demuxed = {
@@ -284,10 +301,7 @@ test("YouTube plugin playback headers use watch-page referer for the selected ro
     playback[0].qualitys[0].userAgent,
     "com.google.ios.youtube/20.03.02 (iPhone16,2; U; CPU iOS 17_7_2 like Mac OS X;)"
   );
-  assert.equal(
-    playback[0].qualitys[0].headers["User-Agent"],
-    "com.google.ios.youtube/20.03.02 (iPhone16,2; U; CPU iOS 17_7_2 like Mac OS X;)"
-  );
+  assert.equal(playback[0].qualitys[0].headers["User-Agent"], undefined);
   assert.equal(
     playback[0].qualitys[0].headers.Referer,
     "https://www.youtube.com/watch?v=abc123def45"

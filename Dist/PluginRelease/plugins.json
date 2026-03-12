@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-12T09:01:07Z",
+  "generatedAt": "2026-03-12T09:36:42Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -349,18 +349,18 @@
     },
     {
       "pluginId": "youtube",
-      "version": "1.0.6",
+      "version": "1.0.7",
       "platform": "youtube",
       "platformName": "YouTube",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.6.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.6.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.7.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.7.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.6.zip",
-      "sha256": "e1b06061d7c60c88c3e936206588d15abf9c864e1c83247d2db62cd6e1432040",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.7.zip",
+      "sha256": "37c6e05ab5a39e30464e21aa6aa7c168e0b0f0969a036567405c6ba3b767fb1a",
       "changelog": [
-        "对齐播放输出字段，显式传递 User-Agent 与请求头",
-        "按真实清晰度从高到低返回，并默认选中最高画质"
+        "对齐有声播放请求参数，避免重复下发 User-Agent 请求头",
+        "按真实清晰度从高到低返回，默认首项为最高画质"
       ],
       "capabilities": {
         "categories": {
