@@ -610,10 +610,6 @@ function _yt_isIPv6BoundManifestURL(url) {
   return token.indexOf(":") >= 0 || token.indexOf("%3a") >= 0;
 }
 
-function _yt_isIOSManifestCandidate(candidate) {
-  return _yt_str(candidate && candidate.source).indexOf("youtubei_ios") >= 0;
-}
-
 function _yt_pickBestManifestCandidate(candidates, expectedVideoId) {
   if (!Array.isArray(candidates) || candidates.length === 0) return null;
 
@@ -1135,9 +1131,6 @@ function _yt_pickFirstSegmentURL(mediaText, mediaURL) {
 
 function _yt_pickPlaybackFallbackCandidate(sorted) {
   if (!Array.isArray(sorted) || sorted.length === 0) return null;
-  for (var i = 0; i < sorted.length; i += 1) {
-    if (_yt_isIOSManifestCandidate(sorted[i])) return sorted[i];
-  }
   return sorted[0];
 }
 
@@ -1219,12 +1212,6 @@ async function _yt_pickPlaybackProbeResult(videoId, watchHTML, options) {
   results.sort(function (lhs, rhs) {
     return _yt_compareManifestProbeResult(lhs, rhs, preferQn, videoId);
   });
-  for (var j = 0; j < results.length; j += 1) {
-    if (_yt_isIOSManifestCandidate(results[j] && results[j].candidate)) {
-      _yt_log("[youtube] prefer ios playback manifest source=" + _yt_str(results[j] && results[j].candidate && results[j].candidate.source));
-      return results[j];
-    }
-  }
   return results[0];
 }
 

@@ -1,16 +1,16 @@
 {
   "pluginId": "youtube",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "apiVersion": 1,
   "displayName": "YouTube (JS PoC)",
   "changelog": [
-    "对齐有声播放请求参数，避免重复下发 User-Agent 请求头",
-    "按真实清晰度从高到低返回，默认首项为最高画质"
+    "回退到实际带音轨的直播清晰度链路，避免返回无声视频子流",
+    "按最高画质优先选择真实可播清晰度，并保留从高到低的画质列表"
   ],
   "liveTypes": [
     "7"
   ],
-  "entry": "lp_plugin_youtube_1.0.7_index.js",
+  "entry": "lp_plugin_youtube_1.0.8_index.js",
   "capabilities": {
     "categories": {
       "status": "available"

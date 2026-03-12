@@ -10,7 +10,7 @@ const {
   _yt_manifestCandidateScore,
   _yt_buildPlayback,
   _yt_pickPlaybackFallbackCandidate,
-} = require("../../Resources/lp_plugin_youtube_1.0.7_index.js");
+} = require("../../Resources/lp_plugin_youtube_1.0.8_index.js");
 
 test("YouTube plugin parses 1080p60 labels and sorts qualities from highest to lowest", () => {
   const manifest = `#EXTM3U
@@ -198,7 +198,7 @@ test("YouTube plugin follows research ordering: candidate score outranks variant
   assert.equal(probeResults[0].candidate.source, "watch_player_response_strip_n");
 });
 
-test("YouTube plugin actual playback fallback prefers youtubei_ios over watch manifests", () => {
+test("YouTube plugin actual playback fallback keeps the best non-demuxed watch manifest", () => {
   const picked = _yt_pickPlaybackFallbackCandidate([
     {
       source: "watch_player_response_strip_n",
@@ -210,8 +210,8 @@ test("YouTube plugin actual playback fallback prefers youtubei_ios over watch ma
     }
   ]);
 
-  assert.equal(picked.source, "youtubei_ios");
-  assert.equal(picked.url, "https://example.com/ios/master.m3u8");
+  assert.equal(picked.source, "watch_player_response_strip_n");
+  assert.equal(picked.url, "https://example.com/watch/master.m3u8");
 });
 
 test("YouTube plugin penalizes demuxed preview manifests below real masters", () => {
