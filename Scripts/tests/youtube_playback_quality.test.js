@@ -7,7 +7,8 @@ const {
   _yt_parseM3U8VariantsFromText,
   _yt_compareVariantForPreferQn,
   _yt_compareManifestProbeResult,
-} = require("../../Resources/lp_plugin_youtube_1.0.1_index.js");
+  _yt_buildPlayback,
+} = require("../../Resources/lp_plugin_youtube_1.0.2_index.js");
 
 test("YouTube plugin parses 1080p60 labels and sorts qualities from highest to lowest", () => {
   const manifest = `#EXTM3U
@@ -145,4 +146,43 @@ test("YouTube plugin prefers the manifest candidate with the strongest real vari
 
   assert.equal(probeResults[0].candidate.source, "youtubei_web");
   assert.equal(probeResults[0].preferredVariant.title, "1080p60");
+});
+
+test("YouTube plugin returns only real quality entries when variant ladder exists", () => {
+  const playback = _yt_buildPlayback(
+    "room123",
+    "https://example.com/master.m3u8",
+    [
+      {
+        qn: 1080,
+        fps: 60,
+        bandwidth: 5100000,
+        itag: 301,
+        title: "1080p60",
+        url: "https://example.com/1080p60.m3u8"
+      },
+      {
+        qn: 720,
+        fps: 30,
+        bandwidth: 2800000,
+        itag: 95,
+        title: "720p",
+        url: "https://example.com/720p.m3u8"
+      }
+    ],
+    {
+      sourceTag: "youtubei_web"
+    }
+  );
+
+  assert.deepEqual(
+    playback[0].qualitys.map(function (item) {
+      return item.title;
+    }),
+    ["1080p60", "720p"]
+  );
+  assert.equal(
+    playback[0].qualitys[0].url,
+    "https://example.com/1080p60.m3u8"
+  );
 });

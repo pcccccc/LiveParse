@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-12T06:33:40Z",
+  "generatedAt": "2026-03-12T06:48:51Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -349,18 +349,18 @@
     },
     {
       "pluginId": "youtube",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "platform": "youtube",
       "platformName": "YouTube",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.1.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.1.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.2.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.2.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.1.zip",
-      "sha256": "18a861a349a62112ed8c8f0b9c0ff27803d18c448be4feab63e8f356ee8078d5",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.2.zip",
+      "sha256": "2fcdc7cc38b49a162cd48479e649673d970ef842752150e2280de4149120708f",
       "changelog": [
-        "优化直播清晰度解析，支持识别 1080p60 等高帧率档位",
-        "播放清晰度列表默认按最高画质到最低画质输出"
+        "移除播放清晰度返回限制，按最高到最低排序输出可用地址",
+        "默认优先返回最高清晰度播放地址"
       ],
       "capabilities": {
         "categories": {

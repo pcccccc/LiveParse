@@ -584,9 +584,6 @@ function _yt_manifestCandidateScore(candidate, expectedVideoId) {
   if (url.indexOf("/source/yt_live_broadcast/") >= 0) score += 50;
   if (url.indexOf("/playlist_type/DVR/") >= 0) score += 20;
   if (url.indexOf("/ip/0.0.0.0/") >= 0) score += 120;
-  // demuxed 链路切换子清晰度时更容易出现无声，优先选非 demuxed manifest。
-  if (url.indexOf("/demuxed/1/") >= 0) score -= 260;
-
   var ipMatch = url.match(/\/ip\/([^/]+)\//);
   if (ipMatch && ipMatch[1]) {
     var ipToken = _yt_str(ipMatch[1]).toLowerCase();
@@ -787,15 +784,6 @@ function _yt_compareVariantForPreferQn(lhs, rhs, preferQn) {
 
   if (leftDistance !== rightDistance) return leftDistance - rightDistance;
   return _yt_compareVariantQualityDesc(lhs, rhs);
-}
-
-function _yt_isPlaybackCodecCompatible(codecs) {
-  var value = _yt_str(codecs).toLowerCase();
-  if (!value) return true;
-  // 优先返回 H.264，避免部分设备在 AV1/VP9 上出现加载超时。
-  if (value.indexOf("avc1") >= 0) return true;
-  if (value.indexOf("h264") >= 0) return true;
-  return false;
 }
 
 function _yt_paginate(list, page, pageSize) {
@@ -1198,10 +1186,7 @@ async function _yt_pickPlaybackProbeResult(videoId, watchHTML, options) {
     var variants = await _yt_parseM3U8Variants(candidateURL);
     if (!Array.isArray(variants) || variants.length === 0) continue;
 
-    var filteredVariants = variants.filter(function (item) {
-      return _yt_isPlaybackCodecCompatible(item && item.codecs);
-    });
-    var playableVariants = filteredVariants.length > 0 ? filteredVariants : variants.slice();
+    var playableVariants = variants.slice();
     playableVariants.sort(function (lhs, rhs) {
       return preferQn > 0
         ? _yt_compareVariantForPreferQn(lhs, rhs, preferQn)
@@ -1377,26 +1362,11 @@ function _yt_buildPlayback(videoId, manifestURL, variants, options) {
   var preferQn = Math.max(0, _yt_toInt(opts.preferQn, 0));
   var playbackProfile = _yt_pickPlaybackProfile(opts.sourceTag);
   _yt_log("[youtube] playback profile source=" + _yt_str(opts.sourceTag) + ", ua=" + _yt_str(playbackProfile.userAgent));
-  var autoEntry = {
-    roomId: _yt_str(videoId),
-    title: "auto",
-    qn: 0,
-    url: _yt_str(manifestURL),
-    liveCodeType: "m3u8",
-    liveType: __yt_liveType,
-    userAgent: playbackProfile.userAgent,
-    headers: playbackProfile.headers
-  };
   var qualitys = [];
 
   if (Array.isArray(variants) && variants.length > 0) {
-    var filteredVariants = variants.filter(function (item) {
-      return _yt_isPlaybackCodecCompatible(item && item.codecs);
-    });
-    var playableVariants = filteredVariants.length > 0 ? filteredVariants : variants;
-
-    for (var i = 0; i < playableVariants.length; i += 1) {
-      var item = playableVariants[i] || {};
+    for (var i = 0; i < variants.length; i += 1) {
+      var item = variants[i] || {};
       if (!_yt_str(item.url)) continue;
       qualitys.push({
         roomId: _yt_str(videoId),
@@ -1432,7 +1402,19 @@ function _yt_buildPlayback(videoId, manifestURL, variants, options) {
   for (var m = 0; m < dedupVariants.length; m += 1) {
     ordered.push(dedupVariants[m]);
   }
-  ordered.push(autoEntry);
+
+  if (ordered.length === 0) {
+    ordered.push({
+      roomId: _yt_str(videoId),
+      title: "auto",
+      qn: 0,
+      url: _yt_str(manifestURL),
+      liveCodeType: "m3u8",
+      liveType: __yt_liveType,
+      userAgent: playbackProfile.userAgent,
+      headers: playbackProfile.headers
+    });
+  }
 
   return [
     {
@@ -2079,13 +2061,6 @@ globalThis.LiveParsePlugin = {
       var variants = playbackProbe && Array.isArray(playbackProbe.variants)
         ? playbackProbe.variants.slice()
         : (probeVariants ? await _yt_parseM3U8Variants(hlsManifestUrl) : []);
-      var isDemuxedManifest = hlsManifestUrl.indexOf("/demuxed/1/") >= 0;
-      if (isDemuxedManifest && variants.length > 0) {
-        // demuxed master 里的子播放列表常为纯视频，直接切子流可能导致无声。
-        // 这里保留 master 播放以保证音频稳定。
-        _yt_log("[youtube] demuxed manifest detected, disable direct variant URLs to keep audio");
-        variants = [];
-      }
       _yt_log("[youtube] playback variants=" + _yt_str(variants.length) + ", probeVariants=" + _yt_str(probeVariants) + ", preferQn=" + _yt_str(preferQn));
 
       return _yt_buildPlayback(resolved.videoId, hlsManifestUrl, variants, {
@@ -2203,6 +2178,7 @@ if (typeof module !== "undefined" && module.exports) {
     _yt_compareVariantQualityDesc: _yt_compareVariantQualityDesc,
     _yt_compareVariantForPreferQn: _yt_compareVariantForPreferQn,
     _yt_compareManifestProbeResult: _yt_compareManifestProbeResult,
+    _yt_buildPlayback: _yt_buildPlayback,
     _yt_qualityTitle: _yt_qualityTitle
   };
 }
