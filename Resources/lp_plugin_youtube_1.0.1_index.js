@@ -726,10 +726,67 @@ function _yt_parseM3U8Attributes(line) {
   return attrs;
 }
 
-function _yt_parseResolutionHeight(resolution) {
+function _yt_parseResolution(resolution) {
   var match = _yt_str(resolution).match(/^(\d+)x(\d+)$/);
-  if (!match) return 0;
-  return _yt_toInt(match[2], 0);
+  if (!match) {
+    return {
+      width: 0,
+      height: 0
+    };
+  }
+
+  return {
+    width: _yt_toInt(match[1], 0),
+    height: _yt_toInt(match[2], 0)
+  };
+}
+
+function _yt_parseFrameRate(value) {
+  var fps = parseFloat(_yt_str(value));
+  return Number.isFinite(fps) ? fps : 0;
+}
+
+function _yt_extractItag(url) {
+  var match = _yt_str(url).match(/(?:\/itag\/|[?&]itag=)(\d+)/);
+  if (!match || !match[1]) return 0;
+  return _yt_toInt(match[1], 0);
+}
+
+function _yt_qualityTitle(height, fps) {
+  if (height <= 0) return "auto";
+  var roundedFps = Math.round(fps || 0);
+  if (roundedFps >= 50) return height + "p" + roundedFps;
+  return height + "p";
+}
+
+function _yt_compareVariantQualityDesc(lhs, rhs) {
+  var leftHeight = _yt_toInt(lhs && lhs.qn, 0);
+  var rightHeight = _yt_toInt(rhs && rhs.qn, 0);
+  if (leftHeight !== rightHeight) return rightHeight - leftHeight;
+
+  var leftFps = _yt_parseFrameRate(lhs && lhs.fps);
+  var rightFps = _yt_parseFrameRate(rhs && rhs.fps);
+  if (leftFps !== rightFps) return rightFps - leftFps;
+
+  var leftBandwidth = _yt_toInt(lhs && lhs.bandwidth, 0);
+  var rightBandwidth = _yt_toInt(rhs && rhs.bandwidth, 0);
+  if (leftBandwidth !== rightBandwidth) return rightBandwidth - leftBandwidth;
+
+  var leftItag = _yt_toInt(lhs && lhs.itag, 0);
+  var rightItag = _yt_toInt(rhs && rhs.itag, 0);
+  if (leftItag !== rightItag) return rightItag - leftItag;
+
+  return _yt_str(lhs && lhs.url).localeCompare(_yt_str(rhs && rhs.url));
+}
+
+function _yt_compareVariantForPreferQn(lhs, rhs, preferQn) {
+  var leftQn = _yt_toInt(lhs && lhs.qn, 0);
+  var rightQn = _yt_toInt(rhs && rhs.qn, 0);
+  var leftDistance = leftQn > 0 ? Math.abs(leftQn - preferQn) : Number.MAX_SAFE_INTEGER;
+  var rightDistance = rightQn > 0 ? Math.abs(rightQn - preferQn) : Number.MAX_SAFE_INTEGER;
+
+  if (leftDistance !== rightDistance) return leftDistance - rightDistance;
+  return _yt_compareVariantQualityDesc(lhs, rhs);
 }
 
 function _yt_isPlaybackCodecCompatible(codecs) {
@@ -1090,11 +1147,8 @@ function _yt_pickPlaybackFallbackCandidate(sorted) {
   return sorted[0];
 }
 
-async function _yt_resolveBestManifestCandidate(videoId, watchHTML, options) {
-  var opts = options && typeof options === "object" ? options : {};
-  var verifyManifest = _yt_normalizeBool(opts.verifyManifest);
+async function _yt_collectPlaybackManifestCandidates(videoId, watchHTML) {
   var base = _yt_extractManifestFromWatchHTML(watchHTML, videoId);
-
   var youtubeiCandidates = await _yt_collectYoutubeiManifestCandidates(videoId, watchHTML);
   var merged = [];
 
@@ -1112,8 +1166,68 @@ async function _yt_resolveBestManifestCandidate(videoId, watchHTML, options) {
     return !_yt_isIPv6BoundManifestURL(item && item.url);
   });
   var candidatePool = ipv4Preferred.length > 0 ? ipv4Preferred : merged;
+  return _yt_sortManifestCandidates(candidatePool, videoId);
+}
 
-  var sorted = _yt_sortManifestCandidates(candidatePool, videoId);
+function _yt_compareManifestProbeResult(lhs, rhs, preferQn, videoId) {
+  var compareVariant = preferQn > 0
+    ? _yt_compareVariantForPreferQn(lhs && lhs.preferredVariant, rhs && rhs.preferredVariant, preferQn)
+    : _yt_compareVariantQualityDesc(lhs && lhs.preferredVariant, rhs && rhs.preferredVariant);
+  if (compareVariant !== 0) return compareVariant;
+
+  var leftCount = Array.isArray(lhs && lhs.variants) ? lhs.variants.length : 0;
+  var rightCount = Array.isArray(rhs && rhs.variants) ? rhs.variants.length : 0;
+  if (leftCount !== rightCount) return rightCount - leftCount;
+
+  return _yt_manifestCandidateScore(rhs && rhs.candidate, videoId) - _yt_manifestCandidateScore(lhs && lhs.candidate, videoId);
+}
+
+async function _yt_pickPlaybackProbeResult(videoId, watchHTML, options) {
+  var opts = options && typeof options === "object" ? options : {};
+  var preferQn = Math.max(0, _yt_toInt(opts.preferQn, 0));
+  var sortedCandidates = await _yt_collectPlaybackManifestCandidates(videoId, watchHTML);
+  if (sortedCandidates.length === 0) return null;
+
+  var probeCount = Math.min(sortedCandidates.length, 4);
+  var results = [];
+  for (var i = 0; i < probeCount; i += 1) {
+    var candidate = sortedCandidates[i] || {};
+    var candidateURL = _yt_str(candidate.url);
+    if (!candidateURL) continue;
+
+    var variants = await _yt_parseM3U8Variants(candidateURL);
+    if (!Array.isArray(variants) || variants.length === 0) continue;
+
+    var filteredVariants = variants.filter(function (item) {
+      return _yt_isPlaybackCodecCompatible(item && item.codecs);
+    });
+    var playableVariants = filteredVariants.length > 0 ? filteredVariants : variants.slice();
+    playableVariants.sort(function (lhs, rhs) {
+      return preferQn > 0
+        ? _yt_compareVariantForPreferQn(lhs, rhs, preferQn)
+        : _yt_compareVariantQualityDesc(lhs, rhs);
+    });
+
+    if (playableVariants.length === 0) continue;
+    results.push({
+      candidate: candidate,
+      variants: playableVariants,
+      preferredVariant: playableVariants[0]
+    });
+  }
+
+  if (results.length === 0) return null;
+
+  results.sort(function (lhs, rhs) {
+    return _yt_compareManifestProbeResult(lhs, rhs, preferQn, videoId);
+  });
+  return results[0];
+}
+
+async function _yt_resolveBestManifestCandidate(videoId, watchHTML, options) {
+  var opts = options && typeof options === "object" ? options : {};
+  var verifyManifest = _yt_normalizeBool(opts.verifyManifest);
+  var sorted = await _yt_collectPlaybackManifestCandidates(videoId, watchHTML);
   if (sorted.length === 0) return null;
   _yt_log("[youtube] manifest candidate count=" + _yt_str(sorted.length) + ", sources=" + sorted.map(function (item) { return _yt_str(item && item.source); }).join(","));
 
@@ -1209,23 +1323,27 @@ function _yt_parseM3U8VariantsFromText(manifestText, manifestURL) {
     }
 
     var resolution = _yt_str(attrs.RESOLUTION);
+    var parsedResolution = _yt_parseResolution(resolution);
     var bandwidth = _yt_toInt(attrs.BANDWIDTH, 0);
-    var height = _yt_parseResolutionHeight(resolution);
+    var height = _yt_toInt(parsedResolution.height, 0);
+    var fps = _yt_parseFrameRate(attrs["FRAME-RATE"]);
     var codecs = _yt_str(attrs.CODECS);
 
     variants.push({
+      width: _yt_toInt(parsedResolution.width, 0),
       resolution: resolution,
       bandwidth: bandwidth,
+      frameRate: _yt_str(attrs["FRAME-RATE"]),
+      fps: fps,
       codecs: codecs,
+      itag: _yt_extractItag(finalURL),
       qn: height,
-      title: height > 0 ? height + "p" : "auto",
+      title: _yt_qualityTitle(height, fps),
       url: finalURL
     });
   }
 
-  variants.sort(function (a, b) {
-    return b.bandwidth - a.bandwidth;
-  });
+  variants.sort(_yt_compareVariantQualityDesc);
 
   return variants;
 }
@@ -1304,23 +1422,10 @@ function _yt_buildPlayback(videoId, manifestURL, variants, options) {
   }
 
   if (preferQn > 0 && dedupVariants.length > 1) {
-    var bestIndex = -1;
-    var bestDistance = Number.MAX_SAFE_INTEGER;
-    for (var k = 0; k < dedupVariants.length; k += 1) {
-      var qn = _yt_toInt(dedupVariants[k] && dedupVariants[k].qn, 0);
-      if (qn <= 0) continue;
-      var distance = Math.abs(qn - preferQn);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestIndex = k;
-      }
-    }
-
-    if (bestIndex > 0) {
-      var picked = dedupVariants.splice(bestIndex, 1)[0];
-      dedupVariants.unshift(picked);
-      _yt_log("[youtube] preferQn=" + _yt_str(preferQn) + ", pickedQn=" + _yt_str(picked && picked.qn));
-    }
+    dedupVariants.sort(function (a, b) {
+      return _yt_compareVariantForPreferQn(a, b, preferQn);
+    });
+    _yt_log("[youtube] preferQn=" + _yt_str(preferQn) + ", picked=" + _yt_str(dedupVariants[0] && dedupVariants[0].title));
   }
 
   var ordered = [];
@@ -1942,11 +2047,18 @@ globalThis.LiveParsePlugin = {
       var resolved = await _yt_resolveVideoId(rawRoomId);
       var watch = await _yt_fetchWatchByVideoId(resolved.videoId);
       var verifyManifest = _yt_normalizeBool(payload && payload.verifyManifest);
+      // 默认开启清晰度解析，提供可切换画质；可通过 payload.probeVariants=false 关闭。
+      var probeVariants = payload && Object.prototype.hasOwnProperty.call(payload, "probeVariants")
+        ? _yt_normalizeBool(payload && payload.probeVariants)
+        : true;
       var qnInput = payload && payload.qn;
       if (qnInput === undefined || qnInput === null) qnInput = payload && payload.rate;
       if (qnInput === undefined || qnInput === null) qnInput = payload && payload.gear;
       var preferQn = Math.max(0, _yt_toInt(qnInput, 0));
-      var manifestCandidate = await _yt_resolveBestManifestCandidate(resolved.videoId, watch.text, {
+      var playbackProbe = probeVariants ? await _yt_pickPlaybackProbeResult(resolved.videoId, watch.text, {
+        preferQn: preferQn
+      }) : null;
+      var manifestCandidate = playbackProbe && playbackProbe.candidate ? playbackProbe.candidate : await _yt_resolveBestManifestCandidate(resolved.videoId, watch.text, {
         verifyManifest: verifyManifest
       });
       var hlsManifestUrl = _yt_str(manifestCandidate && manifestCandidate.url);
@@ -1964,11 +2076,9 @@ globalThis.LiveParsePlugin = {
             _yt_str(ipv6Bound)
         );
       }
-      // 默认开启清晰度解析，提供可切换画质；可通过 payload.probeVariants=false 关闭。
-      var probeVariants = payload && Object.prototype.hasOwnProperty.call(payload, "probeVariants")
-        ? _yt_normalizeBool(payload && payload.probeVariants)
-        : true;
-      var variants = probeVariants ? await _yt_parseM3U8Variants(hlsManifestUrl) : [];
+      var variants = playbackProbe && Array.isArray(playbackProbe.variants)
+        ? playbackProbe.variants.slice()
+        : (probeVariants ? await _yt_parseM3U8Variants(hlsManifestUrl) : []);
       var isDemuxedManifest = hlsManifestUrl.indexOf("/demuxed/1/") >= 0;
       if (isDemuxedManifest && variants.length > 0) {
         // demuxed master 里的子播放列表常为纯视频，直接切子流可能导致无声。
@@ -2086,3 +2196,13 @@ globalThis.LiveParsePlugin = {
     };
   }
 };
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    _yt_parseM3U8VariantsFromText: _yt_parseM3U8VariantsFromText,
+    _yt_compareVariantQualityDesc: _yt_compareVariantQualityDesc,
+    _yt_compareVariantForPreferQn: _yt_compareVariantForPreferQn,
+    _yt_compareManifestProbeResult: _yt_compareManifestProbeResult,
+    _yt_qualityTitle: _yt_qualityTitle
+  };
+}
