@@ -1431,21 +1431,13 @@ function _yt_buildPlayback(videoId, manifestURL, variants, options) {
 }
 
 function _yt_pickPlaybackProfile(sourceTag, videoId) {
-  var source = _yt_str(sourceTag);
-  var ua = __yt_playbackUserAgent;
-  if (source.indexOf("youtubei_ios") >= 0) {
-    ua = __yt_iosPlaybackUserAgent;
-  } else if (source.indexOf("youtubei_android") >= 0) {
-    ua = __yt_androidPlaybackUserAgent;
-  }
-
+  var ua = __yt_iosPlaybackUserAgent;
   return {
     userAgent: ua,
     headers: {
-      "user-agent": ua,
-      referer: "https://www.youtube.com/watch?v=" + encodeURIComponent(_yt_str(videoId)),
-      origin: "https://www.youtube.com",
-      "accept-language": "en-US,en;q=0.9"
+      Referer: "https://www.youtube.com/watch?v=" + encodeURIComponent(_yt_str(videoId)),
+      Origin: "https://www.youtube.com",
+      "Accept-Language": "en-US,en;q=0.9"
     }
   };
 }

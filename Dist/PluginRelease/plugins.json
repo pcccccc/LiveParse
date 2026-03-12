@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-12T08:12:32Z",
+  "generatedAt": "2026-03-12T08:42:52Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -349,17 +349,17 @@
     },
     {
       "pluginId": "youtube",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "platform": "youtube",
       "platformName": "YouTube",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.4.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.4.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.5.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.5.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.4.zip",
-      "sha256": "3cc0a709764933245c3b60f833de692fee737d9bfefecca4fad226c2900ace4f",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.5.zip",
+      "sha256": "1f612102dc313ff47173091c75a7353fef53a48c9473886e6575a726676fd46a",
       "changelog": [
-        "对齐研究脚本的候选排序，优先返回带音频的直播流",
+        "对齐播放输出的 UA 与请求头，修正黑屏问题",
         "按真实清晰度从高到低返回，并默认选中最高画质"
       ],
       "capabilities": {
