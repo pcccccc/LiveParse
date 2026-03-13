@@ -1134,6 +1134,22 @@ function _yt_pickPlaybackFallbackCandidate(sorted) {
   return sorted[0];
 }
 
+function _yt_pickManifestCandidateBySource(candidates, sourcePrefix) {
+  var prefix = _yt_str(sourcePrefix);
+  if (!prefix || !Array.isArray(candidates) || candidates.length === 0) return null;
+
+  for (var i = 0; i < candidates.length; i += 1) {
+    var item = candidates[i] || {};
+    var source = _yt_str(item.source);
+    if (!source) continue;
+    if (source === prefix || source.indexOf(prefix + "_") === 0 || source.indexOf(prefix) === 0) {
+      return item;
+    }
+  }
+
+  return null;
+}
+
 async function _yt_collectPlaybackManifestCandidates(videoId, watchHTML) {
   var playerResponse = _yt_extractWatchPlayerResponse(watchHTML);
   var watchCandidates = _yt_collectManifestCandidatesFromPlayerResponse(
@@ -1236,6 +1252,12 @@ async function _yt_resolveBestManifestCandidate(videoId, watchHTML, options) {
 
   // 全部校验失败时优先回退 youtubei 系列，避免 watch 链路出现 403 分片。
   return _yt_pickPlaybackFallbackCandidate(sorted);
+}
+
+async function _yt_resolveIOSPlaybackManifestCandidate(videoId, watchHTML) {
+  var sorted = await _yt_collectPlaybackManifestCandidates(videoId, watchHTML);
+  if (!Array.isArray(sorted) || sorted.length === 0) return null;
+  return _yt_pickManifestCandidateBySource(sorted, "youtubei_ios");
 }
 
 async function _yt_resolveVideoId(input) {
@@ -1357,6 +1379,22 @@ async function _yt_parseM3U8Variants(manifestURL) {
   return _yt_parseM3U8VariantsFromText(manifest.text, manifestURL);
 }
 
+function _yt_buildManifestBackedPlaybackURL(manifestURL, variant, sourceTag) {
+  var base = _yt_str(manifestURL);
+  if (!base) return "";
+
+  var fragment = [
+    "yt_master_variant=1",
+    "source=" + encodeURIComponent(_yt_str(sourceTag)),
+    "title=" + encodeURIComponent(_yt_str(variant && variant.title)),
+    "itag=" + encodeURIComponent(_yt_str(variant && variant.itag)),
+    "qn=" + encodeURIComponent(_yt_str(variant && variant.qn)),
+    "fps=" + encodeURIComponent(_yt_str(variant && variant.fps))
+  ].join("&");
+
+  return base + "#" + fragment;
+}
+
 function _yt_buildPlayback(videoId, manifestURL, variants, options) {
   if (!manifestURL) {
     _yt_throw("NOT_FOUND", "youtube hls manifest not found", {
@@ -1367,6 +1405,9 @@ function _yt_buildPlayback(videoId, manifestURL, variants, options) {
   var opts = options && typeof options === "object" ? options : {};
   var preferQn = Math.max(0, _yt_toInt(opts.preferQn, 0));
   var playbackProfile = _yt_pickPlaybackProfile(opts.sourceTag, videoId);
+  var useMasterPlaylist =
+    _yt_normalizeBool(opts.useMasterPlaylist) ||
+    _yt_str(opts.sourceTag).indexOf("youtubei_ios") === 0;
   _yt_log("[youtube] playback profile source=" + _yt_str(opts.sourceTag) + ", ua=" + _yt_str(playbackProfile.userAgent));
   var qualitys = [];
 
@@ -1375,12 +1416,15 @@ function _yt_buildPlayback(videoId, manifestURL, variants, options) {
       var item = variants[i] || {};
       var title = _yt_str(item.title);
       var qn = _yt_toInt(item.qn, 0);
-      if (!_yt_str(item.url) || !title || qn <= 0) continue;
+      var itemURL = useMasterPlaylist
+        ? _yt_buildManifestBackedPlaybackURL(manifestURL, item, opts.sourceTag)
+        : _yt_str(item.url);
+      if (!itemURL || !title || qn <= 0) continue;
       qualitys.push({
         roomId: _yt_str(videoId),
         title: title,
         qn: qn,
-        url: _yt_str(item.url),
+        url: itemURL,
         liveCodeType: "m3u8",
         liveType: __yt_liveType,
         userAgent: playbackProfile.userAgent,
@@ -1437,6 +1481,7 @@ function _yt_pickPlaybackProfile(sourceTag, videoId) {
   return {
     userAgent: ua,
     headers: {
+      "User-Agent": ua,
       Referer: "https://www.youtube.com/watch?v=" + encodeURIComponent(_yt_str(videoId)),
       Origin: "https://www.youtube.com",
       "Accept-Language": "en-US,en;q=0.9"
@@ -2043,12 +2088,15 @@ globalThis.LiveParsePlugin = {
       if (qnInput === undefined || qnInput === null) qnInput = payload && payload.rate;
       if (qnInput === undefined || qnInput === null) qnInput = payload && payload.gear;
       var preferQn = Math.max(0, _yt_toInt(qnInput, 0));
-      var playbackProbe = probeVariants ? await _yt_pickPlaybackProbeResult(resolved.videoId, watch.text, {
-        preferQn: preferQn
-      }) : null;
-      var manifestCandidate = playbackProbe && playbackProbe.candidate ? playbackProbe.candidate : await _yt_resolveBestManifestCandidate(resolved.videoId, watch.text, {
-        verifyManifest: verifyManifest
-      });
+      var manifestCandidate = await _yt_resolveIOSPlaybackManifestCandidate(resolved.videoId, watch.text);
+      if (!manifestCandidate) {
+        var playbackProbe = probeVariants ? await _yt_pickPlaybackProbeResult(resolved.videoId, watch.text, {
+          preferQn: preferQn
+        }) : null;
+        manifestCandidate = playbackProbe && playbackProbe.candidate ? playbackProbe.candidate : await _yt_resolveBestManifestCandidate(resolved.videoId, watch.text, {
+          verifyManifest: verifyManifest
+        });
+      }
       var hlsManifestUrl = _yt_str(manifestCandidate && manifestCandidate.url);
       if (hlsManifestUrl) {
         var hasNChallenge = hlsManifestUrl.indexOf("/n/") >= 0;
@@ -2064,14 +2112,13 @@ globalThis.LiveParsePlugin = {
             _yt_str(ipv6Bound)
         );
       }
-      var variants = playbackProbe && Array.isArray(playbackProbe.variants)
-        ? playbackProbe.variants.slice()
-        : (probeVariants ? await _yt_parseM3U8Variants(hlsManifestUrl) : []);
+      var variants = probeVariants ? await _yt_parseM3U8Variants(hlsManifestUrl) : [];
       _yt_log("[youtube] playback variants=" + _yt_str(variants.length) + ", probeVariants=" + _yt_str(probeVariants) + ", preferQn=" + _yt_str(preferQn));
 
       return _yt_buildPlayback(resolved.videoId, hlsManifestUrl, variants, {
         preferQn: preferQn,
-        sourceTag: _yt_str(manifestCandidate && manifestCandidate.source)
+        sourceTag: _yt_str(manifestCandidate && manifestCandidate.source),
+        useMasterPlaylist: _yt_str(manifestCandidate && manifestCandidate.source).indexOf("youtubei_ios") === 0
       });
     } finally {
       __yt_debugLogEnabled = previousDebugLog;

@@ -301,7 +301,10 @@ test("YouTube plugin playback headers use watch-page referer for the selected ro
     playback[0].qualitys[0].userAgent,
     "com.google.ios.youtube/20.03.02 (iPhone16,2; U; CPU iOS 17_7_2 like Mac OS X;)"
   );
-  assert.equal(playback[0].qualitys[0].headers["User-Agent"], undefined);
+  assert.equal(
+    playback[0].qualitys[0].headers["User-Agent"],
+    "com.google.ios.youtube/20.03.02 (iPhone16,2; U; CPU iOS 17_7_2 like Mac OS X;)"
+  );
   assert.equal(
     playback[0].qualitys[0].headers.Referer,
     "https://www.youtube.com/watch?v=abc123def45"
@@ -313,5 +316,48 @@ test("YouTube plugin playback headers use watch-page referer for the selected ro
   assert.equal(
     playback[0].qualitys[0].headers["Accept-Language"],
     "en-US,en;q=0.9"
+  );
+});
+
+test("YouTube iOS playback keeps quality labels but hands off the master manifest", () => {
+  const playback = _yt_buildPlayback(
+    "abc123def45",
+    "https://example.com/master.m3u8",
+    [
+      {
+        qn: 1080,
+        fps: 60,
+        bandwidth: 5100000,
+        itag: 312,
+        title: "1080p60",
+        url: "https://example.com/itag/312/index.m3u8"
+      },
+      {
+        qn: 720,
+        fps: 60,
+        bandwidth: 3200000,
+        itag: 311,
+        title: "720p60",
+        url: "https://example.com/itag/311/index.m3u8"
+      }
+    ],
+    {
+      sourceTag: "youtubei_ios"
+    }
+  );
+
+  assert.deepEqual(
+    playback[0].qualitys.map(function (item) {
+      return item.title;
+    }),
+    ["1080p60", "720p60"]
+  );
+  assert.equal(
+    playback[0].qualitys[0].url,
+    "https://example.com/master.m3u8#yt_master_variant=1&source=youtubei_ios&title=1080p60&itag=312&qn=1080&fps=60"
+  );
+  assert.equal(
+    playback[0].qualitys[1].url,
+    "https://example.com/master.m3u8#yt_master_variant=1&source=youtubei_ios&title=720p60&itag=311&qn=720&fps=60"
   );
 });
