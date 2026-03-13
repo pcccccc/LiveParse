@@ -1,0 +1,40 @@
+{
+  "pluginId": "youtube",
+  "version": "1.0.10",
+  "apiVersion": 1,
+  "displayName": "YouTube (JS PoC)",
+  "changelog": [
+    "对齐研究链路，直接返回解析出的真实直播清晰度地址",
+    "按最高画质优先排序并默认选中首个真实清晰度"
+  ],
+  "liveTypes": [
+    "7"
+  ],
+  "entry": "lp_plugin_youtube_1.0.10_index.js",
+  "capabilities": {
+    "categories": {
+      "status": "available"
+    },
+    "rooms": {
+      "status": "available"
+    },
+    "playback": {
+      "status": "available"
+    },
+    "search": {
+      "status": "available"
+    },
+    "roomDetail": {
+      "status": "available"
+    },
+    "liveState": {
+      "status": "available"
+    },
+    "shareResolve": {
+      "status": "available"
+    },
+    "danmaku": {
+      "status": "available"
+    }
+  }
+}

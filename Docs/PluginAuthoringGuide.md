@@ -152,7 +152,7 @@ globalThis.LiveParsePlugin = {
 
 - `qualitys` 里的清晰度项应按实际画质从高到低排序，默认首项即宿主默认选中的最高画质。
 - 播放 `User-Agent` 优先放在 `userAgent` 字段；如上游 HLS 对嵌套 playlist/segment 的请求头极度敏感，也允许在 `headers` 中显式补一份 `User-Agent` 以保持整条播放链路一致。
-- 对于会在 master manifest 中声明音轨分组的 HLS 平台，`qualitys` 可以展示解析出的清晰度列表，但回放 URL 应优先交给实际可播的 master manifest，避免把无声的预览/子 playlist 直接暴露给播放器。
+- 对于会在 master manifest 中声明音轨分组的 HLS 平台，`qualitys[].url` 必须与已验证可播的研究/实测结果保持一致；不要把研究里解析出的真实清晰度 URL 再二次改写成自定义的 `master + fragment` 形式，除非该形式已经被实际播放链路验证通过。
 
 ### 4.4 getLiveState
 

@@ -10,7 +10,7 @@ const {
   _yt_manifestCandidateScore,
   _yt_buildPlayback,
   _yt_pickPlaybackFallbackCandidate,
-} = require("../../Resources/lp_plugin_youtube_1.0.9_index.js");
+} = require("../../Resources/lp_plugin_youtube_1.0.10_index.js");
 
 test("YouTube plugin parses 1080p60 labels and sorts qualities from highest to lowest", () => {
   const manifest = `#EXTM3U
@@ -319,7 +319,7 @@ test("YouTube plugin playback headers use watch-page referer for the selected ro
   );
 });
 
-test("YouTube iOS playback keeps quality labels but hands off the master manifest", () => {
+test("YouTube iOS playback keeps quality labels and returns the parsed quality URLs", () => {
   const playback = _yt_buildPlayback(
     "abc123def45",
     "https://example.com/master.m3u8",
@@ -354,10 +354,10 @@ test("YouTube iOS playback keeps quality labels but hands off the master manifes
   );
   assert.equal(
     playback[0].qualitys[0].url,
-    "https://example.com/master.m3u8#yt_master_variant=1&source=youtubei_ios&title=1080p60&itag=312&qn=1080&fps=60"
+    "https://example.com/itag/312/index.m3u8"
   );
   assert.equal(
     playback[0].qualitys[1].url,
-    "https://example.com/master.m3u8#yt_master_variant=1&source=youtubei_ios&title=720p60&itag=311&qn=720&fps=60"
+    "https://example.com/itag/311/index.m3u8"
   );
 });
