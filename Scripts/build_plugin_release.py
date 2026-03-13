@@ -13,6 +13,7 @@ import datetime as dt
 import hashlib
 import json
 import pathlib
+import re
 import sys
 import zipfile
 from typing import Any
@@ -40,6 +41,7 @@ REQUIRED_PLUGIN_ICON_FILES = [
     "tv_{pluginId}_small_dark.png",
 ]
 ZIP_FIXED_TIMESTAMP = (2020, 1, 1, 0, 0, 0)
+VERSION_TOKEN_RE = re.compile(r"\d+|[A-Za-z]+")
 
 PLATFORM_DISPLAY_NAMES = {
     "bilibili": "哔哩哔哩",
@@ -209,6 +211,39 @@ def normalize_capabilities(raw: Any) -> dict[str, dict[str, str]]:
         normalized[key] = entry
 
     return normalized
+
+
+def version_sort_key(version: str) -> tuple[tuple[int, int | str], ...]:
+    tokens = VERSION_TOKEN_RE.findall(version)
+    if not tokens:
+        return ((1, version.lower()),)
+
+    key: list[tuple[int, int | str]] = []
+    for token in tokens:
+        if token.isdigit():
+            key.append((0, int(token)))
+        else:
+            key.append((1, token.lower()))
+    return tuple(key)
+
+
+def keep_latest_manifest_per_plugin(manifests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    latest_by_plugin: dict[str, dict[str, Any]] = {}
+
+    for manifest in manifests:
+        plugin_id = str(manifest["pluginId"])
+        current = latest_by_plugin.get(plugin_id)
+        if current is None:
+            latest_by_plugin[plugin_id] = manifest
+            continue
+
+        if version_sort_key(str(manifest["version"])) > version_sort_key(str(current["version"])):
+            latest_by_plugin[plugin_id] = manifest
+
+    return sorted(
+        latest_by_plugin.values(),
+        key=lambda manifest: (str(manifest["pluginId"]), version_sort_key(str(manifest["version"]))),
+    )
 
 
 def normalized_prefix(prefix: str) -> str:
@@ -425,13 +460,15 @@ def main() -> int:
         )
         return 1
 
+    selected_manifests = keep_latest_manifest_per_plugin(selected_manifests)
+
     output_dir.mkdir(parents=True, exist_ok=True)
     zips_dir.mkdir(parents=True, exist_ok=True)
 
     index_plugins: list[dict[str, Any]] = []
     checksum_lines: list[str] = []
 
-    for manifest in sorted(selected_manifests, key=lambda m: (str(m["pluginId"]), str(m["version"]))):
+    for manifest in selected_manifests:
         plugin_id = str(manifest["pluginId"])
         version = str(manifest["version"])
         zip_name = f"liveparse_{plugin_id}_{version}.zip"
