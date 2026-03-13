@@ -10,7 +10,7 @@ const {
   _yt_manifestCandidateScore,
   _yt_buildPlayback,
   _yt_pickPlaybackFallbackCandidate,
-} = require("../../Resources/lp_plugin_youtube_1.0.8_index.js");
+} = require("../../Resources/lp_plugin_youtube_1.0.9_index.js");
 
 test("YouTube plugin parses 1080p60 labels and sorts qualities from highest to lowest", () => {
   const manifest = `#EXTM3U

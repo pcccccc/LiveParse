@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-12T09:52:12Z",
+  "generatedAt": "2026-03-13T01:29:24Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -349,15 +349,15 @@
     },
     {
       "pluginId": "youtube",
-      "version": "1.0.8",
+      "version": "1.0.9",
       "platform": "youtube",
       "platformName": "YouTube",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.8.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.8.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.9.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.9.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.8.zip",
-      "sha256": "58055e9dea7e1ba365376b0aa3e6a9aa9643560ba38cc6d0c73054d8da0ab07f",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.0.9.zip",
+      "sha256": "6b2a1274002f540c4239ba776aecc392f096b03958984ebe2724fdf5f1e21091",
       "changelog": [
         "回退到实际带音轨的直播清晰度链路，避免返回无声视频子流",
         "按最高画质优先选择真实可播清晰度，并保留从高到低的画质列表"

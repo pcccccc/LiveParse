@@ -1,6 +1,6 @@
 {
   "pluginId": "youtube",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "apiVersion": 1,
   "displayName": "YouTube (JS PoC)",
   "changelog": [
@@ -10,7 +10,7 @@
   "liveTypes": [
     "7"
   ],
-  "entry": "lp_plugin_youtube_1.0.8_index.js",
+  "entry": "lp_plugin_youtube_1.0.9_index.js",
   "capabilities": {
     "categories": {
       "status": "available"
