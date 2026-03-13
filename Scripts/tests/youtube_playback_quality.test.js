@@ -5,12 +5,13 @@ const assert = require("node:assert/strict");
 
 const {
   _yt_parseM3U8VariantsFromText,
+  _yt_parseM3U8ManifestTextLatest,
   _yt_compareVariantForPreferQn,
-  _yt_compareManifestProbeResult,
-  _yt_manifestCandidateScore,
+  _yt_scoreManifestCandidateLatest,
+  _yt_finalizeManifestCandidateLatest,
+  _yt_pickBestManifestLatest,
   _yt_buildPlayback,
-  _yt_pickPlaybackFallbackCandidate,
-} = require("../../Resources/lp_plugin_youtube_1.0.10_index.js");
+} = require("../../Resources/lp_plugin_youtube_1.1.0_index.js");
 
 test("YouTube plugin parses 1080p60 labels and sorts qualities from highest to lowest", () => {
   const manifest = `#EXTM3U
@@ -43,6 +44,29 @@ https://cdn.example.com/live/itag/94/480p.m3u8
     "https://example.com/master/1080p60.m3u8"
   );
   assert.equal(variants[3].itag, 94);
+});
+
+test("YouTube plugin parses demuxed audio groups from manifest text", () => {
+  const parsed = _yt_parseM3U8ManifestTextLatest(
+    `#EXTM3U
+#EXT-X-MEDIA:URI="https://example.com/audio/233.m3u8",TYPE=AUDIO,GROUP-ID="233",NAME="Default",DEFAULT=YES,AUTOSELECT=YES
+#EXT-X-MEDIA:URI="https://example.com/audio/234.m3u8",TYPE=AUDIO,GROUP-ID="234",NAME="Default",DEFAULT=YES,AUTOSELECT=YES
+#EXT-X-STREAM-INF:BANDWIDTH=2969452,CODECS="avc1.4D401F,mp4a.40.2",RESOLUTION=1280x720,FRAME-RATE=30,AUDIO="234"
+https://example.com/video/720p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=546239,CODECS="avc1.4D4015,mp4a.40.5",RESOLUTION=426x240,FRAME-RATE=30,AUDIO="233"
+https://example.com/video/240p.m3u8
+`,
+    "https://example.com/master/index.m3u8"
+  );
+
+  assert.equal(parsed.audioTracks.length, 2);
+  assert.equal(parsed.audioTracks[0].groupId, "233");
+  assert.equal(parsed.audioTracks[0].uri, "https://example.com/audio/233.m3u8");
+  assert.equal(parsed.audioTracks[1].groupId, "234");
+  assert.equal(parsed.variants[0].audioGroupId, "234");
+  assert.equal(parsed.variants[0].audioUri, "https://example.com/audio/234.m3u8");
+  assert.equal(parsed.variants[1].audioGroupId, "233");
+  assert.equal(parsed.variants[1].audioUri, "https://example.com/audio/233.m3u8");
 });
 
 test("YouTube plugin qn preference keeps higher fps first within the same resolution", () => {
@@ -82,152 +106,83 @@ test("YouTube plugin qn preference keeps higher fps first within the same resolu
   assert.equal(variants[2].title, "720p60");
 });
 
-test("YouTube plugin prefers the manifest candidate with the strongest real variant ladder", () => {
-  const probeResults = [
-    {
-      candidate: {
-        source: "youtubei_ios",
-        url: "https://example.com/ios/master.m3u8"
-      },
-      variants: [
-        {
-          qn: 720,
-          fps: 60,
-          bandwidth: 3200000,
-          itag: 95,
-          title: "720p60",
-          url: "https://example.com/ios/720p60.m3u8"
-        }
-      ],
-      preferredVariant: {
-        qn: 720,
-        fps: 60,
-        bandwidth: 3200000,
-        itag: 95,
-        title: "720p60",
-        url: "https://example.com/ios/720p60.m3u8"
-      }
-    },
-    {
-      candidate: {
-        source: "youtubei_web",
-        url: "https://example.com/web/master.m3u8"
-      },
-      variants: [
-        {
-          qn: 1080,
-          fps: 60,
-          bandwidth: 5100000,
-          itag: 301,
-          title: "1080p60",
-          url: "https://example.com/web/1080p60.m3u8"
-        },
-        {
-          qn: 720,
-          fps: 60,
-          bandwidth: 3200000,
-          itag: 95,
-          title: "720p60",
-          url: "https://example.com/web/720p60.m3u8"
-        }
-      ],
-      preferredVariant: {
-        qn: 1080,
-        fps: 60,
-        bandwidth: 5100000,
-        itag: 301,
-        title: "1080p60",
-        url: "https://example.com/web/1080p60.m3u8"
-      }
-    }
-  ];
-
-  probeResults.sort(function (a, b) {
-    return _yt_compareManifestProbeResult(a, b, 0, "video1234567");
-  });
-
-  assert.equal(probeResults[0].candidate.source, "youtubei_web");
-  assert.equal(probeResults[0].preferredVariant.title, "1080p60");
-});
-
-test("YouTube plugin follows research ordering: candidate score outranks variant count", () => {
-  const probeResults = [
-    {
-      candidate: {
-        source: "youtubei_ios",
-        url: "https://example.com/ios/master.m3u8"
-      },
-      variants: [
-        { qn: 1080, fps: 60, bandwidth: 5100000, itag: 312, title: "1080p60", url: "https://example.com/ios/1080p60.m3u8" },
-        { qn: 720, fps: 60, bandwidth: 3200000, itag: 311, title: "720p60", url: "https://example.com/ios/720p60.m3u8" },
-        { qn: 480, fps: 30, bandwidth: 1200000, itag: 231, title: "480p", url: "https://example.com/ios/480p.m3u8" }
-      ],
-      preferredVariant: {
-        qn: 1080,
-        fps: 60,
-        bandwidth: 5100000,
-        itag: 312,
-        title: "1080p60",
-        url: "https://example.com/ios/1080p60.m3u8"
-      }
-    },
-    {
-      candidate: {
-        source: "watch_player_response_strip_n",
-        url: "https://example.com/watch/master.m3u8"
-      },
-      variants: [
-        { qn: 1080, fps: 60, bandwidth: 5000000, itag: 301, title: "1080p60", url: "https://example.com/watch/1080p60.m3u8" },
-        { qn: 720, fps: 60, bandwidth: 3000000, itag: 300, title: "720p60", url: "https://example.com/watch/720p60.m3u8" }
-      ],
-      preferredVariant: {
-        qn: 1080,
-        fps: 60,
-        bandwidth: 5000000,
-        itag: 301,
-        title: "1080p60",
-        url: "https://example.com/watch/1080p60.m3u8"
-      }
-    }
-  ];
-
-  probeResults.sort(function (a, b) {
-    return _yt_compareManifestProbeResult(a, b, 0, "video1234567");
-  });
-
-  assert.equal(probeResults[0].candidate.source, "watch_player_response_strip_n");
-});
-
-test("YouTube plugin actual playback fallback keeps the best non-demuxed watch manifest", () => {
-  const picked = _yt_pickPlaybackFallbackCandidate([
-    {
-      source: "watch_player_response_strip_n",
-      url: "https://example.com/watch/master.m3u8"
-    },
+test("YouTube plugin finalize step keeps demuxed uri but exposes master playUrl", () => {
+  const finalized = _yt_finalizeManifestCandidateLatest(
     {
       source: "youtubei_ios",
-      url: "https://example.com/ios/master.m3u8"
+      videoId: "video1234567",
+      sourcePreference: 160,
+      manifestIsDemuxed: true,
+      requiresNTransform: false,
+      originalUrl: "https://example.com/master/index.m3u8",
+      userAgent: "ios-ua"
+    },
+    _yt_parseM3U8ManifestTextLatest(
+      `#EXTM3U
+#EXT-X-MEDIA:URI="https://example.com/audio/main.m3u8",TYPE=AUDIO,GROUP-ID="233",NAME="Default",DEFAULT=YES,AUTOSELECT=YES
+#EXT-X-STREAM-INF:BANDWIDTH=2969452,CODECS="avc1.4D401F,mp4a.40.2",RESOLUTION=1280x720,FRAME-RATE=30,AUDIO="233"
+https://example.com/video/720p.m3u8
+`,
+      "https://example.com/master/index.m3u8"
+    ),
+    {
+      url: "https://example.com/master/index.m3u8",
+      urlTransform: "none"
     }
-  ]);
+  );
 
-  assert.equal(picked.source, "watch_player_response_strip_n");
-  assert.equal(picked.url, "https://example.com/watch/master.m3u8");
+  assert.equal(finalized.qualityCount, 1);
+  assert.equal(finalized.variants[0].uri, "https://example.com/video/720p.m3u8");
+  assert.equal(finalized.variants[0].playUrl, "https://example.com/master/index.m3u8");
+  assert.equal(finalized.preferredAudioUrl, "https://example.com/audio/main.m3u8");
+  assert.equal(finalized.variants[0].hasSeparateAudio, true);
 });
 
-test("YouTube plugin penalizes demuxed preview manifests below real masters", () => {
-  const videoId = "video1234567";
-  const demuxed = {
+test("YouTube plugin manifest scoring prefers stronger real ladders over weaker candidates", () => {
+  const highQualityDemuxed = {
     source: "youtubei_ios",
-    url: `https://manifest.googlevideo.com/api/manifest/hls_variant/id/${videoId}.1/source/yt_live_broadcast/demuxed/1/ip/0.0.0.0/playlist_type/DVR/itag/96/index.m3u8`
+    videoId: "video1234567",
+    sourcePreference: 160,
+    manifestIsDemuxed: true,
+    requiresNTransform: false,
+    usedFallbackStripN: false,
+    qualityCount: 3,
+    maxHeight: 1440,
+    maxFps: 60,
+    maxBandwidth: 7600000,
+    hasAudioTracks: true,
+    preferredQuality: {
+      height: 1440,
+      fps: 60,
+      bandwidth: 7600000
+    }
   };
-  const realMaster = {
-    source: "watch_player_response",
-    url: `https://manifest.googlevideo.com/api/manifest/hls_variant/id/${videoId}.1/source/yt_live_broadcast/ip/0.0.0.0/playlist_type/DVR/index.m3u8`
+  const lowerQualityMuxed = {
+    source: "youtubei_android",
+    videoId: "video1234567",
+    sourcePreference: 220,
+    manifestIsDemuxed: false,
+    requiresNTransform: false,
+    usedFallbackStripN: false,
+    qualityCount: 5,
+    maxHeight: 720,
+    maxFps: 60,
+    maxBandwidth: 2922155,
+    hasAudioTracks: true,
+    preferredQuality: {
+      height: 720,
+      fps: 60,
+      bandwidth: 2922155
+    }
   };
 
   assert.ok(
-    _yt_manifestCandidateScore(realMaster, videoId) >
-      _yt_manifestCandidateScore(demuxed, videoId)
+    _yt_scoreManifestCandidateLatest(highQualityDemuxed, "video1234567") >
+      _yt_scoreManifestCandidateLatest(lowerQualityMuxed, "video1234567")
+  );
+  assert.equal(
+    _yt_pickBestManifestLatest([lowerQualityMuxed, highQualityDemuxed]).source,
+    "youtubei_ios"
   );
 });
 
@@ -299,11 +254,11 @@ test("YouTube plugin playback headers use watch-page referer for the selected ro
 
   assert.equal(
     playback[0].qualitys[0].userAgent,
-    "com.google.ios.youtube/20.03.02 (iPhone16,2; U; CPU iOS 17_7_2 like Mac OS X;)"
+    "com.google.ios.youtube/21.02.3 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)"
   );
   assert.equal(
     playback[0].qualitys[0].headers["User-Agent"],
-    "com.google.ios.youtube/20.03.02 (iPhone16,2; U; CPU iOS 17_7_2 like Mac OS X;)"
+    "com.google.ios.youtube/21.02.3 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)"
   );
   assert.equal(
     playback[0].qualitys[0].headers.Referer,
@@ -330,7 +285,8 @@ test("YouTube iOS playback keeps quality labels and returns the parsed quality U
         bandwidth: 5100000,
         itag: 312,
         title: "1080p60",
-        url: "https://example.com/itag/312/index.m3u8"
+        url: "https://example.com/itag/312/index.m3u8",
+        playUrl: "https://example.com/master/index.m3u8"
       },
       {
         qn: 720,
@@ -338,7 +294,8 @@ test("YouTube iOS playback keeps quality labels and returns the parsed quality U
         bandwidth: 3200000,
         itag: 311,
         title: "720p60",
-        url: "https://example.com/itag/311/index.m3u8"
+        url: "https://example.com/itag/311/index.m3u8",
+        playUrl: "https://example.com/master/index.m3u8"
       }
     ],
     {
@@ -354,10 +311,10 @@ test("YouTube iOS playback keeps quality labels and returns the parsed quality U
   );
   assert.equal(
     playback[0].qualitys[0].url,
-    "https://example.com/itag/312/index.m3u8"
+    "https://example.com/master/index.m3u8"
   );
   assert.equal(
     playback[0].qualitys[1].url,
-    "https://example.com/itag/311/index.m3u8"
+    "https://example.com/master/index.m3u8"
   );
 });
