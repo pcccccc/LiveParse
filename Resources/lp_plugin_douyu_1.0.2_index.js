@@ -165,7 +165,7 @@ async function _douyu_getRoomDetail(roomId) {
     userHeadImg: String(room.owner_avatar || ""),
     liveType: "3",
     liveState,
-    userId: String(room.owner_id || "0"),
+    userId: String(room.owner_uid || room.owner_id || "0"),
     roomId: String(roomId),
     liveWatchedCount: String(roomBizAll.hot || "")
   };
