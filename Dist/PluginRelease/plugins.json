@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-13T06:16:20Z",
+  "generatedAt": "2026-03-14T11:43:14Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -151,17 +151,17 @@
     },
     {
       "pluginId": "douyu",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "platform": "douyu",
       "platformName": "斗鱼",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.0.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.0.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.1.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.1.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.0.zip",
-      "sha256": "a5c2399e1a029ae726255e09b130e02c4b4115cc34693ffa5155a51083df81dd",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.1.zip",
+      "sha256": "b2e2f5cb100ad12edd3309115e3b8f5089d42c5eac5fee2e39dfcabdfa8278de",
       "changelog": [
-        "第一次测试"
+        "修复直播状态判断：show_status/videoLoop 为 0 时不再被 JS falsy 逻辑错误替换为 -1"
       ],
       "capabilities": {
         "categories": {
