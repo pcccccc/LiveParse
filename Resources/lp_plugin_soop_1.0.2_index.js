@@ -36,11 +36,18 @@ const __soop_cdnMapping = {
 };
 
 const __soop_qualityPresets = [
-  { name: "original", label: "1080p" },
-  { name: "hd4k", label: "720p" },
-  { name: "hd", label: "540p" },
-  { name: "sd", label: "360p" },
+  { name: "original", label: "1080p", bps: 4000 },
+  { name: "hd4k", label: "720p", bps: 2000 },
+  { name: "hd", label: "540p", bps: 1000 },
+  { name: "sd", label: "360p", bps: 500 },
 ];
+
+const __soop_qualityOrder = {
+  original: 4000,
+  hd4k: 2000,
+  hd: 1000,
+  sd: 500,
+};
 
 function _soop_throw(code, message, context) {
   if (globalThis.Host && typeof Host.raise === "function") {
@@ -74,6 +81,28 @@ function _soop_firstURL(text) {
 
 function _soop_isValidBjId(val) {
   return /^[a-zA-Z0-9_]{2,20}$/.test(String(val || ""));
+}
+
+function _soop_pickRuntimeCookie(payload) {
+  var runtimeCookie = _soop_str(payload && payload.cookie);
+  var runtimeHeaders =
+    payload && payload.headers && typeof payload.headers === "object"
+      ? payload.headers
+      : null;
+
+  if (!runtimeCookie && runtimeHeaders) {
+    runtimeCookie = _soop_str(runtimeHeaders.cookie || runtimeHeaders.Cookie);
+  }
+
+  return runtimeCookie;
+}
+
+function _soop_qualitySortValue(quality) {
+  var bps = Number(quality && quality.bps);
+  if (bps > 0) return bps;
+
+  var name = _soop_str(quality && quality.name).toLowerCase();
+  return __soop_qualityOrder[name] || 0;
 }
 
 // ============================================================
@@ -517,7 +546,7 @@ globalThis.LiveParsePlugin = {
       _soop_throw("NOT_FOUND", "missing RMD or BNO", { bjId: bjId });
     }
 
-    // 获取可用清晰度
+    // 获取可用清晰度，强制按高到低排序，首项作为默认最高画质
     var qualities = [];
     for (var i = 0; i < viewPreset.length; i++) {
       var preset = viewPreset[i];
@@ -525,12 +554,17 @@ globalThis.LiveParsePlugin = {
       qualities.push({
         name: _soop_str(preset.name),
         label: _soop_str(preset.label),
+        bps: Number(preset.bps) || 0,
       });
     }
 
     if (qualities.length === 0) {
       qualities = __soop_qualityPresets.slice();
     }
+
+    qualities.sort(function (a, b) {
+      return _soop_qualitySortValue(b) - _soop_qualitySortValue(a);
+    });
 
     // Step 2 & 3: 为每个清晰度获取 AID 和播放地址
     var qualityDetails = [];
@@ -716,6 +750,8 @@ globalThis.LiveParsePlugin = {
   async getDanmaku(payload) {
     var roomId = _soop_str(payload && payload.roomId);
     var userId = _soop_str(payload && payload.userId);
+    var runtimeCookie = _soop_pickRuntimeCookie(payload);
+    var danmakuHeaders = runtimeCookie ? { cookie: runtimeCookie } : null;
 
     var bjId = userId || roomId;
     if (!bjId)
@@ -724,7 +760,11 @@ globalThis.LiveParsePlugin = {
       });
 
     try {
-      var channel = await _soop_getChannelInfo(bjId, roomId);
+      var channel = await _soop_getChannelInfo(
+        bjId,
+        roomId,
+        "platform_cookie"
+      );
       if (Number(channel.RESULT) === 1) {
         var chDomain = _soop_str(channel.CHDOMAIN).toLowerCase();
         var chPort = String(Number(channel.CHPT || 0) + 1);
@@ -744,7 +784,7 @@ globalThis.LiveParsePlugin = {
             ws_url:
               "wss://" + chDomain + ":" + chPort + "/Websocket/" + bjid,
           },
-          headers: null,
+          headers: danmakuHeaders,
         };
       }
     } catch (e) {
