@@ -4,7 +4,7 @@
   "plugins": [
     {
       "pluginId": "bilibili",
-      "version": "1.0.3",
+      "version": "1.0.2",
       "platform": "bilibili",
       "platformName": "哔哩哔哩",
       "zipURLs": [
@@ -151,7 +151,7 @@
     },
     {
       "pluginId": "douyu",
-      "version": "1.0.3",
+      "version": "1.0.2",
       "platform": "douyu",
       "platformName": "斗鱼",
       "zipURLs": [
