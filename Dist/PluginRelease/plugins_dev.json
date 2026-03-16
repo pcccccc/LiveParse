@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-15T13:52:32Z",
+  "generatedAt": "2026-03-16T02:13:00Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -249,17 +249,18 @@
     },
     {
       "pluginId": "ks",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "platform": "ks",
       "platformName": "快手",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.1.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.1.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.2.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.2.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.1.zip",
-      "sha256": "cac740698a17267704a138884afae4e3e1a508369c7e927e87614aa09ba9ec34",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.2.zip",
+      "sha256": "97960abed67b301b392fe9adad7755b4f369476272eddd6958a6b62c27ff71f6",
       "changelog": [
-        "第一次测试"
+        "同步快手研究版播放清晰度：按码率从高到低排序并区分 H264/HEVC",
+        "同步快手 recall 弹幕参数：改为 feedTypeCursorMap，并为 getDanmaku 补上 platform_cookie"
       ],
       "capabilities": {
         "categories": {
