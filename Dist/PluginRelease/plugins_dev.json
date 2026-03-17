@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-17T07:21:56Z",
+  "generatedAt": "2026-03-17T08:01:23Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -102,16 +102,17 @@
     },
     {
       "pluginId": "douyin",
-      "version": "1.0.5",
+      "version": "1.0.6",
       "platform": "douyin",
       "platformName": "抖音",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.5.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.5.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.6.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.6.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.5.zip",
-      "sha256": "ca319c5115d38710c141e6a74b876b4eb774f4806c1bb11e42ea0f8f930e932b",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.6.zip",
+      "sha256": "87a8c8f3a4850f35a6f8ce4fe51490c08f3eb856306c4eb099de18b3963b2af1",
       "changelog": [
+        "优化分享口令解析：优先复用 reflow 分享页元数据，避免空白直播间信息",
         "恢复 getPlayback 多机位解析：支持按视角返回附加线路",
         "修复直播搜索：切换到 live search 接口并对齐 Web 请求参数",
         "修复分享口令解析：短链和口令可稳定回落到直播间"

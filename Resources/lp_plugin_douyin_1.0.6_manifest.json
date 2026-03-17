@@ -1,12 +1,12 @@
 {
   "pluginId": "douyin",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "apiVersion": 1,
   "displayName": "Douyin (JS PoC)",
   "liveTypes": [
     "2"
   ],
-  "entry": "lp_plugin_douyin_1.0.5_index.js",
+  "entry": "lp_plugin_douyin_1.0.6_index.js",
   "preloadScripts": [
     "webmssdk.js"
   ],
@@ -37,6 +37,7 @@
     }
   },
   "changelog": [
+    "优化分享口令解析：优先复用 reflow 分享页元数据，避免空白直播间信息",
     "恢复 getPlayback 多机位解析：支持按视角返回附加线路",
     "修复直播搜索：切换到 live search 接口并对齐 Web 请求参数",
     "修复分享口令解析：短链和口令可稳定回落到直播间"

@@ -88,6 +88,27 @@ function _dy_firstMatch(text, re) {
   return m && m[1] ? String(m[1]) : "";
 }
 
+function _dy_decodeHTMLEntities(text) {
+  return _dy_toString(text)
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#x2F;/gi, "/");
+}
+
+function _dy_normalizeShareText(text) {
+  return _dy_decodeHTMLEntities(text)
+    .replace(/\\u002F/gi, "/")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, "\"")
+    .replace(/\\\\/g, "\\")
+    .replace(/\\+$/g, "")
+    .trim();
+}
+
 function _dy_isNumericId(text) {
   const s = _dy_toString(text).trim();
   return /^\d+$/.test(s);
@@ -364,6 +385,15 @@ function _dy_extractReflowURL(text) {
   return _dy_toString(match[0]).replace(/&amp;/g, "&");
 }
 
+function _dy_extractHiddenInputValue(text, name) {
+  const source = _dy_toString(text);
+  const inputName = _dy_toString(name).trim();
+  if (!source || !inputName) return "";
+  const escapedName = inputName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = source.match(new RegExp(`<input[^>]*name=["']${escapedName}["'][^>]*value=["']([^"']*)["']`, "i"));
+  return _dy_normalizeShareText(match && match[1] ? match[1] : "");
+}
+
 function _dy_extractShareRoomIds(text) {
   const source = _dy_toString(text);
   if (!source) {
@@ -401,6 +431,108 @@ function _dy_mergeShareRoomIds(current, next) {
     webRid: _dy_firstNonEmptyString([left.webRid, right.webRid]),
     roomIdStr: _dy_firstNonEmptyString([left.roomIdStr, right.roomIdStr]),
     reflowURL: _dy_firstNonEmptyString([left.reflowURL, right.reflowURL])
+  };
+}
+
+function _dy_extractShareRoomTitle(text) {
+  const source = _dy_toString(text);
+  return _dy_normalizeShareText(_dy_firstNonEmptyString([
+    _dy_extractHiddenInputValue(source, "shareTitle"),
+    _dy_firstMatch(source, /room\\":\{[\s\S]*?\\"title\\":\\"([^"]+)/),
+    _dy_firstMatch(source, /"room":\{[\s\S]*?"title":"([^"]+)/)
+  ]));
+}
+
+function _dy_extractShareUserName(text, roomTitle) {
+  const source = _dy_toString(text);
+  const title = _dy_toString(roomTitle);
+  const fromTitle = title.endsWith("的直播") ? title.replace(/的直播$/, "") : "";
+  return _dy_normalizeShareText(_dy_firstNonEmptyString([
+    _dy_firstMatch(source, /【([^】]+)】正在直播/),
+    _dy_firstMatch(source, /owner\\":\{[\s\S]*?\\"nickname\\":\\"([^"]+)/),
+    _dy_firstMatch(source, /"owner":\{[\s\S]*?"nickname":"([^"]+)/),
+    fromTitle
+  ]));
+}
+
+function _dy_extractShareRoomCover(text) {
+  const source = _dy_toString(text);
+  return _dy_normalizeShareText(_dy_firstNonEmptyString([
+    _dy_extractHiddenInputValue(source, "shareImage"),
+    _dy_firstMatch(source, /cover\\":\{[\s\S]*?\\"urlList\\":\[\\"([^"]+)/),
+    _dy_firstMatch(source, /"cover":\{[\s\S]*?"urlList":\["([^"]+)/)
+  ]));
+}
+
+function _dy_extractShareUserHeadImg(text) {
+  const source = _dy_toString(text);
+  return _dy_normalizeShareText(_dy_firstNonEmptyString([
+    _dy_firstMatch(source, /avatarThumb\\":\{\\"urlList\\":\[\\"([^"]+)/),
+    _dy_firstMatch(source, /avatar_thumb\\":\{\\"url_list\\":\[\\"([^"]+)/),
+    _dy_firstMatch(source, /"avatarThumb":\{"urlList":\["([^"]+)/),
+    _dy_firstMatch(source, /"avatar_thumb":\{"url_list":\["([^"]+)/)
+  ]));
+}
+
+function _dy_extractShareWatchedCount(text) {
+  const source = _dy_toString(text);
+  return _dy_normalizeShareText(_dy_firstNonEmptyString([
+    _dy_firstMatch(source, /roomViewStats\\":\{[\s\S]*?\\"displayShort\\":\\"([^"]+)/),
+    _dy_firstMatch(source, /"roomViewStats":\{[\s\S]*?"displayShort":"([^"]+)/),
+    _dy_firstMatch(source, /stats\\":\{[\s\S]*?\\"totalUserStr\\":\\"([^"]+)/),
+    _dy_firstMatch(source, /stats\\":\{[\s\S]*?\\"userCountStr\\":\\"([^"]+)/),
+    _dy_firstMatch(source, /"stats":\{[\s\S]*?"totalUserStr":"([^"]+)/),
+    _dy_firstMatch(source, /"stats":\{[\s\S]*?"userCountStr":"([^"]+)/)
+  ]));
+}
+
+function _dy_extractShareLiveState(text) {
+  const source = _dy_toString(text);
+  const statusText = _dy_firstNonEmptyString([
+    _dy_firstMatch(source, /room\\":\{[\s\S]*?\\"status\\":(\d+)/),
+    _dy_firstMatch(source, /"room":\{[\s\S]*?"status":(\d+)/)
+  ]);
+  if (statusText) {
+    return _dy_statusToLiveState(Number(statusText), true);
+  }
+
+  const desc = _dy_extractHiddenInputValue(source, "shareDesc");
+  if (desc.includes("正在直播")) return "1";
+  if (desc.includes("已结束") || desc.includes("回放")) return "0";
+  return "";
+}
+
+function _dy_buildLiveModelFromShareSource(text, resolved) {
+  const source = _dy_toString(text);
+  if (!source) return null;
+
+  const ids = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(source));
+  const roomId = ids.webRid || ids.roomIdStr || "";
+  const userId = ids.roomIdStr || ids.webRid || "";
+  if (!roomId && !userId) return null;
+
+  const roomTitle = _dy_extractShareRoomTitle(source);
+  const userName = _dy_extractShareUserName(source, roomTitle);
+  const roomCover = _dy_extractShareRoomCover(source);
+  const userHeadImg = _dy_extractShareUserHeadImg(source);
+  const liveWatchedCount = _dy_extractShareWatchedCount(source);
+  const liveState = _dy_extractShareLiveState(source) || "1";
+  const normalizedTitle = roomTitle || (userName ? `${userName}的直播` : "");
+
+  if (!userName && !normalizedTitle && !roomCover && !userHeadImg && !liveWatchedCount) {
+    return null;
+  }
+
+  return {
+    userName,
+    roomTitle: normalizedTitle,
+    roomCover,
+    userHeadImg,
+    liveType: "2",
+    liveState,
+    userId,
+    roomId,
+    liveWatchedCount
   };
 }
 
@@ -1550,14 +1682,16 @@ async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
   const text = _dy_toString(shareCode).trim();
   if (!text) _dy_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
   if (_dy_isNumericId(text)) {
-    return { roomId: text, userId: text };
+    return { roomId: text, userId: text, shareModel: null };
   }
 
   let resolved = _dy_extractShareRoomIds(text);
+  const shareSources = [text];
   if (resolved.webRid || resolved.roomIdStr) {
     return {
       roomId: resolved.webRid || resolved.roomIdStr,
-      userId: resolved.roomIdStr || resolved.webRid || ""
+      userId: resolved.roomIdStr || resolved.webRid || "",
+      shareModel: _dy_buildLiveModelFromShareSource(shareSources.join("\n"), resolved)
     };
   }
 
@@ -1572,6 +1706,7 @@ async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
 
     const finalURL = _dy_toString((resp && resp.url) || shortURL);
     const html = _dy_toString(resp && resp.bodyText);
+    shareSources.push(finalURL, html);
     resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(finalURL));
     resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(html));
 
@@ -1581,7 +1716,7 @@ async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
       _dy_extractReflowURL(html)
     ]);
 
-    if (!resolved.webRid && reflowURL) {
+    if (reflowURL) {
       const reflowResp = await _dy_requestWithSession({
         url: reflowURL,
         method: "GET",
@@ -1590,15 +1725,18 @@ async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
       });
       const reflowFinalURL = _dy_toString((reflowResp && reflowResp.url) || reflowURL);
       const reflowHTML = _dy_toString(reflowResp && reflowResp.bodyText);
+      shareSources.push(reflowFinalURL, reflowHTML);
       resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(reflowFinalURL));
       resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(reflowHTML));
     }
   }
 
+  const shareModel = _dy_buildLiveModelFromShareSource(shareSources.join("\n"), resolved);
   if (resolved.webRid || resolved.roomIdStr) {
     return {
       roomId: resolved.webRid || resolved.roomIdStr,
-      userId: resolved.roomIdStr || resolved.webRid || ""
+      userId: resolved.roomIdStr || resolved.webRid || "",
+      shareModel
     };
   }
 
@@ -1663,6 +1801,9 @@ globalThis.LiveParsePlugin = {
     const shareCode = _dy_toString(runtimePayload.shareCode);
     if (!shareCode) _dy_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
     const resolved = await _dy_resolveRoomIdFromShareCode(shareCode, "");
+    if (resolved && resolved.shareModel) {
+      return resolved.shareModel;
+    }
     return await this.getRoomDetail({ roomId: resolved.roomId, userId: resolved.userId });
   },
 
