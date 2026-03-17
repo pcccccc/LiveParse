@@ -402,6 +402,11 @@ function _dy_extractShareRoomIds(text) {
 
   return {
     webRid: _dy_firstNonEmptyString([
+      _dy_firstMatch(source, /\\\"webRid\\\":\\\"(\d+)\\\"/),
+      _dy_firstMatch(source, /\\\"webRid\\\":(\d+)/),
+      _dy_firstMatch(source, /\\\"web_rid\\\":\\\"(\d+)\\\"/),
+      _dy_firstMatch(source, /\\\"web_rid\\\":(\d+)/),
+      _dy_firstMatch(source, /\\"webRid\\":(\d+)/),
       _dy_firstMatch(source, /live\.douyin\.com\/(\d+)/),
       _dy_firstMatch(source, /"webRid":"(\d+)"/),
       _dy_firstMatch(source, /"webRid":(\d+)/),
@@ -410,8 +415,13 @@ function _dy_extractShareRoomIds(text) {
       _dy_firstMatch(source, /\bweb_rid=(\d+)/)
     ]),
     roomIdStr: _dy_firstNonEmptyString([
+      _dy_firstMatch(source, /\\\"params\\\":\{\\\"id\\\":\\\"(\d+)\\\"/),
+      _dy_firstMatch(source, /\\\"roomIdStr\\\":\\\"(\d+)\\\"/),
+      _dy_firstMatch(source, /\\\"room_id_str\\\":\\\"(\d+)\\\"/),
+      _dy_firstMatch(source, /\\\"roomIdsStr\\\":\[\\"?(\d+)"/),
       _dy_firstMatch(source, /douyin\/webcast\/reflow\/(\d+)/),
       _dy_firstMatch(source, /"params":\{"id":"(\d+)"/),
+      _dy_firstMatch(source, /"roomIdStr":"(\d+)"/),
       _dy_firstMatch(source, /\broom_id_str=(\d+)/),
       _dy_firstMatch(source, /\broom_id=(\d+)/),
       _dy_firstMatch(source, /"roomIdsStr":\["(\d+)"/),
@@ -507,7 +517,7 @@ function _dy_buildLiveModelFromShareSource(text, resolved) {
   if (!source) return null;
 
   const ids = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(source));
-  const roomId = ids.webRid || ids.roomIdStr || "";
+  const roomId = ids.webRid || "";
   const userId = ids.roomIdStr || ids.webRid || "";
   if (!roomId && !userId) return null;
 
@@ -1687,9 +1697,9 @@ async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
 
   let resolved = _dy_extractShareRoomIds(text);
   const shareSources = [text];
-  if (resolved.webRid || resolved.roomIdStr) {
+  if (resolved.webRid) {
     return {
-      roomId: resolved.webRid || resolved.roomIdStr,
+      roomId: resolved.webRid,
       userId: resolved.roomIdStr || resolved.webRid || "",
       shareModel: _dy_buildLiveModelFromShareSource(shareSources.join("\n"), resolved)
     };
@@ -1697,23 +1707,40 @@ async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
 
   const shortURL = _dy_firstURL(text) || (text.startsWith("http") ? text : "");
   if (shortURL) {
-    const resp = await _dy_request({
-      url: shortURL,
-      method: "GET",
-      headers: _dy_pickHeaders(cookie),
-      timeout: 20
-    }, "none");
+    try {
+      const sessionResp = await _dy_requestWithSession({
+        url: shortURL,
+        method: "GET",
+        headers: _dy_pickHeaders(""),
+        timeout: 20
+      });
 
-    const finalURL = _dy_toString((resp && resp.url) || shortURL);
-    const html = _dy_toString(resp && resp.bodyText);
-    shareSources.push(finalURL, html);
-    resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(finalURL));
-    resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(html));
+      const sessionFinalURL = _dy_toString((sessionResp && sessionResp.url) || shortURL);
+      const sessionHTML = _dy_toString(sessionResp && sessionResp.bodyText);
+      shareSources.push(sessionFinalURL, sessionHTML);
+      resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(sessionFinalURL));
+      resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(sessionHTML));
+    } catch (e) {
+    }
+
+    if (!resolved.roomIdStr || !resolved.reflowURL) {
+      const resp = await _dy_request({
+        url: shortURL,
+        method: "GET",
+        headers: _dy_pickHeaders(cookie),
+        timeout: 20
+      }, "none");
+
+      const finalURL = _dy_toString((resp && resp.url) || shortURL);
+      const html = _dy_toString(resp && resp.bodyText);
+      shareSources.push(finalURL, html);
+      resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(finalURL));
+      resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(html));
+    }
 
     const reflowURL = _dy_firstNonEmptyString([
       resolved.reflowURL,
-      _dy_extractReflowURL(finalURL),
-      _dy_extractReflowURL(html)
+      _dy_extractReflowURL(shareSources.join("\n"))
     ]);
 
     if (reflowURL) {
