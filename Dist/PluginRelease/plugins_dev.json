@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-16T03:01:00Z",
+  "generatedAt": "2026-03-17T07:21:56Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -102,17 +102,19 @@
     },
     {
       "pluginId": "douyin",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "platform": "douyin",
       "platformName": "抖音",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.4.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.4.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.5.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.5.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.4.zip",
-      "sha256": "8bd8491323fd363f6bdf3869cd27d17ffe8c3ec935be91b36cae699ed453f73c",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.5.zip",
+      "sha256": "ca319c5115d38710c141e6a74b876b4eb774f4806c1bb11e42ea0f8f930e932b",
       "changelog": [
-        "修复播放清晰度解析：支持主备线路、多清晰度排序和原画兜底"
+        "恢复 getPlayback 多机位解析：支持按视角返回附加线路",
+        "修复直播搜索：切换到 live search 接口并对齐 Web 请求参数",
+        "修复分享口令解析：短链和口令可稳定回落到直播间"
       ],
       "capabilities": {
         "categories": {

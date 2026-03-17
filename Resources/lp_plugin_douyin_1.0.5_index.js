@@ -8,6 +8,36 @@ const _dy_runtime = {
   searchId: "",
   searchKeyword: ""
 };
+const _dy_roomIdResolveCache = Object.create(null);
+const _dy_searchWebCommonQueryParts = [
+  "channel=channel_pc_web",
+  "update_version_code=170400",
+  "pc_client_type=1",
+  "pc_libra_divert=Mac",
+  "support_h265=1",
+  "support_dash=1",
+  "version_code=170400",
+  "version_name=17.4.0",
+  "cookie_enabled=true",
+  "screen_width=1920",
+  "screen_height=1080",
+  "browser_language=zh-CN",
+  "browser_platform=MacIntel",
+  "browser_name=Chrome",
+  "browser_version=140.0.0.0",
+  "browser_online=true",
+  "engine_name=Blink",
+  "engine_version=140.0.0.0",
+  "os_name=Mac+OS",
+  "os_version=10.15.7",
+  "cpu_core_num=8",
+  "device_memory=8",
+  "platform=PC",
+  "downlink=10",
+  "effective_type=4g",
+  "round_trip_time=100",
+  "webid=7247041636524377637"
+];
 
 async function _dy_request(request, authMode) {
   return await Host.http.request({
@@ -326,27 +356,161 @@ function _dy_firstNonEmptyObject(values) {
   return {};
 }
 
+function _dy_extractReflowURL(text) {
+  const source = _dy_toString(text);
+  if (!source) return "";
+  const match = source.match(/https?:\/\/[^"'\s<]*\/douyin\/webcast\/reflow\/\d+[^"'\s<]*/i);
+  if (!match || !match[0]) return "";
+  return _dy_toString(match[0]).replace(/&amp;/g, "&");
+}
+
+function _dy_extractShareRoomIds(text) {
+  const source = _dy_toString(text);
+  if (!source) {
+    return { webRid: "", roomIdStr: "", reflowURL: "" };
+  }
+
+  return {
+    webRid: _dy_firstNonEmptyString([
+      _dy_firstMatch(source, /live\.douyin\.com\/(\d+)/),
+      _dy_firstMatch(source, /"webRid":"(\d+)"/),
+      _dy_firstMatch(source, /"webRid":(\d+)/),
+      _dy_firstMatch(source, /"web_rid":"(\d+)"/),
+      _dy_firstMatch(source, /"web_rid":(\d+)/),
+      _dy_firstMatch(source, /\bweb_rid=(\d+)/)
+    ]),
+    roomIdStr: _dy_firstNonEmptyString([
+      _dy_firstMatch(source, /douyin\/webcast\/reflow\/(\d+)/),
+      _dy_firstMatch(source, /"params":\{"id":"(\d+)"/),
+      _dy_firstMatch(source, /\broom_id_str=(\d+)/),
+      _dy_firstMatch(source, /\broom_id=(\d+)/),
+      _dy_firstMatch(source, /"roomIdsStr":\["(\d+)"/),
+      _dy_firstMatch(source, /"room_id_str":"(\d+)"/),
+      _dy_firstMatch(source, /"room_id_str":(\d+)/),
+      _dy_firstMatch(source, /"room_id":"(\d+)"/),
+      _dy_firstMatch(source, /"room_id":(\d+)/)
+    ]),
+    reflowURL: _dy_extractReflowURL(source)
+  };
+}
+
+function _dy_mergeShareRoomIds(current, next) {
+  const left = current || {};
+  const right = next || {};
+  return {
+    webRid: _dy_firstNonEmptyString([left.webRid, right.webRid]),
+    roomIdStr: _dy_firstNonEmptyString([left.roomIdStr, right.roomIdStr]),
+    reflowURL: _dy_firstNonEmptyString([left.reflowURL, right.reflowURL])
+  };
+}
+
+function _dy_parseJSONObjectLike(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value;
+  }
+  const text = _dy_toString(value).trim();
+  if (!text || (text[0] !== "{" && text[0] !== "[")) return null;
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function _dy_buildSearchCandidateLiveModel(candidate, resolved) {
+  const current = candidate || {};
+  const ids = resolved || {};
+  return {
+    userName: _dy_toString(current.userName || ""),
+    roomTitle: _dy_toString(current.roomTitle || ""),
+    roomCover: _dy_toString(current.roomCover || ""),
+    userHeadImg: _dy_toString(current.userHeadImg || ""),
+    liveType: "2",
+    liveState: "1",
+    userId: _dy_toString(ids.userId || current.roomIdStr || ""),
+    roomId: _dy_toString(ids.roomId || current.roomIdStr || ""),
+    liveWatchedCount: _dy_toString(current.liveWatchedCount || "")
+  };
+}
+
+function _dy_extractSearchCandidateFromAwemeItem(item) {
+  const current = item || {};
+  const aweme = current.aweme_info || (Array.isArray(current.aweme_list) ? current.aweme_list[0] : null) || {};
+  const author = aweme.author || {};
+  const roomIdStr = _dy_toString(author.room_id_str || author.room_id || "").trim();
+  if (!_dy_isNumericId(roomIdStr) || roomIdStr === "0") return null;
+
+  const avatar = author.avatar_larger || author.avatar_thumb || {};
+  const video = aweme.video || {};
+  const cover = aweme.cover || video.cover || video.origin_cover || {};
+
+  return {
+    roomIdStr,
+    userName: _dy_toString(author.nickname || ""),
+    roomTitle: _dy_toString(aweme.desc || author.signature || ""),
+    roomCover: _dy_firstArrayValue(cover.url_list),
+    userHeadImg: _dy_firstArrayValue(avatar.url_list),
+    liveWatchedCount: _dy_pickFirstPresentValue([
+      aweme.live_watch_count,
+      ((aweme.statistics || {}).live_watch_count),
+      author.room_view_stats && author.room_view_stats.display_short
+    ])
+  };
+}
+
+async function _dy_resolveRoomIdsFromRoomIdStr(roomIdStr) {
+  const normalized = _dy_toString(roomIdStr).trim();
+  if (!_dy_isNumericId(normalized) || normalized === "0") {
+    return { roomId: "", userId: "" };
+  }
+  if (_dy_roomIdResolveCache[normalized]) {
+    return _dy_roomIdResolveCache[normalized];
+  }
+
+  let resolved = _dy_extractShareRoomIds(`https://webcast.amemv.com/douyin/webcast/reflow/${normalized}`);
+  try {
+    const resp = await _dy_requestWithSession({
+      url: `https://webcast.amemv.com/douyin/webcast/reflow/${encodeURIComponent(normalized)}`,
+      method: "GET",
+      headers: _dy_pickHeaders(""),
+      timeout: 20
+    });
+    resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(_dy_toString((resp && resp.url) || "")));
+    resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(_dy_toString(resp && resp.bodyText)));
+  } catch (e) {
+  }
+
+  const out = {
+    roomId: _dy_toString(resolved.webRid || resolved.roomIdStr || normalized),
+    userId: _dy_toString(resolved.roomIdStr || normalized)
+  };
+  _dy_roomIdResolveCache[normalized] = out;
+  return out;
+}
+
 function _dy_extractLiveModelsFromUserList(item) {
   const result = [];
   const userList = Array.isArray((item || {}).user_list) ? item.user_list : [];
   for (const userItem of userList) {
     const userInfo = (userItem && userItem.user_info) || {};
     const roomData = _dy_firstNonEmptyObject([
-      userItem && userItem.room_data,
-      userInfo && userInfo.room_data,
-      userItem && userItem.live_info,
-      userInfo && userInfo.live_info,
-      userItem && userItem.webcast_info,
-      userInfo && userInfo.webcast_info,
-      userItem && userItem.room_info,
-      userInfo && userInfo.room_info
+      _dy_parseJSONObjectLike(userItem && userItem.room_data),
+      _dy_parseJSONObjectLike(userInfo && userInfo.room_data),
+      _dy_parseJSONObjectLike(userItem && userItem.live_info),
+      _dy_parseJSONObjectLike(userInfo && userInfo.live_info),
+      _dy_parseJSONObjectLike(userItem && userItem.webcast_info),
+      _dy_parseJSONObjectLike(userInfo && userInfo.webcast_info),
+      _dy_parseJSONObjectLike(userItem && userItem.room_info),
+      _dy_parseJSONObjectLike(userInfo && userInfo.room_info)
     ]);
     const room = _dy_firstNonEmptyObject([
       roomData.room,
       roomData.data,
       roomData.room_data,
       roomData.live_info,
-      roomData.webcast_info
+      roomData.webcast_info,
+      roomData
     ]);
     const roomOwner = _dy_firstNonEmptyObject([roomData.owner, room.owner]);
     const avatar = userInfo.avatar_larger || userInfo.avatar_thumb || {};
@@ -377,6 +541,10 @@ function _dy_extractLiveModelsFromUserList(item) {
       roomData.id_str,
       roomData.room_id_str,
       roomData.room_id,
+      userInfo.room_id_str,
+      userItem.room_id_str,
+      userInfo.room_id,
+      userItem.room_id,
       roomOwner.id_str,
       userInfo.uid,
       userInfo.user_id,
@@ -799,22 +967,63 @@ function _dy_extractFallbackPlayArgs(roomId, streamUrl) {
   return ordered.length > 0 ? [{ cdn: "主线路", qualitys: ordered }] : [];
 }
 
-function _dy_extractPlayArgs(roomData, roomId) {
-  const room = (roomData && roomData.room) || {};
-  const streamUrl = room.stream_url || {};
-
-  const streamData = (((streamUrl.live_core_sdk_data || {}).pull_data || {}).stream_data) || "";
+function _dy_extractPlayArgsFromStreamUrl(roomId, streamUrl) {
+  const normalizedStreamUrl = streamUrl || {};
+  const streamData = (((normalizedStreamUrl.live_core_sdk_data || {}).pull_data || {}).stream_data) || "";
   let cdns = _dy_extractPlayArgsFromStreamData(roomId, streamData);
 
   if (cdns.length === 0) {
-    cdns = _dy_extractFallbackPlayArgs(roomId, streamUrl);
-  }
-
-  if (cdns.length === 0) {
-    _dy_throw("INVALID_RESPONSE", `empty quality list for roomId=${roomId}`, { roomId: String(roomId || "") });
+    cdns = _dy_extractFallbackPlayArgs(roomId, normalizedStreamUrl);
   }
 
   return cdns;
+}
+
+function _dy_pickPrimaryPlaybackLine(cdns) {
+  if (!Array.isArray(cdns) || cdns.length === 0) return null;
+
+  const preferred = cdns.find(function (item) {
+    return _dy_toString(item && item.cdn) === "主线路";
+  });
+  return preferred || cdns[0] || null;
+}
+
+function _dy_extractMultiCameraPlayArgs(room, roomId) {
+  const episodeExtra = (room && room.episode_extra) || {};
+  const cameraInfos = Array.isArray(episodeExtra.camera_infos) ? episodeExtra.camera_infos : [];
+  const results = [];
+
+  cameraInfos.forEach(function (camera, index) {
+    const streamInfo = (camera && camera.stream_info) || {};
+    const cameraCdns = _dy_extractPlayArgsFromStreamUrl(roomId, streamInfo);
+    const primaryLine = _dy_pickPrimaryPlaybackLine(cameraCdns);
+    const qualitys = Array.isArray(primaryLine && primaryLine.qualitys) ? primaryLine.qualitys.slice() : [];
+    if (qualitys.length === 0) return;
+
+    const title = _dy_toString(camera && camera.title).trim() || `视角${index + 1}`;
+    results.push({
+      cdn: `多机位-${title}`,
+      qualitys
+    });
+  });
+
+  return results;
+}
+
+function _dy_extractPlayArgs(roomData, roomId) {
+  const room = (roomData && roomData.room) || {};
+  const streamUrl = room.stream_url || {};
+  const multiCameraCdns = _dy_extractMultiCameraPlayArgs(room, roomId);
+  let cdns = _dy_extractPlayArgsFromStreamUrl(roomId, streamUrl);
+
+  if (cdns.length === 0) {
+    if (multiCameraCdns.length > 0) {
+      return multiCameraCdns;
+    }
+    _dy_throw("INVALID_RESPONSE", `empty quality list for roomId=${roomId}`, { roomId: String(roomId || "") });
+  }
+
+  return cdns.concat(multiCameraCdns);
 }
 
 function _dy_enrichCookie(cookie) {
@@ -1147,21 +1356,9 @@ async function _dy_getRoomList(id, parentId, page, cookie) {
 
 async function _dy_searchRooms(keyword, page, cookie) {
   const normalizedCookie = _dy_normalizeCookie(cookie);
-  let searchCookie = normalizedCookie;
-  const msTokenFromCookie = _dy_getCookieValue(searchCookie, "msToken");
+  const msTokenFromCookie = _dy_getCookieValue(normalizedCookie, "msToken");
   const msToken = msTokenFromCookie || _dy_generateMsToken();
   const generatedMsToken = msTokenFromCookie ? 0 : 1;
-  if (!msTokenFromCookie) {
-    searchCookie = _dy_appendCookieKV(searchCookie, "msToken", msToken);
-  }
-  const verifyFpFromCookie =
-    _dy_getCookieValue(searchCookie, "s_v_web_id") ||
-    _dy_getCookieValue(searchCookie, "verifyFp");
-  const verifyFp = verifyFpFromCookie || _dy_generateVerifyFp();
-  const generatedVerifyFp = verifyFpFromCookie ? 0 : 1;
-  if (!verifyFpFromCookie) {
-    searchCookie = _dy_appendCookieKV(searchCookie, "s_v_web_id", verifyFp);
-  }
   const keywordText = String(keyword || "").trim();
   const encodedKeyword = encodeURIComponent(keywordText);
   const pageNo = Number(page || 1);
@@ -1172,54 +1369,32 @@ async function _dy_searchRooms(keyword, page, cookie) {
   const queryParts = [
     "device_platform=webapp",
     "aid=6383",
-    "channel=channel_pc_web",
-    "update_version_code=170400",
-    "pc_client_type=1",
-    "version_code=190600",
-    "version_name=19.6.0",
-    "cookie_enabled=true",
-    "screen_width=1980",
-    "screen_height=1080",
-    "browser_language=zh-CN",
-    "browser_platform=Win32",
-    "browser_name=Edge",
-    "browser_version=140.0.0.0",
-    "browser_online=true",
-    "engine_name=Blink",
-    "engine_version=140.0.0.0",
-    "os_name=Windows",
-    "os_version=10",
-    "cpu_core_num=12",
-    "device_memory=8",
-    "platform=PC",
-    "downlink=4.7",
-    "effective_type=4g",
-    "round_trip_time=100",
-    "webid=7247041636524377637",
+    "app_name=douyin_web",
+    "live_id=1",
+    "language=zh-CN",
     "search_channel=aweme_live",
-    "enable_history=1",
     `keyword=${encodedKeyword}`,
-    "search_source=tab_search",
+    "search_source=normal_search",
     "query_correct_type=1",
     "is_filter_search=0",
     "from_group_id=",
+    "disable_rs=0",
     `offset=${encodeURIComponent(String((pageNo - 1) * 15))}`,
     "count=15",
     "need_filter_settings=1",
-    "list_type=multi",
-    `search_id=${encodeURIComponent(_dy_runtime.searchId || "")}`,
-    `verifyFp=${encodeURIComponent(verifyFp)}`,
-    `fp=${encodeURIComponent(verifyFp)}`,
+    "list_type=single",
+    `pc_search_top_1_params=${encodeURIComponent("{\"enable_ai_search_top_1\":1}")}`,
+    ..._dy_searchWebCommonQueryParts,
     `msToken=${encodeURIComponent(msToken)}`
   ];
 
   const qs = queryParts.join("&");
-  const requestURL = `https://www.douyin.com/aweme/v1/web/general/search/single/?${qs}`;
-  const searchHeaders = Object.assign({}, _dy_pickHeaders(searchCookie), {
+  const requestURL = `https://www.douyin.com/aweme/v1/web/live/search/?${qs}`;
+  const searchHeaders = Object.assign({}, _dy_pickHeaders(""), {
     "Accept": "application/json, text/plain, */*",
     "Authority": "www.douyin.com",
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-    "Referer": `https://www.douyin.com/search/${encodedKeyword}?type=general&source=tab_search`
+    "Referer": `https://www.douyin.com/search/${encodedKeyword}?type=live`
   });
 
   const resp = await _dy_requestWithSession({
@@ -1256,13 +1431,13 @@ async function _dy_searchRooms(keyword, page, cookie) {
       logid: logId,
       cookie_len: String(normalizedCookie.length),
       generated_msToken: String(generatedMsToken),
-      generated_verifyFp: String(generatedVerifyFp),
       url: requestURL
     });
   }
 
   const out = [];
   const seenRoomIds = new Set();
+  const awemeCandidates = [];
   let rawParsedCount = 0;
   let userListModelCount = 0;
   let userListUserCount = 0;
@@ -1277,7 +1452,7 @@ async function _dy_searchRooms(keyword, page, cookie) {
   let firstUserInfoUID = "";
   const pushModel = (model) => {
     const roomId = _dy_toString(model && model.roomId);
-    if (!roomId || seenRoomIds.has(roomId)) return;
+    if (!roomId || roomId === "0" || seenRoomIds.has(roomId)) return;
     seenRoomIds.add(roomId);
     out.push(model);
   };
@@ -1346,34 +1521,26 @@ async function _dy_searchRooms(keyword, page, cookie) {
       pushModel(model);
       userListModelCount += 1;
     }
+
+    const awemeCandidate = _dy_extractSearchCandidateFromAwemeItem(item);
+    if (awemeCandidate) {
+      awemeCandidates.push(awemeCandidate);
+    }
+  }
+
+  if (out.length === 0 && awemeCandidates.length > 0) {
+    const resolvedRoomIdStrs = new Set();
+    for (const candidate of awemeCandidates) {
+      const roomIdStr = _dy_toString(candidate && candidate.roomIdStr);
+      if (!roomIdStr || roomIdStr === "0" || resolvedRoomIdStrs.has(roomIdStr)) continue;
+      resolvedRoomIdStrs.add(roomIdStr);
+      const resolved = await _dy_resolveRoomIdsFromRoomIdStr(roomIdStr);
+      pushModel(_dy_buildSearchCandidateLiveModel(candidate, resolved));
+    }
   }
 
   if (out.length === 0) {
-    _dy_throw("BLOCKED", "douyin search parse empty", {
-      http: _dy_toString(resp && resp.status),
-      status_code: _dy_toString(obj && obj.status_code),
-      search_nil_type: searchNilType,
-      logid: logId,
-      cookie_len: String(normalizedCookie.length),
-      has_msToken: msTokenFromCookie ? "1" : "0",
-      has_verifyFp: verifyFpFromCookie ? "1" : "0",
-      generated_msToken: String(generatedMsToken),
-      generated_verifyFp: String(generatedVerifyFp),
-      list_count: String(list.length),
-      raw_parsed: String(rawParsedCount),
-      user_list_users: String(userListUserCount),
-      user_list_models: String(userListModelCount),
-      first_item_type: firstItemType,
-      first_item_keys: firstItemKeys,
-      first_user_keys: firstUserKeys,
-      first_user_info_keys: firstUserInfoKeys,
-      first_user_room_id: firstUserRoomId,
-      first_user_info_room_id: firstUserInfoRoomId,
-      first_user_info_room_id_str: firstUserInfoRoomIdStr,
-      first_user_info_uid: firstUserInfoUID,
-      first_room_data_keys: firstRoomDataKeys,
-      url: requestURL
-    });
+    return [];
   }
 
   return out;
@@ -1382,13 +1549,17 @@ async function _dy_searchRooms(keyword, page, cookie) {
 async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
   const text = _dy_toString(shareCode).trim();
   if (!text) _dy_throw("INVALID_ARGS", "shareCode is empty", { field: "shareCode" });
-  if (_dy_isNumericId(text)) return text;
+  if (_dy_isNumericId(text)) {
+    return { roomId: text, userId: text };
+  }
 
-  let roomId = _dy_firstMatch(text, /live\.douyin\.com\/(\d+)/);
-  if (_dy_isNumericId(roomId)) return roomId;
-
-  roomId = _dy_firstMatch(text, /douyin\/webcast\/reflow\/(\d+)/);
-  if (_dy_isNumericId(roomId)) return roomId;
+  let resolved = _dy_extractShareRoomIds(text);
+  if (resolved.webRid || resolved.roomIdStr) {
+    return {
+      roomId: resolved.webRid || resolved.roomIdStr,
+      userId: resolved.roomIdStr || resolved.webRid || ""
+    };
+  }
 
   const shortURL = _dy_firstURL(text) || (text.startsWith("http") ? text : "");
   if (shortURL) {
@@ -1400,18 +1571,43 @@ async function _dy_resolveRoomIdFromShareCode(shareCode, cookie) {
     }, "none");
 
     const finalURL = _dy_toString((resp && resp.url) || shortURL);
-    roomId = _dy_firstMatch(finalURL, /live\.douyin\.com\/(\d+)/);
-    if (_dy_isNumericId(roomId)) return roomId;
-
-    roomId = _dy_firstMatch(finalURL, /douyin\/webcast\/reflow\/(\d+)/);
-    if (_dy_isNumericId(roomId)) return roomId;
-
     const html = _dy_toString(resp && resp.bodyText);
-    roomId = _dy_firstMatch(html, /live\.douyin\.com\/(\d+)/);
-    if (_dy_isNumericId(roomId)) return roomId;
+    resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(finalURL));
+    resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(html));
+
+    const reflowURL = _dy_firstNonEmptyString([
+      resolved.reflowURL,
+      _dy_extractReflowURL(finalURL),
+      _dy_extractReflowURL(html)
+    ]);
+
+    if (!resolved.webRid && reflowURL) {
+      const reflowResp = await _dy_requestWithSession({
+        url: reflowURL,
+        method: "GET",
+        headers: _dy_pickHeaders(""),
+        timeout: 20
+      });
+      const reflowFinalURL = _dy_toString((reflowResp && reflowResp.url) || reflowURL);
+      const reflowHTML = _dy_toString(reflowResp && reflowResp.bodyText);
+      resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(reflowFinalURL));
+      resolved = _dy_mergeShareRoomIds(resolved, _dy_extractShareRoomIds(reflowHTML));
+    }
   }
 
-  _dy_throw("NOT_FOUND", `cannot resolve douyin roomId from shareCode: ${shareCode}`, { shareCode: String(shareCode || "") });
+  if (resolved.webRid || resolved.roomIdStr) {
+    return {
+      roomId: resolved.webRid || resolved.roomIdStr,
+      userId: resolved.roomIdStr || resolved.webRid || ""
+    };
+  }
+
+  _dy_throw("NOT_FOUND", `cannot resolve douyin roomId from shareCode: ${shareCode}`, {
+    shareCode: String(shareCode || ""),
+    webRid: resolved.webRid || "",
+    roomIdStr: resolved.roomIdStr || "",
+    reflowURL: resolved.reflowURL || ""
+  });
 }
 
 globalThis.LiveParsePlugin = {
@@ -1466,8 +1662,8 @@ globalThis.LiveParsePlugin = {
     const runtimePayload = _dy_runtimePayload(payload);
     const shareCode = _dy_toString(runtimePayload.shareCode);
     if (!shareCode) _dy_throw("INVALID_ARGS", "shareCode is required", { field: "shareCode" });
-    const roomId = await _dy_resolveRoomIdFromShareCode(shareCode, "");
-    return await this.getRoomDetail({ roomId, userId: roomId });
+    const resolved = await _dy_resolveRoomIdFromShareCode(shareCode, "");
+    return await this.getRoomDetail({ roomId: resolved.roomId, userId: resolved.userId });
   },
 
   async getDanmaku(payload) {

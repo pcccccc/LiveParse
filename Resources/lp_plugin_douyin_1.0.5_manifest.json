@@ -1,16 +1,15 @@
 {
-  "pluginId": "youtube",
-  "version": "1.0.9",
+  "pluginId": "douyin",
+  "version": "1.0.5",
   "apiVersion": 1,
-  "displayName": "YouTube (JS PoC)",
-  "changelog": [
-    "回退到实际带音轨的直播清晰度链路，避免返回无声视频子流",
-    "按最高画质优先选择真实可播清晰度，并保留从高到低的画质列表"
-  ],
+  "displayName": "Douyin (JS PoC)",
   "liveTypes": [
-    "7"
+    "2"
   ],
-  "entry": "lp_plugin_youtube_1.0.9_index.js",
+  "entry": "lp_plugin_douyin_1.0.5_index.js",
+  "preloadScripts": [
+    "webmssdk.js"
+  ],
   "capabilities": {
     "categories": {
       "status": "available"
@@ -36,5 +35,10 @@
     "danmaku": {
       "status": "available"
     }
-  }
+  },
+  "changelog": [
+    "恢复 getPlayback 多机位解析：支持按视角返回附加线路",
+    "修复直播搜索：切换到 live search 接口并对齐 Web 请求参数",
+    "修复分享口令解析：短链和口令可稳定回落到直播间"
+  ]
 }
