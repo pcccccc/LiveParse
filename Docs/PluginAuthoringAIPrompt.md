@@ -16,18 +16,21 @@
 - 当前为纯 JS 插件模式：enableJSPlugins = true，pluginFallbackToSwiftImplementation = false。
 - 禁止新增平台级 Swift fallback。
 - 平台解析逻辑只能放在 JS 插件中；Swift 侧仅宿主能力与弹幕协议解析。
+- 发布脚本默认扫描当前仓库全部 manifest；新增平台不需要再维护平台名称映射表。
 
 [文件位置与命名]
-- 所有插件文件放在 Sources/LiveParse/Resources/。
+- 所有插件文件放在 Resources/。
 - 文件命名必须是：
   - lp_plugin_<pluginId>_<version>_manifest.json
   - lp_plugin_<pluginId>_<version>_index.js
 - manifest 的 entry 必须与 index.js 文件名完全一致。
 
 [Manifest 约束]
-- 必须包含字段：pluginId, version, apiVersion, displayName, liveTypes, entry。
+- 必须包含字段：pluginId, version, apiVersion, displayName, platformDescription, liveTypes, entry。
 - apiVersion 固定为 1。
 - version 使用 SemVer（如 1.0.0）。
+- displayName 必须写最终面向用户的展示名，不要带 "JS PoC" 等后缀。
+- platformDescription 用于客户端平台页/平台列表的静态描述。
 - 如需要预加载脚本，使用 preloadScripts 字段。
 
 [JS 插件接口约束]
@@ -76,6 +79,7 @@
 目标参数：
 - pluginId: <PLUGIN_ID>
 - displayName: <DISPLAY_NAME>
+- platformDescription: <PLATFORM_DESCRIPTION>
 - version: <VERSION，例如 1.0.0>
 - liveType: <LIVE_TYPE_RAW_VALUE，例如 9>
 - 平台站点: <DOMAIN 或 API 描述>
@@ -84,8 +88,8 @@
 
 实现要求：
 1) 生成两个文件（完整内容）：
-   - Sources/LiveParse/Resources/lp_plugin_<PLUGIN_ID>_<VERSION>_manifest.json
-   - Sources/LiveParse/Resources/lp_plugin_<PLUGIN_ID>_<VERSION>_index.js
+   - Resources/lp_plugin_<PLUGIN_ID>_<VERSION>_manifest.json
+   - Resources/lp_plugin_<PLUGIN_ID>_<VERSION>_index.js
 2) JS 必须实现 8 个核心方法并可运行。
 3) 需要参数校验：缺失关键参数时使用 Host.raise("INVALID_ARGS", ...)。
 4) HTTP 请求统一封装，且在需要时使用 authMode: "platform_cookie"。
@@ -101,5 +105,5 @@
 ## 3) 可直接使用的“极速版”单条 Prompt
 
 ```text
-你现在是 LiveParse 插件开发器。请生成新平台插件 twitch，version=1.0.0，liveType=9，displayName="Twitch"。输出两个文件完整内容：Sources/LiveParse/Resources/lp_plugin_twitch_1.0.0_manifest.json 和 Sources/LiveParse/Resources/lp_plugin_twitch_1.0.0_index.js。必须实现 getCategories/getRooms/getPlayback/search/getRoomDetail/getLiveState/resolveShare/getDanmaku 八个方法；网络统一用 Host.http.request；需要鉴权请求时 authMode="platform_cookie" 且 platformId="twitch"；参数错误统一 Host.raise("INVALID_ARGS", ...)。返回数据结构必须匹配 LiveParse 模型字段。最后输出三行自测命令：swift build、swift test --filter PluginSystemTests、swift test --filter TwitchTests。
+你现在是 LiveParse 插件开发器。请生成新平台插件 twitch，version=1.0.0，liveType=9，displayName="Twitch"，platformDescription="全球游戏直播平台"。输出两个文件完整内容：Resources/lp_plugin_twitch_1.0.0_manifest.json 和 Resources/lp_plugin_twitch_1.0.0_index.js。必须实现 getCategories/getRooms/getPlayback/search/getRoomDetail/getLiveState/resolveShare/getDanmaku 八个方法；网络统一用 Host.http.request；需要鉴权请求时 authMode="platform_cookie" 且 platformId="twitch"；参数错误统一 Host.raise("INVALID_ARGS", ...)。返回数据结构必须匹配 LiveParse 模型字段。最后输出三行自测命令：swift build、swift test --filter PluginSystemTests、swift test --filter TwitchTests。
 ```

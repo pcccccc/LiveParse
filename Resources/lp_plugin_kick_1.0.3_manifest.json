@@ -2,11 +2,13 @@
   "pluginId": "kick",
   "version": "1.0.3",
   "apiVersion": 1,
-  "displayName": "Kick (JS PoC)",
+  "displayName": "Kick",
+  "platformDescription": "海外互动直播平台（占位，不稳定）",
   "liveTypes": [
     "10"
   ],
   "entry": "lp_plugin_kick_1.0.3_index.js",
+  "preloadScripts": [],
   "capabilities": {
     "categories": {
       "status": "available"

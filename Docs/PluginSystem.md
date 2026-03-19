@@ -56,7 +56,8 @@ Application Support/LiveParse/state.json
   "pluginId": "huya",
   "version": "2.3.1",
   "apiVersion": 1,
-  "displayName": "Huya",
+  "displayName": "虎牙",
+  "platformDescription": "竞技由我，玩在虎牙",
   "liveTypes": ["1"],
   "entry": "index.js",
   "minHostVersion": "1.0.0"
@@ -68,7 +69,8 @@ Application Support/LiveParse/state.json
 - `pluginId`：插件唯一 ID（字符串，建议与平台一致）。
 - `version`：SemVer（`MAJOR.MINOR.PATCH`）。
 - `apiVersion`：宿主与插件的桥接协议版本（整数）。不兼容直接拒绝加载。
-- `displayName`：展示名（可选）。
+- `displayName`：最终展示名（可选），直接用于客户端 UI，不要再附带 `JS PoC` 等开发态后缀。
+- `platformDescription`：平台静态描述（可选），用于客户端平台页 / 平台列表摘要。
 - `liveTypes`：该插件负责的 `LiveType.rawValue` 列表。
 - `entry`：入口 JS 文件名。
 - `minHostVersion`：宿主最低版本（可选）。
@@ -100,6 +102,7 @@ Application Support/LiveParse/state.json
       "version": "2.3.1",
       "platform": "huya",
       "platformName": "虎牙",
+      "platformDescription": "竞技由我，玩在虎牙",
       "icon": "assets/live_card_huya.png",
       "iosIcon": "assets/pad_live_card_huya.png",
       "macosIcon": "assets/mini_live_card_huya.png",
@@ -124,7 +127,8 @@ Application Support/LiveParse/state.json
 字段约定：
 
 - `platform`：平台标识（可选，通常等于 `pluginId`）。
-- `platformName`：平台展示名（可选，用于客户端 UI）。
+- `platformName`：平台展示名（可选，用于客户端 UI，默认来自 manifest 的 `displayName`）。
+- `platformDescription`：平台静态描述（可选，默认来自 manifest 的 `platformDescription`）。
 - `icon`：平台图标路径（可选，推荐写 zip 内部路径，如 `assets/live_card_huya.png`）。
 - `iosIcon`：iOS 图标路径（可选，推荐 `assets/pad_live_card_<id>.png`）。
 - `macosIcon`：macOS 图标路径（可选，推荐 `assets/mini_live_card_<id>.png`）。
@@ -142,7 +146,7 @@ Application Support/LiveParse/state.json
 
 ### 发布脚本（仓库内）
 
-可使用脚本自动打包 9 平台插件、计算 sha256、生成 `plugins.json`：
+可使用脚本自动打包当前仓库中的全部插件 manifest、计算 sha256、生成 `plugins.json`：
 
 ```bash
 python3 Scripts/build_plugin_release.py \
@@ -156,6 +160,12 @@ python3 Scripts/build_plugin_release.py \
 - `Dist/PluginRelease/plugins.json`
 - `Dist/PluginRelease/checksums.txt`
 
+说明：
+
+- 默认会扫描 `Resources/` 下全部 `lp_plugin_*_manifest.json`。
+- `--plugins` 仅作为可选过滤器；显式传入时才按 `pluginId` 子集打包。
+- `OFFICIAL_PLUGIN_IDS` 只用于官方平台 7 张 icon 资源的完整性校验，不再负责平台名称映射。
+
 ### 插件图标目录规范（推荐）
 
 为了避免“新增平台必须发版 App 才能补图标”，图标应随插件 zip 一起发布。
@@ -163,7 +173,7 @@ python3 Scripts/build_plugin_release.py \
 在仓库内按以下目录放图：
 
 ```
-Sources/LiveParse/Resources/plugin_assets/<pluginId>/
+Resources/plugin_assets/<pluginId>/
 ```
 
 命名建议（与三端 UI 对齐）：

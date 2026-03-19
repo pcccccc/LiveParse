@@ -2,11 +2,13 @@
   "pluginId": "yy",
   "version": "1.0.1",
   "apiVersion": 1,
-  "displayName": "YY (JS PoC)",
+  "displayName": "YY直播",
+  "platformDescription": "全民娱乐的互动直播平台",
   "liveTypes": [
     "6"
   ],
   "entry": "lp_plugin_yy_1.0.1_index.js",
+  "preloadScripts": [],
   "capabilities": {
     "categories": {
       "status": "available"

@@ -2,11 +2,13 @@
   "pluginId": "douyu",
   "version": "1.0.2",
   "apiVersion": 1,
-  "displayName": "Douyu (JS PoC)",
+  "displayName": "斗鱼",
+  "platformDescription": "每个人的直播平台",
   "liveTypes": [
     "3"
   ],
   "entry": "lp_plugin_douyu_1.0.2_index.js",
+  "preloadScripts": [],
   "capabilities": {
     "categories": {
       "status": "available"

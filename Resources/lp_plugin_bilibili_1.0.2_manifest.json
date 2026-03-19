@@ -2,11 +2,13 @@
   "pluginId": "bilibili",
   "version": "1.0.2",
   "apiVersion": 1,
-  "displayName": "Bilibili (JS PoC)",
+  "displayName": "哔哩哔哩",
+  "platformDescription": "列表返回352、超清直播须在设置扫码",
   "liveTypes": [
     "0"
   ],
   "entry": "lp_plugin_bilibili_1.0.2_index.js",
+  "preloadScripts": [],
   "capabilities": {
     "categories": {
       "status": "available"

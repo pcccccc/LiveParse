@@ -2,11 +2,13 @@
   "pluginId": "ks",
   "version": "1.0.3",
   "apiVersion": 1,
-  "displayName": "KuaiShou (JS PoC)",
+  "displayName": "快手",
+  "platformDescription": "无法播放请手动打开任意直播间通过滑块验证码",
   "liveTypes": [
     "5"
   ],
   "entry": "lp_plugin_ks_1.0.3_index.js",
+  "preloadScripts": [],
   "capabilities": {
     "categories": {
       "status": "available"

@@ -22,7 +22,7 @@
 
 ## 2. 创建 manifest.json（必须）
 
-放在 `Sources/LiveParse/Resources/`，示例：
+放在 `Resources/`，示例：
 
 ```json
 {
@@ -30,9 +30,11 @@
   "version": "1.0.0",
   "apiVersion": 1,
   "displayName": "Twitch",
+  "platformDescription": "全球游戏直播平台",
   "liveTypes": ["9"],
   "entry": "lp_plugin_twitch_1.0.0_index.js",
   "preloadScripts": [],
+  "capabilities": {},
   "changelog": [
     "初始版本"
   ]
@@ -42,8 +44,11 @@
 字段说明：
 
 - `apiVersion` 当前固定为 `1`（宿主要求）。
+- `displayName` 必须写最终用户可见名称，不要再附带 `JS PoC` 等开发态后缀。
+- `platformDescription` 用于客户端平台页 / 平台列表静态描述，发布脚本会原样写入远端 `plugins.json`。
 - `entry` 必须指向同版本入口 JS 文件名。
 - `preloadScripts` 可选；如果依赖签名库/加密库，在这里声明。
+- `capabilities` 可选；建议显式声明 8 大能力的可用性，便于宿主 UI 做静态提示。
 - `changelog` 可选；用于远端插件索引展示更新日志。
 
 ## 3. JS 插件必须实现的 8 个核心方法
@@ -237,12 +242,19 @@ async function request(request, authMode) {
 
 如果你要把新平台作为官方内置平台，而非仅实验插件，还需要：
 
-1. 在 `Sources/LiveParse/Resources/plugin_assets/<pluginId>/` 补齐 7 张图标资源。
-2. 在 `Scripts/build_plugin_release.py` 的 `OFFICIAL_PLUGIN_IDS`、`PLATFORM_DISPLAY_NAMES` 中加入新平台。
-3. 补充平台测试（至少 `PluginSystemTests` + 该平台测试）。
-4. 若支持实时弹幕协议，按需扩展 `WebSocketConnection` / `HTTPPollingDanmakuConnection` 对应解析逻辑。
+1. 在 `Resources/plugin_assets/<pluginId>/` 补齐 7 张图标资源。
+2. 仅当该平台需要纳入“官方平台图标完整性校验”时，再把 `pluginId` 加入 `Scripts/build_plugin_release.py` 的 `OFFICIAL_PLUGIN_IDS`。
+3. 不需要再修改平台名称映射表；平台展示名与描述统一以 manifest 中的 `displayName` / `platformDescription` 为准。
+4. 补充平台测试（至少 `PluginSystemTests` + 该平台测试）。
+5. 若支持实时弹幕协议，按需扩展 `WebSocketConnection` / `HTTPPollingDanmakuConnection` 对应解析逻辑。
 
-## 8. 提交前检查清单
+## 8. 发布脚本默认行为
+
+- `Scripts/build_plugin_release.py` 默认会扫描 `Resources/` 下当前仓库的全部插件 manifest。
+- `--plugins` 只是可选过滤器；只有显式传入时才按 `pluginId` 子集打包。
+- 新增实验平台时，只要 manifest 与入口文件就位，即可被默认打包进远端索引。
+
+## 9. 提交前检查清单
 
 - 文件命名、manifest `version`、`entry` 三者一致。
 - 8 个核心方法都可调用，参数缺失时有清晰错误。

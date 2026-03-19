@@ -2,11 +2,13 @@
   "pluginId": "soop",
   "version": "1.0.3",
   "apiVersion": 1,
-  "displayName": "SOOP (JS PoC)",
+  "displayName": "SOOP",
+  "platformDescription": "韩国直播平台(原AfreecaTV)",
   "liveTypes": [
     "8"
   ],
   "entry": "lp_plugin_soop_1.0.3_index.js",
+  "preloadScripts": [],
   "capabilities": {
     "categories": {
       "status": "available"

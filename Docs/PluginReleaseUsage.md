@@ -2,7 +2,7 @@
 
 本文是「可执行」的操作手册：
 - 如何整理插件目录
-- 如何打包 9 平台插件
+- 如何打包当前仓库中的全部插件 manifest
 - 如何部署 `plugins.json` 与 zip
 - 三端（iOS/macOS/tvOS）如何消费图标字段
 
@@ -14,8 +14,8 @@
 
 放在：
 
-- `Sources/LiveParse/Resources/lp_plugin_<pluginId>_<version>_manifest.json`
-- `Sources/LiveParse/Resources/lp_plugin_<pluginId>_<version>_index.js`
+- `Resources/lp_plugin_<pluginId>_<version>_manifest.json`
+- `Resources/lp_plugin_<pluginId>_<version>_index.js`
 
 示例：
 
@@ -26,7 +26,7 @@
 
 放在：
 
-- `Sources/LiveParse/Resources/plugin_assets/<pluginId>/`
+- `Resources/plugin_assets/<pluginId>/`
 
 每个平台固定 7 张图（必须）：
 
@@ -38,7 +38,7 @@
 - `tv_<pluginId>_big_dark.png`
 - `tv_<pluginId>_small_dark.png`
 
-> `Scripts/build_plugin_release.py` 默认会强校验这 7 张图（官方 9 平台）。缺失会直接失败，避免线上出现“新增平台还要发 App 补图”的回退场景。
+> `Scripts/build_plugin_release.py` 默认只会对 `OFFICIAL_PLUGIN_IDS` 中的平台强校验这 7 张图。缺失会直接失败，避免线上出现“官方平台还要发 App 补图”的回退场景；实验平台没有 `plugin_assets` 时不会再伪造 iOS/macOS/tvOS icon 字段。
 
 ---
 
@@ -60,9 +60,12 @@ python3 Scripts/build_plugin_release.py \
 
 说明：
 
+- 默认会扫描 `Resources/` 下当前仓库的全部插件 manifest。
+- `--plugins` 只是可选过滤器；只有显式传入时才按 `pluginId` 子集打包。
 - `zipURLs` 按顺序回退下载。
 - `zipURL` 会自动写入最后一个地址，用于兼容旧客户端。
-- `plugins.json` 中图标字段会写成 zip 内路径（`assets/...`）。
+- `platformName` / `platformDescription` 会直接从 manifest 的 `displayName` / `platformDescription` 写入。
+- `plugins.json` 中图标字段会优先写成 zip 内路径（`assets/...`）；非官方插件仅在 zip 内存在真实资源时才写 `iosIcon` / `macosIcon` / `tvos*` 字段。
 
 ---
 
@@ -88,6 +91,7 @@ python3 Scripts/build_plugin_release.py \
 `plugins.json` 单个平台常用字段：
 
 - `platform` / `platformName`
+- `platformDescription`
 - `icon`
 - `iosIcon`
 - `macosIcon`
@@ -123,6 +127,11 @@ python3 Scripts/build_plugin_release.py \
 5. 客户端拉取索引后安装并展示。
 
 到这一步为止，不需要发布 App 来补平台图标。
+
+补充：
+
+- 新增平台不需要再修改平台名称映射表；平台名与静态描述统一来自 manifest。
+- 只有当某个平台需要纳入官方 7 图校验时，才需要把它加入 `Scripts/build_plugin_release.py` 的 `OFFICIAL_PLUGIN_IDS`。
 
 ---
 

@@ -2,11 +2,13 @@
   "pluginId": "cc",
   "version": "1.0.0",
   "apiVersion": 1,
-  "displayName": "Netease CC (JS PoC)",
+  "displayName": "网易CC",
+  "platformDescription": "网易游戏直播",
   "liveTypes": [
     "4"
   ],
   "entry": "lp_plugin_cc_1.0.0_index.js",
+  "preloadScripts": [],
   "capabilities": {
     "categories": {
       "status": "available"

@@ -2,8 +2,7 @@
 """
 Package LiveParse JS plugins for remote distribution and generate plugins.json.
 
-Default behavior packages the 9 production platforms:
-  bilibili, huya, douyin, douyu, cc, ks, yy, youtube, soop
+Default behavior scans every plugin manifest under Resources/.
 """
 
 from __future__ import annotations
@@ -43,43 +42,6 @@ REQUIRED_PLUGIN_ICON_FILES = [
 ZIP_FIXED_TIMESTAMP = (2020, 1, 1, 0, 0, 0)
 VERSION_TOKEN_RE = re.compile(r"\d+|[A-Za-z]+")
 
-PLATFORM_DISPLAY_NAMES = {
-    "bilibili": "哔哩哔哩",
-    "huya": "虎牙",
-    "douyin": "抖音",
-    "douyu": "斗鱼",
-    "cc": "网易CC",
-    "ks": "快手",
-    "yy": "YY直播",
-    "youtube": "YouTube",
-    "soop": "SOOP",
-}
-
-ASSET_ICON_TOKENS = {
-    "bilibili": "bili",
-    "douyu": "douyu",
-    "huya": "huya",
-    "douyin": "douyin",
-    "yy": "yy",
-    "cc": "cc",
-    "ks": "ks",
-    "soop": "soop",
-    # AngelLive currently falls back to YY card icon for YouTube.
-    "youtube": "yy",
-}
-
-TVOS_PLATFORM_BIG_SMALL_NAMES = {
-    "bilibili": ("tv_bilibili_big", "tv_bilibili_small"),
-    "douyu": ("tv_douyu_big", "tv_douyu_small"),
-    "huya": ("tv_huya_big", "tv_huya_small"),
-    "douyin": ("tv_douyin_big", "tv_douyin_small"),
-    "yy": ("tv_yy_big", "tv_yy_small"),
-    "cc": ("tv_cc_big", "tv_cc_small"),
-    "ks": ("tv_ks_big", "tv_ks_small"),
-    "soop": ("tv_soop_big", "tv_soop_small"),
-    "youtube": ("tv_youtube_big", "tv_youtube_small"),
-}
-
 
 def parse_args() -> argparse.Namespace:
     repo_root = pathlib.Path(__file__).resolve().parents[1]
@@ -104,8 +66,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--plugins",
         type=str,
-        default=",".join(OFFICIAL_PLUGIN_IDS),
-        help="Comma-separated plugin IDs to include. Default is the 9 production platforms.",
+        default="",
+        help=(
+            "Optional comma-separated plugin IDs to include. "
+            "If omitted, all discovered plugin manifests are packaged."
+        ),
     )
     parser.add_argument(
         "--url-prefix",
@@ -339,21 +304,6 @@ def make_icon_value(plugin_id: str, icon_prefix: str, icon_ext: str) -> str:
     return file_name
 
 
-def make_default_icon_names(plugin_id: str) -> dict[str, str]:
-    token = ASSET_ICON_TOKENS.get(plugin_id, plugin_id)
-    big_name, small_name = TVOS_PLATFORM_BIG_SMALL_NAMES.get(
-        plugin_id,
-        (f"{plugin_id}-big", f"{plugin_id}-small"),
-    )
-    return {
-        "iosIcon": f"pad_live_card_{token}",
-        "macosIcon": f"mini_live_card_{token}",
-        "tvosIcon": f"live_card_{token}",
-        "tvosBigIcon": big_name,
-        "tvosSmallIcon": small_name,
-    }
-
-
 def pick_asset(assets: list[str], file_name: str) -> str | None:
     for path in assets:
         if pathlib.Path(path).name == file_name:
@@ -378,15 +328,13 @@ def build_icon_fields(
     icon_prefix: str,
     icon_ext: str,
 ) -> dict[str, str]:
-    defaults = make_default_icon_names(plugin_id=plugin_id)
-    fields: dict[str, str] = {
-        "icon": make_icon_value(plugin_id=plugin_id, icon_prefix=icon_prefix, icon_ext=icon_ext),
-        "iosIcon": defaults["iosIcon"],
-        "macosIcon": defaults["macosIcon"],
-        "tvosIcon": defaults["tvosIcon"],
-        "tvosBigIcon": defaults["tvosBigIcon"],
-        "tvosSmallIcon": defaults["tvosSmallIcon"],
-    }
+    fields: dict[str, str] = {}
+    if icon_prefix.strip():
+        fields["icon"] = make_icon_value(
+            plugin_id=plugin_id,
+            icon_prefix=icon_prefix,
+            icon_ext=icon_ext,
+        )
 
     # Prefer icon paths inside plugin zip so adding a plugin doesn't require app asset updates.
     icon_path = pick_asset(packaged_assets, f"live_card_{plugin_id}.png")
@@ -426,10 +374,12 @@ def main() -> int:
         print(f"Resources directory does not exist: {resources_dir}", file=sys.stderr)
         return 1
 
-    include_ids = {item.strip() for item in args.plugins.split(",") if item.strip()}
-    if not include_ids:
-        print("No plugin IDs selected; check --plugins value.", file=sys.stderr)
-        return 1
+    include_ids: set[str] | None = None
+    if args.plugins.strip():
+        include_ids = {item.strip() for item in args.plugins.split(",") if item.strip()}
+        if not include_ids:
+            print("No plugin IDs selected; check --plugins value.", file=sys.stderr)
+            return 1
 
     manifest_paths = sorted(resources_dir.glob("lp_plugin_*_manifest.json"))
     if not manifest_paths:
@@ -443,7 +393,7 @@ def main() -> int:
         manifest = load_manifest(manifest_path)
         plugin_id = str(manifest.get("pluginId", "")).strip()
         version = str(manifest.get("version", "")).strip()
-        if plugin_id not in include_ids:
+        if include_ids is not None and plugin_id not in include_ids:
             continue
         if not plugin_id or not version:
             raise ValueError(f"Invalid pluginId/version in {manifest_path}")
@@ -454,10 +404,13 @@ def main() -> int:
         selected_manifests.append(manifest)
 
     if not selected_manifests:
-        print(
-            f"No manifests matched selected plugin IDs: {sorted(include_ids)}",
-            file=sys.stderr,
-        )
+        if include_ids is None:
+            print(f"No valid plugin manifests found under: {resources_dir}", file=sys.stderr)
+        else:
+            print(
+                f"No manifests matched selected plugin IDs: {sorted(include_ids)}",
+                file=sys.stderr,
+            )
         return 1
 
     selected_manifests = keep_latest_manifest_per_plugin(selected_manifests)
@@ -481,15 +434,16 @@ def main() -> int:
             keep_entry_name=bool(args.keep_entry_name),
         )
         urls = choose_zip_urls(zip_name=zip_name, prefixes=args.url_prefix)
-        platform_name = PLATFORM_DISPLAY_NAMES.get(plugin_id) or str(manifest.get("displayName") or plugin_id)
+        platform_name = str(manifest.get("displayName") or plugin_id).strip() or plugin_id
+        platform_description = str(manifest.get("platformDescription") or "").strip()
+        if plugin_id in OFFICIAL_PLUGIN_IDS and not args.allow_missing_icons:
+            validate_required_icons(plugin_id=plugin_id, packaged_assets=packaged_assets)
         icon_fields = build_icon_fields(
             plugin_id=plugin_id,
             packaged_assets=packaged_assets,
             icon_prefix=args.icon_prefix,
             icon_ext=args.icon_ext,
         )
-        if plugin_id in OFFICIAL_PLUGIN_IDS and not args.allow_missing_icons:
-            validate_required_icons(plugin_id=plugin_id, packaged_assets=packaged_assets)
 
         checksum_lines.append(f"{sha256}  {zip_name}")
         item = {
@@ -502,6 +456,8 @@ def main() -> int:
             "zipURL": urls[-1],
             "sha256": sha256,
         }
+        if platform_description:
+            item["platformDescription"] = platform_description
         changelog = normalize_changelog(manifest.get("changelog"))
         if changelog:
             item["changelog"] = changelog
