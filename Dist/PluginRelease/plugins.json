@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-16T03:01:00Z",
+  "generatedAt": "2026-03-17T08:45:45Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -102,17 +102,21 @@
     },
     {
       "pluginId": "douyin",
-      "version": "1.0.4",
+      "version": "1.0.7",
       "platform": "douyin",
       "platformName": "抖音",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.4.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.4.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.7.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.7.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.4.zip",
-      "sha256": "8bd8491323fd363f6bdf3869cd27d17ffe8c3ec935be91b36cae699ed453f73c",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.7.zip",
+      "sha256": "7488472a8a0675d3d9eac5422abd80573cba4bd3b793b91936d873562c784610",
       "changelog": [
-        "修复播放清晰度解析：支持主备线路、多清晰度排序和原画兜底"
+        "修复分享口令 roomId 提取：兼容 reflow RSC 转义 payload 中的 webRid 字段",
+        "优化分享口令解析：优先复用 reflow 分享页元数据，避免空白直播间信息",
+        "恢复 getPlayback 多机位解析：支持按视角返回附加线路",
+        "修复直播搜索：切换到 live search 接口并对齐 Web 请求参数",
+        "修复分享口令解析：短链和口令可稳定回落到直播间"
       ],
       "capabilities": {
         "categories": {
