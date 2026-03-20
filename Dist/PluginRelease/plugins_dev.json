@@ -1,6 +1,6 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-20T05:48:20Z",
+  "generatedAt": "2026-03-20T15:14:00Z",
   "plugins": [
     {
       "pluginId": "bilibili",
@@ -366,19 +366,19 @@
     },
     {
       "pluginId": "soop",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "platform": "soop",
       "platformName": "SOOP",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.3.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.3.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.4.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.4.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.3.zip",
-      "sha256": "5adbbc6bc2a8831d21a623496d85e337e5a848e82374059409fccbebe1dca2b8",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_soop_1.0.4.zip",
+      "sha256": "33350326ee87a003fb37587b51a81abf51e600d2a7a61e1f7ca36453c592805a",
       "platformDescription": "韩国直播平台(原AfreecaTV)",
       "changelog": [
-        "修复弹幕连接：getDanmaku 请求补齐 platform_cookie，并透传运行时 cookie",
-        "优化播放清晰度顺序：getPlayback 改为从清晰到模糊排序，默认最高画质"
+        "补齐详情/状态登录态：getRoomDetail 与 getLiveState 改为统一走 platform_cookie",
+        "优化分享解析登录态：resolveShare 复用 getRoomDetail 的宿主 Cookie 路径"
       ],
       "capabilities": {
         "categories": {
