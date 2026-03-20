@@ -1,21 +1,22 @@
 {
   "apiVersion": 1,
-  "generatedAt": "2026-03-19T08:04:49Z",
+  "generatedAt": "2026-03-20T05:48:20Z",
   "plugins": [
     {
       "pluginId": "bilibili",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "platform": "bilibili",
       "platformName": "哔哩哔哩",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.2.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.2.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.3.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.3.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.2.zip",
-      "sha256": "34bdeda3fa725661635292333fc72bd6f49bce9ccce4374f736ebefab25d44fc",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.3.zip",
+      "sha256": "cf9681956decdecb85871be7901164a5fbce2f68c18b3809684620277cf0d00e",
       "platformDescription": "列表返回352、超清直播须在设置扫码",
       "changelog": [
-        "修复弹幕连接：getDanmaku 添加 platform_cookie 认证"
+        "同步 pure_live_TV 播放解析：getPlayback 直接基于 getRoomPlayInfo 构建清晰度与线路",
+        "补全播放候选：全量展开 stream/format/codec/url_info，并为播放请求补充 platform_cookie + buvid"
       ],
       "capabilities": {
         "categories": {
