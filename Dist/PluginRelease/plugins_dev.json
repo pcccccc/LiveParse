@@ -63,7 +63,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_1.0.0.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_cc_1.0.0.zip",
-      "sha256": "8c4e64a4ea87d3c5be0b8290c93f23673f53d766d2012919a4914bce6a11748f",
+      "sha256": "ae8131c02644b1a9848335632fd3a799cd0902636393e45184e12e0c191ea5cf",
       "platformDescription": "网易游戏直播",
       "changelog": [
         "第一次测试"
@@ -113,7 +113,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.7.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.7.zip",
-      "sha256": "ea1e781747b82558739c71fb3ca16b9f735638f29e23446d24733e267cbcab29",
+      "sha256": "7488472a8a0675d3d9eac5422abd80573cba4bd3b793b91936d873562c784610",
       "platformDescription": "抖音 - 记录美好生活",
       "changelog": [
         "修复分享口令 roomId 提取：兼容 reflow RSC 转义 payload 中的 webRid 字段",
@@ -167,7 +167,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.2.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyu_1.0.2.zip",
-      "sha256": "39dacd7144bfd65aed55debf19d44f48093e0dd5ec8891c6bb26bcd3bcae4836",
+      "sha256": "24ca2e36af0d68ec5699b9f13f1faf6df92a66db306c6737a2ca2df9a2e0066a",
       "platformDescription": "每个人的直播平台",
       "changelog": [
         "修复 getRoomDetail 返回 userId 始终为 0 的问题：owner_id 改为 owner_uid"
@@ -217,7 +217,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_1.0.1.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_huya_1.0.1.zip",
-      "sha256": "d105a2ee6e6d746d696e7cda04794959033aad662f10ec93f843426d2610fca4",
+      "sha256": "02221e205eb3f24bd228e75ed75948c4ab70367e4b43b316efb184a2c54a8741",
       "platformDescription": "竞技由我，玩在虎牙",
       "changelog": [
         "第一次测试"
@@ -321,7 +321,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.3.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_ks_1.0.3.zip",
-      "sha256": "3c8acc3ee0f0c16e2bc3ef1b387cf33a873d439099a69a75f34c09ddd44d013d",
+      "sha256": "733a9f5b4d9cd7133d91285913c60e1e116b577b6342dea4b55cc4b9d9d3f5f1",
       "platformDescription": "无法播放请手动打开任意直播间通过滑块验证码",
       "changelog": [
         "同步快手研究版播放清晰度：按码率从高到低排序并区分 H264/HEVC",
@@ -478,7 +478,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.1.0.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_youtube_1.1.0.zip",
-      "sha256": "053115177a563bf06c269a1cf062d6b86caac2c21f6db7666f6dd2827f6a8a8d",
+      "sha256": "22021436400de38802bb991e172ae4013a20f8252784833bb76bd6efe3cc30c5",
       "platformDescription": "全球视频平台直播",
       "changelog": [
         "完整覆盖研究版 YouTube 播放链路：watch 初始响应 + youtubei 多端 player 统一收集 manifest",
@@ -530,7 +530,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_1.0.1.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_yy_1.0.1.zip",
-      "sha256": "bd62fafb2e66059d5c111d4ba92de8eef209dd2c2cf9a790b5784a59d3b17d3e",
+      "sha256": "d350c754969ebea023969e9b251fe8ef55b2e8e6bfb975a1bee55b09af3bbed4",
       "platformDescription": "全民娱乐的互动直播平台",
       "changelog": [
         "第一次测试"
