@@ -1,0 +1,317 @@
+{
+  "version": "2026-03",
+  "description": "Twitch本地缓存分类",
+  "categoryData": [
+    {
+      "partition": {
+        "id_str": "101",
+        "type": 4,
+        "title": "聊天与生活"
+      },
+      "sub_partition": [
+        {
+          "partition": {
+            "id_str": "509658",
+            "type": 1,
+            "title": "Just Chatting"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "138585",
+            "type": 1,
+            "title": "Hearthstone"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "499973",
+            "type": 1,
+            "title": "Always On"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "509659",
+            "type": 1,
+            "title": "ASMR"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "509660",
+            "type": 1,
+            "title": "Art"
+          },
+          "sub_partition": []
+        }
+      ]
+    },
+    {
+      "partition": {
+        "id_str": "102",
+        "type": 4,
+        "title": "电子竞技"
+      },
+      "sub_partition": [
+        {
+          "partition": {
+            "id_str": "21779",
+            "type": 1,
+            "title": "League of Legends"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "516575",
+            "type": 1,
+            "title": "VALORANT"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "515025",
+            "type": 1,
+            "title": "Overwatch"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "32399",
+            "type": 1,
+            "title": "Counter-Strike"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "29595",
+            "type": 1,
+            "title": "Dota 2"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "511224",
+            "type": 1,
+            "title": "Apex Legends"
+          },
+          "sub_partition": []
+        }
+      ]
+    },
+    {
+      "partition": {
+        "id_str": "103",
+        "type": 4,
+        "title": "射击对抗"
+      },
+      "sub_partition": [
+        {
+          "partition": {
+            "id_str": "33214",
+            "type": 1,
+            "title": "Fortnite"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "512710",
+            "type": 1,
+            "title": "Call of Duty: Warzone"
+          },
+          "sub_partition": []
+        }
+      ]
+    },
+    {
+      "partition": {
+        "id_str": "104",
+        "type": 4,
+        "title": "角色扮演"
+      },
+      "sub_partition": [
+        {
+          "partition": {
+            "id_str": "32982",
+            "type": 1,
+            "title": "Grand Theft Auto V"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "18122",
+            "type": 1,
+            "title": "World of Warcraft"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "29307",
+            "type": 1,
+            "title": "Path of Exile"
+          },
+          "sub_partition": []
+        }
+      ]
+    },
+    {
+      "partition": {
+        "id_str": "105",
+        "type": 4,
+        "title": "休闲策略"
+      },
+      "sub_partition": [
+        {
+          "partition": {
+            "id_str": "138585",
+            "type": 1,
+            "title": "Hearthstone"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "491487",
+            "type": 1,
+            "title": "Dead by Daylight"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "27471",
+            "type": 1,
+            "title": "Minecraft"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "29452",
+            "type": 1,
+            "title": "Virtual Casino"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "498566",
+            "type": 1,
+            "title": "Slots"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "513143",
+            "type": 1,
+            "title": "Teamfight Tactics"
+          },
+          "sub_partition": []
+        }
+      ]
+    },
+    {
+      "partition": {
+        "id_str": "106",
+        "type": 4,
+        "title": "主机格斗"
+      },
+      "sub_partition": [
+        {
+          "partition": {
+            "id_str": "55453844",
+            "type": 1,
+            "title": "Street Fighter 6"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "1597660489",
+            "type": 1,
+            "title": "RESIDENT EVIL: requiem"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "18808",
+            "type": 1,
+            "title": "Resident Evil 5"
+          },
+          "sub_partition": []
+        }
+      ]
+    },
+    {
+      "partition": {
+        "id_str": "107",
+        "type": 4,
+        "title": "其它热门"
+      },
+      "sub_partition": [
+        {
+          "partition": {
+            "id_str": "515186",
+            "type": 1,
+            "title": "Crimson Desert"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "509672",
+            "type": 1,
+            "title": "IRL"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "407314011",
+            "type": 1,
+            "title": "Marathon"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "464339927",
+            "type": 1,
+            "title": "ARC Raiders"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "1264310518",
+            "type": 1,
+            "title": "Marvel Rivals"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "1435206302",
+            "type": 1,
+            "title": "Slay the Spire II"
+          },
+          "sub_partition": []
+        }
+      ]
+    }
+  ]
+}
