@@ -23,94 +23,605 @@ const _tw_category_source = {
   "version": "2026-03",
   "categoryData": [
     {
-      "partition": { "id_str": "101", "type": 4, "title": "聊天与生活" },
+      "partition": {
+        "id_str": "101",
+        "type": 4,
+        "title": "聊天与生活"
+      },
       "sub_partition": [
-        { "partition": { "id_str": "509658", "type": 1, "title": "Just Chatting" }, "sub_partition": [] },
-        { "partition": { "id_str": "509659", "type": 1, "title": "ASMR" }, "sub_partition": [] },
-        { "partition": { "id_str": "509660", "type": 1, "title": "Art" }, "sub_partition": [] },
-        { "partition": { "id_str": "509670", "type": 1, "title": "Science & Technology" }, "sub_partition": [] },
-        { "partition": { "id_str": "509663", "type": 1, "title": "Special Events" }, "sub_partition": [] },
-        { "partition": { "id_str": "26936", "type": 1, "title": "Music" }, "sub_partition": [] },
-        { "partition": { "id_str": "417752", "type": 1, "title": "Talk Shows & Podcasts" }, "sub_partition": [] },
-        { "partition": { "id_str": "509672", "type": 1, "title": "Travel & Outdoors" }, "sub_partition": [] },
-        { "partition": { "id_str": "116747", "type": 1, "title": "Pools, Hot Tubs, and Bikinis" }, "sub_partition": [] },
-        { "partition": { "id_str": "509667", "type": 1, "title": "Food & Drink" }, "sub_partition": [] }
+        {
+          "partition": {
+            "id_str": "509658",
+            "type": 1,
+            "title": "Just Chatting",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/509658-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "509659",
+            "type": 1,
+            "title": "ASMR",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/509659-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "509660",
+            "type": 1,
+            "title": "Art",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/509660-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "509670",
+            "type": 1,
+            "title": "Science & Technology",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/509670-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "509663",
+            "type": 1,
+            "title": "Special Events",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/509663-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "26936",
+            "type": 1,
+            "title": "Music",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/26936-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "417752",
+            "type": 1,
+            "title": "Talk Shows & Podcasts",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/417752-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "509672",
+            "type": 1,
+            "title": "Travel & Outdoors",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/509672-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "116747",
+            "type": 1,
+            "title": "Pools, Hot Tubs, and Bikinis"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "509667",
+            "type": 1,
+            "title": "Food & Drink",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/509667-285x380.jpg"
+          },
+          "sub_partition": []
+        }
       ]
     },
     {
-      "partition": { "id_str": "102", "type": 4, "title": "电子竞技" },
+      "partition": {
+        "id_str": "102",
+        "type": 4,
+        "title": "电子竞技"
+      },
       "sub_partition": [
-        { "partition": { "id_str": "21779", "type": 1, "title": "League of Legends" }, "sub_partition": [] },
-        { "partition": { "id_str": "29595", "type": 1, "title": "Dota 2" }, "sub_partition": [] },
-        { "partition": { "id_str": "516575", "type": 1, "title": "VALORANT" }, "sub_partition": [] },
-        { "partition": { "id_str": "32399", "type": 1, "title": "Counter-Strike" }, "sub_partition": [] },
-        { "partition": { "id_str": "511224", "type": 1, "title": "Apex Legends" }, "sub_partition": [] },
-        { "partition": { "id_str": "488552", "type": 1, "title": "Overwatch 2" }, "sub_partition": [] },
-        { "partition": { "id_str": "460630", "type": 1, "title": "Rainbow Six Siege" }, "sub_partition": [] },
-        { "partition": { "id_str": "30921", "type": 1, "title": "Rocket League" }, "sub_partition": [] },
-        { "partition": { "id_str": "11848", "type": 1, "title": "StarCraft II" }, "sub_partition": [] },
-        { "partition": { "id_str": "504461", "type": 1, "title": "Super Smash Bros. Ultimate" }, "sub_partition": [] }
+        {
+          "partition": {
+            "id_str": "21779",
+            "type": 1,
+            "title": "League of Legends",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/21779-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "29595",
+            "type": 1,
+            "title": "Dota 2",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/29595-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "516575",
+            "type": 1,
+            "title": "VALORANT",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/516575-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "32399",
+            "type": 1,
+            "title": "Counter-Strike",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/32399-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "511224",
+            "type": 1,
+            "title": "Apex Legends",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/511224-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "515025",
+            "type": 1,
+            "title": "Overwatch 2",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/515025-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "460630",
+            "type": 1,
+            "title": "Rainbow Six Siege",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/460630-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "30921",
+            "type": 1,
+            "title": "Rocket League",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/30921-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "490422",
+            "type": 1,
+            "title": "StarCraft II",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/490422-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "504461",
+            "type": 1,
+            "title": "Super Smash Bros. Ultimate",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/504461_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        }
       ]
     },
     {
-      "partition": { "id_str": "103", "type": 4, "title": "射击对抗" },
+      "partition": {
+        "id_str": "103",
+        "type": 4,
+        "title": "射击对抗"
+      },
       "sub_partition": [
-        { "partition": { "id_str": "493057", "type": 1, "title": "PUBG: BATTLEGROUNDS" }, "sub_partition": [] },
-        { "partition": { "id_str": "512710", "type": 1, "title": "Call of Duty: Warzone" }, "sub_partition": [] },
-        { "partition": { "id_str": "491931", "type": 1, "title": "Escape from Tarkov" }, "sub_partition": [] },
-        { "partition": { "id_str": "33214", "type": 1, "title": "Fortnite" }, "sub_partition": [] },
-        { "partition": { "id_str": "495589", "type": 1, "title": "Destiny 2" }, "sub_partition": [] },
-        { "partition": { "id_str": "26559", "type": 1, "title": "Rust" }, "sub_partition": [] },
-        { "partition": { "id_str": "65632", "type": 1, "title": "DayZ" }, "sub_partition": [] },
-        { "partition": { "id_str": "497086", "type": 1, "title": "Hunt: Showdown" }, "sub_partition": [] },
-        { "partition": { "id_str": "143106037", "type": 1, "title": "THE FINALS" }, "sub_partition": [] },
-        { "partition": { "id_str": "243144883", "type": 1, "title": "Deadlock" }, "sub_partition": [] }
+        {
+          "partition": {
+            "id_str": "493057",
+            "type": 1,
+            "title": "PUBG: BATTLEGROUNDS",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/493057-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "512710",
+            "type": 1,
+            "title": "Call of Duty: Warzone",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/512710-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "491931",
+            "type": 1,
+            "title": "Escape from Tarkov",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/491931_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "33214",
+            "type": 1,
+            "title": "Fortnite",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/33214-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "497057",
+            "type": 1,
+            "title": "Destiny 2",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/497057-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "263490",
+            "type": 1,
+            "title": "Rust",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/263490_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "65632",
+            "type": 1,
+            "title": "DayZ",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/65632_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "500188",
+            "type": 1,
+            "title": "Hunt: Showdown",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/500188_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "1910103699",
+            "type": 1,
+            "title": "THE FINALS",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/1910103699-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "2132205352",
+            "type": 1,
+            "title": "Deadlock",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/2132205352_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        }
       ]
     },
     {
-      "partition": { "id_str": "104", "type": 4, "title": "角色扮演" },
+      "partition": {
+        "id_str": "104",
+        "type": 4,
+        "title": "角色扮演"
+      },
       "sub_partition": [
-        { "partition": { "id_str": "32982", "type": 1, "title": "Grand Theft Auto V" }, "sub_partition": [] },
-        { "partition": { "id_str": "18122", "type": 1, "title": "World of Warcraft" }, "sub_partition": [] },
-        { "partition": { "id_str": "512953", "type": 1, "title": "Elden Ring" }, "sub_partition": [] },
-        { "partition": { "id_str": "514331", "type": 1, "title": "Cyberpunk 2077" }, "sub_partition": [] },
-        { "partition": { "id_str": "493959", "type": 1, "title": "Red Dead Redemption 2" }, "sub_partition": [] },
-        { "partition": { "id_str": "213958988", "type": 1, "title": "Baldur's Gate 3" }, "sub_partition": [] },
-        { "partition": { "id_str": "29307", "type": 1, "title": "Path of Exile" }, "sub_partition": [] },
-        { "partition": { "id_str": "2692", "type": 1, "title": "Super Mario 64" }, "sub_partition": [] },
-        { "partition": { "id_str": "65654", "type": 1, "title": "The Elder Scrolls V: Skyrim" }, "sub_partition": [] },
-        { "partition": { "id_str": "213930085", "type": 1, "title": "Genshin Impact" }, "sub_partition": [] },
-        { "partition": { "id_str": "24319326", "type": 1, "title": "Honkai: Star Rail" }, "sub_partition": [] }
+        {
+          "partition": {
+            "id_str": "32982",
+            "type": 1,
+            "title": "Grand Theft Auto V",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/32982_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "18122",
+            "type": 1,
+            "title": "World of Warcraft",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/18122-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "512953",
+            "type": 1,
+            "title": "Elden Ring",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/512953_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "65876",
+            "type": 1,
+            "title": "Cyberpunk 2077",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/65876-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "493959",
+            "type": 1,
+            "title": "Red Dead Redemption 2",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/493959_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "512923",
+            "type": 1,
+            "title": "Baldur's Gate 3",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/512923_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "29307",
+            "type": 1,
+            "title": "Path of Exile",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/29307_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "2692",
+            "type": 1,
+            "title": "Super Mario 64",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/2692_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "30028",
+            "type": 1,
+            "title": "The Elder Scrolls V: Skyrim",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/30028_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "513181",
+            "type": 1,
+            "title": "Genshin Impact",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/513181_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "213930085",
+            "type": 1,
+            "title": "Honkai: Star Rail",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/213930085_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        }
       ]
     },
     {
-      "partition": { "id_str": "105", "type": 4, "title": "休闲策略" },
+      "partition": {
+        "id_str": "105",
+        "type": 4,
+        "title": "休闲策略"
+      },
       "sub_partition": [
-        { "partition": { "id_str": "27471", "type": 1, "title": "Minecraft" }, "sub_partition": [] },
-        { "partition": { "id_str": "513181", "type": 1, "title": "Teamfight Tactics" }, "sub_partition": [] },
-        { "partition": { "id_str": "138585", "type": 1, "title": "Hearthstone" }, "sub_partition": [] },
-        { "partition": { "id_str": "743", "type": 1, "title": "Chess" }, "sub_partition": [] },
-        { "partition": { "id_str": "491487", "type": 1, "title": "Dead by Daylight" }, "sub_partition": [] },
-        { "partition": { "id_str": "226233513", "type": 1, "title": "Lethal Company" }, "sub_partition": [] },
-        { "partition": { "id_str": "493181", "type": 1, "title": "Clash Royale" }, "sub_partition": [] },
-        { "partition": { "id_str": "490801", "type": 1, "title": "Stardew Valley" }, "sub_partition": [] },
-        { "partition": { "id_str": "510218", "type": 1, "title": "Among Us" }, "sub_partition": [] },
-        { "partition": { "id_str": "1518765410", "type": 1, "title": "Palworld" }, "sub_partition": [] }
+        {
+          "partition": {
+            "id_str": "27471",
+            "type": 1,
+            "title": "Minecraft",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/27471_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "513143",
+            "type": 1,
+            "title": "Teamfight Tactics",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/513143-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "138585",
+            "type": 1,
+            "title": "Hearthstone",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/138585-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "511910411",
+            "type": 1,
+            "title": "Chess",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/511910411_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "491487",
+            "type": 1,
+            "title": "Dead by Daylight",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/491487-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "2085980140",
+            "type": 1,
+            "title": "Lethal Company",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/2085980140_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "491168",
+            "type": 1,
+            "title": "Clash Royale",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/491168_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "490744",
+            "type": 1,
+            "title": "Stardew Valley",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/490744_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "919012536",
+            "type": 1,
+            "title": "Among Us",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/919012536_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "1036710512",
+            "type": 1,
+            "title": "Palworld",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/1036710512_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        }
       ]
     },
     {
-      "partition": { "id_str": "106", "type": 4, "title": "主机格斗" },
+      "partition": {
+        "id_str": "106",
+        "type": 4,
+        "title": "主机格斗"
+      },
       "sub_partition": [
-        { "partition": { "id_str": "1598502573", "type": 1, "title": "Street Fighter 6" }, "sub_partition": [] },
-        { "partition": { "id_str": "1960233481", "type": 1, "title": "TEKKEN 8" }, "sub_partition": [] },
-        { "partition": { "id_str": "512720", "type": 1, "title": "Resident Evil 4" }, "sub_partition": [] },
-        { "partition": { "id_str": "1071066020", "type": 1, "title": "Mortal Kombat 1" }, "sub_partition": [] },
-        { "partition": { "id_str": "28388", "type": 1, "title": "Dark Souls" }, "sub_partition": [] },
-        { "partition": { "id_str": "217730951", "type": 1, "title": "Dark Souls III" }, "sub_partition": [] },
-        { "partition": { "id_str": "417969", "type": 1, "title": "Bloodborne" }, "sub_partition": [] },
-        { "partition": { "id_str": "1290310705", "type": 1, "title": "Sekiro: Shadows Die Twice" }, "sub_partition": [] },
-        { "partition": { "id_str": "592160912", "type": 1, "title": "Guilty Gear -Strive-" }, "sub_partition": [] },
-        { "partition": { "id_str": "713444455", "type": 1, "title": "The Legend of Zelda: Tears of the Kingdom" }, "sub_partition": [] }
+        {
+          "partition": {
+            "id_str": "55453844",
+            "type": 1,
+            "title": "Street Fighter 6",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/55453844_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "538054672",
+            "type": 1,
+            "title": "TEKKEN 8",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/538054672_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "1820378900",
+            "type": 1,
+            "title": "Resident Evil 4",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/1820378900_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "904864974",
+            "type": 1,
+            "title": "Mortal Kombat 1",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/904864974_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "29433",
+            "type": 1,
+            "title": "Dark Souls",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/29433_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "490292",
+            "type": 1,
+            "title": "Dark Souls III",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/490292_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "460636",
+            "type": 1,
+            "title": "Bloodborne",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/460636_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "506415",
+            "type": 1,
+            "title": "Sekiro: Shadows Die Twice",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/506415_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "517159",
+            "type": 1,
+            "title": "Guilty Gear -Strive-",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/517159_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        },
+        {
+          "partition": {
+            "id_str": "512998",
+            "type": 1,
+            "title": "The Legend of Zelda: Tears of the Kingdom",
+            "icon": "https://static-cdn.jtvnw.net/ttv-boxart/512998_IGDB-285x380.jpg"
+          },
+          "sub_partition": []
+        }
       ]
     }
   ]
@@ -121,11 +632,17 @@ function _tw_makeCategoryNode(partition, parentIdOverride) {
   const id = _tw_str(node.id_str);
   if (!id) return null;
   const parentIdValue = parentIdOverride === undefined || parentIdOverride === null ? node.type : parentIdOverride;
+
+  let iconUrl = _tw_str(node.icon);
+  if (!iconUrl && String(node.type) === "1") {
+    iconUrl = `https://static-cdn.jtvnw.net/ttv-boxart/${id}-285x380.jpg`;
+  }
+
   return {
     id: id,
     parentId: _tw_str(parentIdValue),
     title: _tw_str(node.title),
-    icon: "",
+    icon: iconUrl,
     biz: ""
   };
 }
@@ -788,7 +1305,7 @@ globalThis.LiveParsePlugin = {
           return {
             id: item.id,
             title: item.title,
-            icon: "",
+            icon: `https://static-cdn.jtvnw.net/ttv-boxart/${item.id}-285x380.jpg`,
             biz: ""
           };
         });
