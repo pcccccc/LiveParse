@@ -426,7 +426,7 @@
         "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_twitch_1.0.14.zip"
       ],
       "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_twitch_1.0.14.zip",
-      "sha256": "86b25c2426561b8a5e6ad20668cdbc1c0ece3ec9c1698339276328030b8f1113",
+      "sha256": "0228f75bd77e8c642e15104965c62a82728278b12b3792cd5272ca99d90b7669",
       "platformDescription": "全球游戏直播平台",
       "changelog": [
         "Implement realtime chat (danmaku) via Twitch IRC WebSocket protocol",
