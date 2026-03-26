@@ -4,19 +4,18 @@
   "plugins": [
     {
       "pluginId": "bilibili",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "platform": "bilibili",
       "platformName": "哔哩哔哩",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.3.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.3.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.4.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.4.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.3.zip",
-      "sha256": "cf9681956decdecb85871be7901164a5fbce2f68c18b3809684620277cf0d00e",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_bilibili_1.0.4.zip",
+      "sha256": "3b111fcd9e89fc21169357df6f0a1454ee5406cb855682b16a2eb2c167d81a97",
       "platformDescription": "列表返回352、超清直播须在设置扫码",
       "changelog": [
-        "同步 pure_live_TV 播放解析：getPlayback 直接基于 getRoomPlayInfo 构建清晰度与线路",
-        "补全播放候选：全量展开 stream/format/codec/url_info，并为播放请求补充 platform_cookie + buvid"
+        "补齐房间详情登录态：getRoomDetail 添加 platform_cookie authMode 和 buvid Cookie，与 getPlayback 保持一致"
       ],
       "capabilities": {
         "categories": {

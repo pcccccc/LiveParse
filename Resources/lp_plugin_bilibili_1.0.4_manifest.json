@@ -1,0 +1,41 @@
+{
+  "pluginId": "bilibili",
+  "version": "1.0.4",
+  "apiVersion": 1,
+  "displayName": "哔哩哔哩",
+  "platformDescription": "列表返回352、超清直播须在设置扫码",
+  "liveTypes": [
+    "0"
+  ],
+  "entry": "lp_plugin_bilibili_1.0.4_index.js",
+  "preloadScripts": [],
+  "capabilities": {
+    "categories": {
+      "status": "available"
+    },
+    "rooms": {
+      "status": "available"
+    },
+    "playback": {
+      "status": "available"
+    },
+    "search": {
+      "status": "available"
+    },
+    "roomDetail": {
+      "status": "available"
+    },
+    "liveState": {
+      "status": "available"
+    },
+    "shareResolve": {
+      "status": "available"
+    },
+    "danmaku": {
+      "status": "available"
+    }
+  },
+  "changelog": [
+    "getRoomDetail 添加 platform_cookie authMode 和 buvid Cookie，与 getPlayback 保持一致"
+  ]
+}
