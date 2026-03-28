@@ -104,22 +104,18 @@
     },
     {
       "pluginId": "douyin",
-      "version": "1.0.7",
+      "version": "1.0.8",
       "platform": "douyin",
       "platformName": "抖音",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.7.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.7.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.8.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.8.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.7.zip",
-      "sha256": "ea1e781747b82558739c71fb3ca16b9f735638f29e23446d24733e267cbcab29",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.8.zip",
+      "sha256": "364e52c1cf32712fbc480bdf636e8113387bc7c3e84ce3c4230988c7e6f948c4",
       "platformDescription": "抖音 - 记录美好生活",
       "changelog": [
-        "修复分享口令 roomId 提取：兼容 reflow RSC 转义 payload 中的 webRid 字段",
-        "优化分享口令解析：优先复用 reflow 分享页元数据，避免空白直播间信息",
-        "恢复 getPlayback 多机位解析：支持按视角返回附加线路",
-        "修复直播搜索：切换到 live search 接口并对齐 Web 请求参数",
-        "修复分享口令解析：短链和口令可稳定回落到直播间"
+        "修复多机位播放：独立解析每个机位的 stream_info 流地址，不再复用主房间流"
       ],
       "capabilities": {
         "categories": {

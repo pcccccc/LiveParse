@@ -1130,22 +1130,96 @@ function _dy_pickPrimaryPlaybackLine(cdns) {
   return preferred || cdns[0] || null;
 }
 
-function _dy_extractMultiCameraPlayArgs(room, roomId) {
+function _dy_parseStreamInfoQualities(streamInfo) {
+  const info = streamInfo || {};
+  const streamData = (((info.live_core_sdk_data || {}).pull_data || {}).stream_data) || "";
+
+  if (streamData) {
+    try {
+      const parsed = JSON.parse(String(streamData));
+      const data = (parsed && parsed.data) || {};
+      const qualityMeta = _dy_getPlaybackQualityMeta(parsed);
+      const variants = [];
+      const seen = Object.create(null);
+
+      Object.keys(data).forEach(function (qualityKey) {
+        const quality = data[qualityKey] || {};
+        const lineStream = quality.main || {};
+        const title = qualityMeta.labelMap[qualityKey] || qualityKey;
+        const rank = qualityMeta.rankMap[qualityKey] || 0;
+
+        ["flv", "hls"].forEach(function (protocol) {
+          const url = _dy_toString(lineStream[protocol]).trim();
+          if (!url) return;
+          const dedupeKey = title + "|" + url;
+          if (seen[dedupeKey]) return;
+          seen[dedupeKey] = true;
+          variants.push({
+            rank: rank,
+            protocolRank: protocol === "flv" ? 2 : 1,
+            detail: {
+              title: title + "_" + protocol.toUpperCase(),
+              qn: rank,
+              url: url,
+              liveCodeType: protocol === "flv" ? "flv" : "m3u8",
+              liveType: "2",
+              userAgent: _dy_playbackUserAgent,
+              headers: _dy_playbackHeaders
+            }
+          });
+        });
+      });
+
+      if (variants.length > 0) {
+        return _dy_sortPlaybackVariants(variants).map(function (item) { return item.detail; });
+      }
+    } catch (e) {}
+  }
+
+  const flvMap = info.flv_pull_url || {};
+  const resolutionMeta = {
+    FULL_HD1: { title: "蓝光", rank: 400 },
+    HD1: { title: "超清", rank: 300 },
+    SD2: { title: "高清", rank: 200 },
+    SD1: { title: "标清", rank: 100 }
+  };
+  const variants = [];
+  Object.keys(resolutionMeta).forEach(function (key) {
+    var url = _dy_toString(flvMap[key]).trim();
+    if (!url) return;
+    var meta = resolutionMeta[key];
+    variants.push({
+      rank: meta.rank,
+      protocolRank: 2,
+      detail: {
+        title: meta.title + "_FLV",
+        qn: meta.rank,
+        url: url,
+        liveCodeType: "flv",
+        liveType: "2",
+        userAgent: _dy_playbackUserAgent,
+        headers: _dy_playbackHeaders
+      }
+    });
+  });
+
+  return _dy_sortPlaybackVariants(variants).map(function (item) { return item.detail; });
+}
+
+function _dy_extractMultiCameraPlayArgs(room) {
   const episodeExtra = (room && room.episode_extra) || {};
   const cameraInfos = Array.isArray(episodeExtra.camera_infos) ? episodeExtra.camera_infos : [];
   const results = [];
 
   cameraInfos.forEach(function (camera, index) {
     const streamInfo = (camera && camera.stream_info) || {};
-    const cameraCdns = _dy_extractPlayArgsFromStreamUrl(roomId, streamInfo);
-    const primaryLine = _dy_pickPrimaryPlaybackLine(cameraCdns);
-    const qualitys = Array.isArray(primaryLine && primaryLine.qualitys) ? primaryLine.qualitys.slice() : [];
+    const qualitys = _dy_parseStreamInfoQualities(streamInfo);
     if (qualitys.length === 0) return;
 
-    const title = _dy_toString(camera && camera.title).trim() || `视角${index + 1}`;
+    const title = _dy_toString(camera && camera.title).trim() || (`机位${index + 1}`);
     results.push({
       cdn: `多机位-${title}`,
-      qualitys
+      qualitys: qualitys
     });
   });
 
@@ -1155,7 +1229,7 @@ function _dy_extractMultiCameraPlayArgs(room, roomId) {
 function _dy_extractPlayArgs(roomData, roomId) {
   const room = (roomData && roomData.room) || {};
   const streamUrl = room.stream_url || {};
-  const multiCameraCdns = _dy_extractMultiCameraPlayArgs(room, roomId);
+  const multiCameraCdns = _dy_extractMultiCameraPlayArgs(room);
   let cdns = _dy_extractPlayArgsFromStreamUrl(roomId, streamUrl);
 
   if (cdns.length === 0) {
