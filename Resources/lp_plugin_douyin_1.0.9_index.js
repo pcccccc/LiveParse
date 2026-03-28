@@ -1130,7 +1130,7 @@ function _dy_pickPrimaryPlaybackLine(cdns) {
   return preferred || cdns[0] || null;
 }
 
-function _dy_parseStreamInfoQualities(streamInfo) {
+function _dy_parseStreamInfoQualities(streamInfo, roomId) {
   const info = streamInfo || {};
   const streamData = (((info.live_core_sdk_data || {}).pull_data || {}).stream_data) || "";
 
@@ -1158,6 +1158,7 @@ function _dy_parseStreamInfoQualities(streamInfo) {
             rank: rank,
             protocolRank: protocol === "flv" ? 2 : 1,
             detail: {
+              roomId: _dy_toString(roomId),
               title: title + "_" + protocol.toUpperCase(),
               qn: rank,
               url: url,
@@ -1192,6 +1193,7 @@ function _dy_parseStreamInfoQualities(streamInfo) {
       rank: meta.rank,
       protocolRank: 2,
       detail: {
+        roomId: _dy_toString(roomId),
         title: meta.title + "_FLV",
         qn: meta.rank,
         url: url,
@@ -1213,7 +1215,8 @@ function _dy_extractMultiCameraPlayArgs(room) {
 
   cameraInfos.forEach(function (camera, index) {
     const streamInfo = (camera && camera.stream_info) || {};
-    const qualitys = _dy_parseStreamInfoQualities(streamInfo);
+    const cameraId = _dy_toString(camera && camera.camera_id).trim() || String(index);
+    const qualitys = _dy_parseStreamInfoQualities(streamInfo, cameraId);
     if (qualitys.length === 0) return;
 
     const title = _dy_toString(camera && camera.title).trim() || (`机位${index + 1}`);

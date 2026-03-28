@@ -104,15 +104,15 @@
     },
     {
       "pluginId": "douyin",
-      "version": "1.0.8",
+      "version": "1.0.9",
       "platform": "douyin",
       "platformName": "抖音",
       "zipURLs": [
-        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.8.zip",
-        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.8.zip"
+        "https://ghfast.top/https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.9.zip",
+        "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.9.zip"
       ],
-      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.8.zip",
-      "sha256": "364e52c1cf32712fbc480bdf636e8113387bc7c3e84ce3c4230988c7e6f948c4",
+      "zipURL": "https://github.com/pcccccc/LiveParse/releases/download/2.1.0/liveparse_douyin_1.0.9.zip",
+      "sha256": "7236cf79e1353d102f6df7935db20a70e3f0e1a1f1f410e07232ef1cbfa8232c",
       "platformDescription": "抖音 - 记录美好生活",
       "changelog": [
         "修复多机位播放：独立解析每个机位的 stream_info 流地址，不再复用主房间流"
